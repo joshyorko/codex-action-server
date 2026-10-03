@@ -63,11 +63,15 @@ def engine(args, *operation, timeout=120):
 
 
 def worker_exec(args, worker, *operation):
+    from worker_containers import ROOT as worker_root
+
     return engine(
         args,
         "exec",
         "--user",
         "vscode",
+        "--workdir",
+        worker_root,
         "--env",
         "CODEX_HOME=" + worker["codex_home"],
         full_container_id(worker),

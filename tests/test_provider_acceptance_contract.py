@@ -330,3 +330,18 @@ def test_driver_refuses_preexisting_scope_without_cleanup(monkeypatch, tmp_path)
     assert driver.main() == 1
     assert cleanup_calls == []
     assert "already has a worker" in json.loads(report.read_text())["error"]
+
+
+def test_worker_exec_uses_source_cwd_instead_of_pid1_cwd(monkeypatch):
+    from worker_containers import ROOT as worker_root
+
+    checks = load_live_checks()
+    monkeypatch.setattr(checks, "engine", lambda args, *command: command)
+    result = checks.worker_exec(
+        object(),
+        {"container_id": "a" * 64, "codex_home": "/home/vscode/.codex"},
+        "test",
+        "-f",
+        "scripts/remote/setup.sh",
+    )
+    assert result[result.index("--workdir") + 1] == worker_root

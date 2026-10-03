@@ -284,14 +284,14 @@ class ContainerProvider:
             raise WorkerError("worker_identity_changed")
         return worker
 
-    def _exec(self, worker, args, *, user="vscode", timeout=30):
+    def _exec(self, worker, args, *, user="vscode", workdir=ROOT, timeout=30):
         return self.engine.run(
             [
                 "exec",
                 "--user",
                 user,
                 "--workdir",
-                ROOT,
+                workdir,
                 worker.container_id,
                 *args,
             ],
@@ -323,7 +323,7 @@ class ContainerProvider:
             "--user",
             "vscode",
             "--workdir",
-            ROOT,
+            "/",
             "--entrypoint",
             "/bin/sh",
             "--env",
@@ -341,7 +341,7 @@ class ContainerProvider:
         # All subsequent steps stay pinned to this ID. Failure leaves it for
         # explicit reconciliation/deletion, never a second automatic create.
         self.engine.run(["start", cid])
-        self._exec(worker, ["mkdir", "-p", ROOT], user="root")
+        self._exec(worker, ["mkdir", "-p", ROOT], user="root", workdir="/")
         self.engine.run(["cp", "-", cid + ":" + ROOT], archive=recipe.archive)
         self._exec(worker, ["chown", "-R", "vscode:vscode", ROOT], user="root")
         self._exec(

@@ -473,3 +473,25 @@ def test_paused_podman_false_running_is_not_deletable(engine):
     with pytest.raises(ValueError, match="worker_must_be_stopped"):
         provider(engine).delete(CID)
     assert not any(c[0] == "rm" for c in engine.calls)
+
+
+def test_create_makes_workdir_before_using_it(engine, monkeypatch):
+    from worker_containers import SourceRecipe, ROOT as WORKDIR
+
+    recipe = SourceRecipe(
+        ROOT,
+        SOURCE,
+        json.loads(
+            (ROOT / ".devcontainer/remote-worker/devcontainer.json").read_text()
+        ),
+        b"archive",
+    )
+    engine.rows = []
+    monkeypatch.setattr(SourceRecipe, "load", classmethod(lambda cls, path: recipe))
+    provider(engine).create(ROOT, "https://headroom.example/v1")
+    create = next(c for c in engine.calls if c[0] == "create")
+    assert create[create.index("--workdir") + 1] == "/"
+    mkdir = next(c for c in engine.calls if c[0] == "exec" and "mkdir" in c)
+    assert mkdir[mkdir.index("--workdir") + 1] == "/"
+    hook = next(c for c in engine.calls if c[0] == "exec" and "-c" in c)
+    assert hook[hook.index("--workdir") + 1] == WORKDIR
