@@ -74,9 +74,37 @@ if (( config_created == 0 )); then
   printf 'Select Headroom explicitly with the configured endpoint when desired.\n'
 else
   "$HEADROOM" init --global --proxy-url "$HEADROOM_URL" codex
+  # Headroom infers authentication from the current login. A fresh worker has
+  # none yet, but must retain the recipe's policy for a later interactive login.
+  "$PYTHON" - "$CONFIG" <<'PY'
+from pathlib import Path
+import re
+import sys
+import tomllib
+
+path = Path(sys.argv[1])
+content = path.read_text()
+provider = tomllib.loads(content)["model_providers"]["headroom"]
+if provider.get("requires_openai_auth") is not True:
+    table = re.search(
+        r"(?ms)^([ \t]*\[model_providers\.headroom\][ \t]*(?:#[^\n]*)?\n)"
+        r"(.*?)(?=^[ \t]*\[|\Z)",
+        content,
+    )
+    if table is None:
+        raise SystemExit("Headroom did not emit its expected provider table")
+    body = re.sub(
+        r"(?m)^[ \t]*requires_openai_auth[ \t]*=[^\n]*(?:\n|\Z)",
+        "",
+        table[2],
+    )
+    replacement = table[1] + "requires_openai_auth = true\n" + body
+    updated = content[:table.start()] + replacement + content[table.end():]
+    tomllib.loads(updated)
+    path.write_text(updated)
+PY
 fi
 "$RTK" init --codex
 "$RTK" verify
 "$CODEX" plugin marketplace add joshyorko/plugins --ref main
 "$CODEX" plugin add luna-factory@plugins
-
