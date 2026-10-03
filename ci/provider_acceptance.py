@@ -279,6 +279,12 @@ def failure_diagnostics(args, *, scope_was_absent):
             "status": str(state.get("Status", ""))[:120],
             "error": str(state.get("Error", ""))[:4096],
         }
+        if args.engine == "podman" and state.get("Status") == "running":
+            from worker_probe import read_only_transport_probe
+
+            result["forwarded_transport"] = read_only_transport_probe(
+                args.engine, args.endpoint, identity
+            )
         # The provider's PID 1 is fixed sleep, not the setup exec or native daemon.
         result["pid1_logs_tail"] = engine(
             args, "logs", "--tail", "40", identity, timeout=15
@@ -294,6 +300,7 @@ def main():
     parser.add_argument("--endpoint", required=True)
     parser.add_argument("--owner", required=True)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--defer-failed-podman-cleanup", action="store_true")
     args = parser.parse_args()
     report = {"status": "failed", "stage": "starting", "engine": args.engine}
     started = time.monotonic()
@@ -312,12 +319,19 @@ def main():
                 args, scope_was_absent=report.get("worker_scope_was_absent", False)
             )
         try:
-            if report.get("worker_scope_was_absent", False):
+            if not report.get("worker_scope_was_absent", False):
+                report["cleanup"] = {"status": "skipped_unowned_scope"}
+            elif (
+                args.defer_failed_podman_cleanup
+                and args.engine == "podman"
+                and report["status"] == "failed"
+                and report.get("failure_diagnostics", {}).get("container_id")
+            ):
+                report["cleanup"] = {"status": "deferred_to_host_diagnostics"}
+            else:
                 report["cleanup"] = cleanup(
                     ROOT, args.engine, args.endpoint, args.owner
                 )
-            else:
-                report["cleanup"] = {"status": "skipped_unowned_scope"}
         except Exception as error:
             report["status"] = "failed"
             report["cleanup_error"] = f"{type(error).__name__}: {error}"

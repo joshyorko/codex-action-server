@@ -40,6 +40,9 @@ def command_stage(args) -> str:
         return "recipe_start_hook"
     if any("scripts/remote/verify.sh" in part for part in args):
         return "recipe_verify"
+    for executable in ("mkdir", "chown", "touch", "test"):
+        if executable in args:
+            return "worker_" + executable
     return "worker_exec"
 
 
@@ -69,6 +72,46 @@ def trace_engine_run(original):
             raise
 
     return traced
+
+
+def read_only_transport_probe(engine, endpoint, identity):
+    """Compare two fixed read-only commands; discard all copied source bytes."""
+    from worker_containers import ContainerEngine, ROOT as worker_root
+
+    if not re.fullmatch(r"[0-9a-f]{64}", identity):
+        raise ValueError("Transport comparison requires a full container identity")
+    selected = ContainerEngine(engine, endpoint)
+    result = {"container_id": identity}
+    for name, operation in (
+        ("source_directory", ["cp", identity + ":" + worker_root, "-"]),
+        (
+            "exec_true",
+            ["exec", "--user", "root", "--workdir", "/", identity, "/bin/true"],
+        ),
+    ):
+        try:
+            process = subprocess.run(
+                selected.command(operation),
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.PIPE,
+                text=True,
+                timeout=10,
+                check=False,
+            )
+            result[name] = {
+                "returncode": process.returncode,
+                "stderr": redact_output(process.stderr),
+            }
+            if name == "source_directory":
+                result[name]["exists"] = process.returncode == 0
+        except subprocess.TimeoutExpired as error:
+            result[name] = {
+                "timeout_seconds": 10,
+                "stderr": redact_output(error.stderr),
+            }
+        except OSError as error:
+            result[name] = {"error": type(error).__name__}
+    return result
 
 
 def main():

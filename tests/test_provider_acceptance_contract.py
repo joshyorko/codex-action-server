@@ -215,7 +215,9 @@ def test_failure_diagnostics_keep_only_state_and_bounded_pid1_logs(monkeypatch):
 
     monkeypatch.setattr(checks, "engine", engine)
     assert hasattr(checks, "failure_diagnostics"), "Failure inspection is missing"
-    result = checks.failure_diagnostics(object(), scope_was_absent=True)
+    result = checks.failure_diagnostics(
+        type("Args", (), {"engine": "podman"})(), scope_was_absent=True
+    )
     assert result == {
         "container_id": identity,
         "state": {"status": "created", "error": "start failed"},
@@ -345,3 +347,81 @@ def test_worker_exec_uses_source_cwd_instead_of_pid1_cwd(monkeypatch):
         "scripts/remote/setup.sh",
     )
     assert result[result.index("--workdir") + 1] == worker_root
+
+
+@pytest.mark.parametrize("executable", ["mkdir", "chown", "touch", "test"])
+def test_probe_names_fixed_worker_preparation_commands(executable):
+    probe = load_probe()
+    assert (
+        probe.command_stage(["exec", "--user", "root", "a" * 64, executable])
+        == "worker_" + executable
+    )
+
+
+def test_read_only_transport_probe_uses_fixed_commands_and_full_id(monkeypatch):
+    from types import SimpleNamespace
+    from worker_containers import ROOT as worker_root
+
+    probe = load_probe()
+    calls = []
+
+    def completed(args, **kwargs):
+        calls.append((args, kwargs))
+        return SimpleNamespace(returncode=0, stderr="")
+
+    monkeypatch.setattr(probe.subprocess, "run", completed)
+    assert hasattr(
+        probe, "read_only_transport_probe"
+    ), "Transport comparison is missing"
+    identity = "a" * 64
+    result = probe.read_only_transport_probe(
+        "podman", "unix:///explicit.sock", identity
+    )
+    assert result["source_directory"]["returncode"] == 0
+    assert result["exec_true"]["returncode"] == 0
+    assert [call[0] for call in calls] == [
+        [
+            "podman",
+            "--remote",
+            "--url",
+            "unix:///explicit.sock",
+            "cp",
+            identity + ":" + worker_root,
+            "-",
+        ],
+        [
+            "podman",
+            "--remote",
+            "--url",
+            "unix:///explicit.sock",
+            "exec",
+            "--user",
+            "root",
+            "--workdir",
+            "/",
+            identity,
+            "/bin/true",
+        ],
+    ]
+    assert all(call[1]["timeout"] == 10 for call in calls)
+    assert all(call[1]["stdout"] == subprocess.DEVNULL for call in calls)
+
+
+def test_read_only_transport_probe_records_timeout_without_retry(monkeypatch):
+    probe = load_probe()
+    calls = []
+
+    def timed_out(args, **kwargs):
+        calls.append(args)
+        raise subprocess.TimeoutExpired(args, 10, stderr=b"device code: ABCD-EFGH")
+
+    monkeypatch.setattr(probe.subprocess, "run", timed_out)
+    assert hasattr(
+        probe, "read_only_transport_probe"
+    ), "Transport comparison is missing"
+    result = probe.read_only_transport_probe(
+        "podman", "unix:///explicit.sock", "a" * 64
+    )
+    assert len(calls) == 2
+    assert result["exec_true"]["timeout_seconds"] == 10
+    assert "ABCD-EFGH" not in result["exec_true"]["stderr"]

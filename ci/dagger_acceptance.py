@@ -155,6 +155,11 @@ async def acceptance(snapshot: Path, args, owner: str) -> dict:
                     owner,
                     "--output",
                     "/evidence/result.json",
+                    *(
+                        ["--defer-failed-podman-cleanup"]
+                        if args.engine == "podman"
+                        else []
+                    ),
                 ]
             )
         )
@@ -212,6 +217,23 @@ def main() -> int:
                 )
                 report["acceptance"] = native
                 if native.get("status") != "passed":
+                    if (
+                        native.get("cleanup", {}).get("status")
+                        == "deferred_to_host_diagnostics"
+                    ):
+                        from worker_probe import read_only_transport_probe
+
+                        expected = full_container_id(native.get("failure_diagnostics"))
+                        current = worker_status(
+                            snapshot, args.engine, endpoint, args.owner
+                        )
+                        if full_container_id(current) != expected:
+                            raise RuntimeError(
+                                "Worker changed before host transport comparison"
+                            )
+                        report["host_transport"] = read_only_transport_probe(
+                            args.engine, endpoint, expected
+                        )
                     raise RuntimeError("Real-provider acceptance failed; see its stage")
             finally:
                 report["cleanup"] = cleanup(snapshot, args.engine, endpoint, args.owner)
