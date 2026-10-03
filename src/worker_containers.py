@@ -395,6 +395,6 @@ class ContainerProvider:
 
     def delete(self, expected_container_id):
         worker = self._pinned(expected_container_id)
-        if worker.running:
+        if worker.running or worker.paused or worker.restarting:
             raise WorkerError("worker_must_be_stopped")
         self.engine.run(["rm", "--volumes", worker.container_id])

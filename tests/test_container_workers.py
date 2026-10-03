@@ -466,3 +466,10 @@ def test_paused_or_restarting_is_not_reported_stopped(engine, state):
         provider(engine).stop(CID)
     with pytest.raises(ValueError, match="worker_must_be_stopped"):
         provider(engine).delete(CID)
+
+
+def test_paused_podman_false_running_is_not_deletable(engine):
+    engine.rows[0]["State"].update(Running=False, Paused=True)
+    with pytest.raises(ValueError, match="worker_must_be_stopped"):
+        provider(engine).delete(CID)
+    assert not any(c[0] == "rm" for c in engine.calls)

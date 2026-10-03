@@ -23,8 +23,9 @@ jobs:
         engine: [docker, podman]
     env:
       ACCEPTANCE_OWNER: gha-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.engine }}
-      ACCEPTANCE_OUTPUT: ${{ runner.temp }}/provider-acceptance-${{ matrix.engine }}.json
     steps:
+      - name: Set runner output path
+        run: echo "ACCEPTANCE_OUTPUT=$RUNNER_TEMP/provider-acceptance-${{ matrix.engine }}.json" >> "$GITHUB_ENV"
       - uses: actions/checkout@v4
         with:
           persist-credentials: false

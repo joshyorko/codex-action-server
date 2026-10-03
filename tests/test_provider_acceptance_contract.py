@@ -137,3 +137,41 @@ def test_cleanup_stops_running_worker_before_exact_delete(tmp_path):
         ["delete", "--container-id", identity],
         ["status"],
     ]
+
+
+def test_workflow_job_env_uses_only_available_github_contexts():
+    import re
+
+    content = (ROOT / ".github/workflows/provider-acceptance.yml").read_text()
+    job_env = content.split("    env:\n", 1)[1].split("    steps:\n", 1)[0]
+    contexts = set(re.findall(r"\$\{\{\s*([a-zA-Z_]+)\.", job_env))
+    # GitHub's contexts reference excludes runner at jobs.<job_id>.env.
+    assert contexts <= {
+        "github",
+        "needs",
+        "strategy",
+        "matrix",
+        "vars",
+        "secrets",
+        "inputs",
+    }
+    assert "ACCEPTANCE_OUTPUT=$RUNNER_TEMP/" in content
+
+
+def test_driver_rejects_owner_longer_than_provider_limit():
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(ROOT / "ci/dagger_acceptance.py"),
+            "--engine",
+            "docker",
+            "--socket",
+            "/unused.sock",
+            "--owner",
+            "a" * 65,
+        ],
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 2
+    assert "owner must be a unique run-scoped identifier" in result.stderr
