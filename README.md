@@ -42,7 +42,9 @@ Devsy list/status JSON is authoritative for workspace identity/readiness. Devsy'
 generated SSH config supplies its route. This release accepts existing loopback
 TCP routes only and expected user `vscode` by default; missing routes and
 ProxyCommand/ProxyJump fail closed. Keep the operator's Devsy desktop/workspace
-connection running. Remote socket identity is discovered using native daemon
+connection running. Selected workspace SSH configuration is honored and its route is pinned across
+probe/proxy. Each SSH command checks the remote workspace UID/ID before invoking
+Codex, rejecting stale or wrong-context aliases. Remote socket identity is discovered using native daemon
 version, then the native proxy carries WebSocket RPC over SSH.
 
 ## Typed surface
@@ -120,5 +122,5 @@ See [design and evidence](docs/DESIGN.md) and [operator sequence](docs/OPERATION
 mcp-tunnel-kit forwards native HTTP to this `/mcp` endpoint; it does not translate
 Codex actions into agent messages. Set CODEX_MCP_URL to the selected loopback port.
 Friday can use that same MCP URL. This repository owns the typed implementation;
-Friday's legacy copy is temporary rollback material only. No live cutover or merge
+Friday removes its private copy and keeps only a standalone-client compatibility shim. No live cutover or merge
 is implied by a passing test or a draft PR.

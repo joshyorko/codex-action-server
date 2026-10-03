@@ -81,7 +81,15 @@ def reserve(root, key, payload):
             fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
             locked = True
         except BlockingIOError:
-            yield Receipt(path, {"request_id": key, "state": "in_progress"}, True)
+            try:
+                data = json.loads(path.read_text())
+            except FileNotFoundError:
+                raise ValueError("request_id_reservation_pending") from None
+            if data.get("fingerprint") != fingerprint:
+                raise ValueError("request_id_conflict")
+            if data.get("state") == "unknown":
+                data["state"] = "in_progress"
+            yield Receipt(path, data, True)
             return
         if path.exists():
             data = json.loads(path.read_text())

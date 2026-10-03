@@ -134,7 +134,26 @@ def _devsy(config):
         raise ResolutionError("workspace_not_running")
     # Devsy owns this alias and port. Never synthesize localhost:port or start it.
     alias = workspace + ".devsy"
-    ssh = _run(["ssh", "-G", "-o", "BatchMode=yes", "-o", "ForwardAgent=no", alias])
+    ssh_file = row.get("sshConfigIncludePath") or row.get("sshConfigPath")
+    config_args = []
+    if ssh_file:
+        if not isinstance(ssh_file, str):
+            raise ResolutionError("invalid_ssh_configuration_path")
+        ssh_file = str(Path(ssh_file).expanduser())
+        validate_cwd(ssh_file)
+        config_args = ["-F", ssh_file]
+    ssh = _run(
+        [
+            "ssh",
+            "-G",
+            *config_args,
+            "-o",
+            "BatchMode=yes",
+            "-o",
+            "ForwardAgent=no",
+            alias,
+        ]
+    )
     fields = dict(line.split(None, 1) for line in ssh.splitlines() if " " in line)
     if fields.get("user") != config.get("user", "vscode"):
         raise ResolutionError("ssh_user_mismatch")
@@ -152,7 +171,27 @@ def _devsy(config):
         or fields.get("proxyjump", "none") != "none"
     ):
         raise ResolutionError("devsy_active_tcp_route_required")
-    return alias
+    uid = _name(row.get("uid"))
+    options = (
+        *config_args,
+        "-o",
+        "Hostname=" + fields["hostname"],
+        "-p",
+        str(port),
+        "-l",
+        fields["user"],
+        "-o",
+        "ProxyCommand=none",
+        "-o",
+        "ProxyJump=none",
+        "-o",
+        "RemoteCommand=none",
+        "-o",
+        "ClearAllForwardings=yes",
+        "-o",
+        "PermitLocalCommand=no",
+    )
+    return alias, options, uid, workspace
 
 
 def resolve_target(name: str) -> Target:
@@ -189,6 +228,7 @@ def resolve_target(name: str) -> Target:
     socket = config.get("socket_path")
     if socket is not None:
         validate_cwd(socket)
+    options, uid, workspace = (), None, None
     if transport == "local":
         destination = "local"
     elif transport == "ssh":
@@ -196,10 +236,10 @@ def resolve_target(name: str) -> Target:
         if destination == "local":
             raise ResolutionError("invalid_ssh_destination")
     elif transport == "devsy":
-        destination = _devsy(config)
+        destination, options, uid, workspace = _devsy(config)
     else:
         raise ResolutionError("unsupported_target_transport")
-    return Target(destination, binary, socket, name)
+    return Target(destination, binary, socket, name, options, uid, workspace)
 
 
 def validate_cwd(cwd: str) -> str:

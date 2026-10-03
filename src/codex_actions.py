@@ -507,6 +507,7 @@ def _dispatch_run(operation, payload, callback):
                     result["dispatch"] = receipt.public()
                     return Response(result=_envelope(operation, client, result))
             except (
+                ActionError,
                 RpcError,
                 OSError,
                 TimeoutError,

@@ -249,6 +249,7 @@ class ActionServerValidationTests(unittest.TestCase):
     def test_real_loopback_mcp_uses_typed_actions_and_isolated_native_fixture(self):
         try:
             import anyio
+            import httpx
             from mcp import ClientSession
             from mcp.client.streamable_http import streamable_http_client
         except ImportError as error:
@@ -313,9 +314,12 @@ class ActionServerValidationTests(unittest.TestCase):
                 self._wait_for_loopback(process, port, server_log)
 
                 async def exercise() -> None:
-                    async with streamable_http_client(
-                        f"http://127.0.0.1:{port}/mcp"
-                    ) as streams:
+                    async with (
+                        httpx.AsyncClient(trust_env=False) as http,
+                        streamable_http_client(
+                            f"http://127.0.0.1:{port}/mcp", http_client=http
+                        ) as streams,
+                    ):
                         read_stream, write_stream = streams[:2]
                         async with ClientSession(
                             read_stream,

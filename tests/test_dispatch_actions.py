@@ -55,3 +55,26 @@ def test_missing_ack_stays_unknown_and_same_key_never_dispatches_again(
         module, "Client", side_effect=AssertionError("duplicate execution")
     ):
         assert module.start_turn(payload).result.result["dispatch"]["replayed"]
+
+
+def test_post_ack_guard_error_preserves_receipt(monkeypatch):
+    from test_control_actions import ControlClient
+
+    module = load_actions()
+    client = ControlClient(None)
+    original = client.request
+
+    def request(method, params):
+        if method == "thread/read":
+            return {"thread": {"id": "different", "cwd": "/wrong"}}
+        return original(method, params)
+
+    client.request = request
+    payload = module.CreateThreadAndStartTurnRequest(
+        target="local", cwd="/trusted", text="test", wait_for_completion=True
+    )
+    with patch.object(module, "Client", return_value=client):
+        result = module.create_thread_and_start_turn(payload).result.result
+    assert result["dispatch"]["thread_id"]
+    assert result["dispatch"]["turn_id"]
+    assert result["dispatch"]["error_code"]

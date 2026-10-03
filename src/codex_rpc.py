@@ -79,6 +79,9 @@ class Target:
     codex_bin: str = "codex"
     socket_path: str | None = None
     logical_name: str | None = None
+    ssh_options: tuple[str, ...] = ()
+    workspace_uid: str | None = None
+    workspace_id: str | None = None
 
     def __post_init__(self):
         if (
@@ -94,6 +97,16 @@ class Target:
         command = [self.codex_bin, *args]
         if self.target == "local":
             return command
+        remote = shlex.join(command)
+        if self.workspace_uid is not None:
+            remote = (
+                'test "$DEVSY_WORKSPACE_UID" = '
+                + shlex.quote(self.workspace_uid)
+                + ' && test "$DEVSY_WORKSPACE_ID" = '
+                + shlex.quote(self.workspace_id or "")
+                + " && exec "
+                + remote
+            )
         return [
             "ssh",
             "-T",
@@ -101,8 +114,9 @@ class Target:
             "BatchMode=yes",
             "-o",
             "ForwardAgent=no",
+            *self.ssh_options,
             self.target,
-            shlex.join(command),
+            remote,
         ]
 
 

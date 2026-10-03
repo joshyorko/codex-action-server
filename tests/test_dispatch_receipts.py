@@ -51,3 +51,12 @@ def test_lock_prevents_concurrent_same_key_execution(tmp_path):
         with d.reserve(tmp_path, "job-1", {"text": "a"}) as receipt:
             assert receipt.replayed
             assert receipt.data["state"] == "in_progress"
+
+
+def test_concurrent_different_payload_conflicts(tmp_path):
+    import dispatch_receipts as d
+
+    with d.reserve(tmp_path, "job-1", {"text": "a"}):
+        with pytest.raises(ValueError, match="request_id_conflict"):
+            with d.reserve(tmp_path, "job-1", {"text": "b"}):
+                pass

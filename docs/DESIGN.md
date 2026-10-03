@@ -40,7 +40,11 @@ configuration. It does NOT invoke workspace up/start/ssh, repair SSH config, or
 select the most recently used workspace. Zero/multiple matches fail closed.
 A source selector can tolerate workspace-name changes only when exactly one
 workspace matches its context/provider/source. Exact workspace + optional UID is
-the recommended tonight configuration. The HTTP caller supplies neither selector
+the recommended tonight configuration. The resolver honors the selected workspace SSH config/include path, freezes the
+TCP address/port/user for the native probe and proxy, and checks remote
+DEVSY_WORKSPACE_UID/ID on each actual SSH connection before executing Codex.
+Same-named workspaces in another context therefore fail before native RPC.
+The HTTP caller supplies neither selector
 nor SSH destination. ProxyCommand routes are deliberately unsupported in this
 first slice because they may start lifecycle/helpers; diagnostics explain this.
 
@@ -94,7 +98,9 @@ transparent mutation retries (duplicate work); full task registry (Codex owns it
 
 ## Migration boundary
 
-Friday's current implementation stays a frozen rollback copy until operator
-cutover is verified. A consumer installer points at a pinned standalone checkout;
-no permanent dual maintenance. Remove the frozen copy in a follow-up after both
-local and remote acceptance. No live services are changed by this branch.
+Friday removes its private action package and distribution ownership. A tiny
+scripts/codex_rpc.py compatibility entrypoint loads the standalone RPC client from
+an installed distribution or operator-pinned CODEX_ACTION_SERVER_ROOT. The old
+installer is a no-op migration notice. Friday consumes an independently managed
+MCP URL via its native configuration command. Rollback uses the previously deployed
+checkout, not a second maintained implementation. No live services are changed.
