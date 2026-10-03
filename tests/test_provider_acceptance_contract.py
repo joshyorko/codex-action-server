@@ -516,3 +516,20 @@ def test_controller_returns_same_full_acceptance_report(monkeypatch, tmp_path):
     assert result["controller_id"] == identity
     assert result["test_transport"] == "direct_bind_socket"
     assert calls[-1][-3:] == ["rm", "--force", identity]
+
+
+def test_recipe_image_identity_allows_podman_tag_normalization():
+    checks = load_live_checks()
+    assert hasattr(checks, "image_identity"), "Digest-aware image comparison is missing"
+    digest = "sha256:" + "a" * 64
+    expected = "registry.example:5000/team/worker:secure@" + digest
+    actual = "registry.example:5000/team/worker@" + digest
+    assert checks.image_identity(expected) == checks.image_identity(actual)
+    assert checks.image_identity(expected) != checks.image_identity(
+        "other/worker@" + digest
+    )
+    assert checks.image_identity(expected) != checks.image_identity(
+        "registry.example:5000/team/worker@sha256:" + "b" * 64
+    )
+    with pytest.raises(ValueError):
+        checks.image_identity("registry.example:5000/team/worker:secure")

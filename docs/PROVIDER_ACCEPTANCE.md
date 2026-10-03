@@ -119,9 +119,11 @@ python ci/dagger_acceptance.py --cleanup-only \
   --engine docker --socket /var/run/docker.sock --owner THE_RECORDED_OWNER
 ```
 
-The inner live test has a 30-minute deadline; the outer Dagger call has a
-35-minute deadline; the GitHub job has a 45-minute deadline. Individual provider
-commands also have timeouts. A failed or interrupted create is reconciled before
+The inner live test has a 30-minute deadline. The Dagger build/query has a
+35-minute timeout; a Podman controller already handed to its host thread remains
+bounded by its 1900-second wait and per-command timeouts while cleanup finishes.
+The GitHub job has a 45-minute deadline. Individual provider commands also have
+timeouts. A failed or interrupted create is reconciled before
 cleanup, never replayed automatically.
 
 ## Caching boundaries

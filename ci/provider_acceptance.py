@@ -12,6 +12,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import re
 import signal
 import subprocess
 import sys
@@ -120,6 +121,19 @@ def smoke(args, worker, target_file):
     return target, evidence
 
 
+def image_identity(reference):
+    """Tags may be omitted by inspect; repository and pinned digest must match."""
+    repository, separator, digest = reference.partition("@")
+    if not separator or not re.fullmatch(r"sha256:[0-9a-f]{64}", digest):
+        raise ValueError("Expected a digest-pinned image reference")
+    tag_separator = repository.rfind(":")
+    if tag_separator > repository.rfind("/"):
+        repository = repository[:tag_separator]
+    if not repository:
+        raise ValueError("Expected an image repository")
+    return repository, digest
+
+
 def check_isolation(args, worker):
     inspect = json.loads(engine(args, "inspect", full_container_id(worker)))[0]
     if inspect.get("Mounts"):
@@ -173,7 +187,9 @@ def run(args, report):
         if first["source_commit"] != report["source_commit"]:
             raise RuntimeError("Worker source SHA differs from the supplied checkout")
         report["isolation"] = check_isolation(args, first)
-        if report["isolation"]["image_reference"] != recipe["image"]:
+        if image_identity(report["isolation"]["image_reference"]) != image_identity(
+            recipe["image"]
+        ):
             raise RuntimeError("Worker did not use the reviewed recipe image")
         report["stage"] = "native_read_only"
         stale_target, report["first_rpc"] = smoke(args, first, target_file)
@@ -282,7 +298,7 @@ def failure_diagnostics(args, *, scope_was_absent):
         if args.engine == "podman" and state.get("Status") == "running":
             from worker_probe import read_only_transport_probe
 
-            result["forwarded_transport"] = read_only_transport_probe(
+            result["controller_transport_probe"] = read_only_transport_probe(
                 args.engine, args.endpoint, identity
             )
         # The provider's PID 1 is fixed sleep, not the setup exec or native daemon.
