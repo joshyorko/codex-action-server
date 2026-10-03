@@ -1,0 +1,10 @@
+**
+!Containerfile
+!package.yaml
+!src/
+!src/*.py
+!scripts/
+!scripts/run-container.sh
+!scripts/preflight.py
+!scripts/container_health.py
+!scripts/install_runtime_transport_patch.py
