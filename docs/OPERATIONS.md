@@ -1,4 +1,4 @@
-# Tonight: standalone cutover, existing Codex untouched
+# Standalone cutover, existing Codex untouched
 
 The three PRs are review candidates, not merged. Use the exact SHAs in the handoff
 as STANDALONE_SHA, FRIDAY_SHA, and TUNNEL_KIT_SHA. Run on Dakota as kdlocpanda.
@@ -127,27 +127,23 @@ is a thin loader and its former installer only explains migration.
 
 ## 6. Only after Dakota passes: configure/prove Devsy read-only
 
-Devsy desktop/workspace connection must already be running. Choose a unique
-workspace from authoritative JSON, not the most recently used one. This command
-selects exactly one Kubernetes workspace sourced from Friday, matching tonight's
-recorded topology. It fails rather than guessing when zero/multiple candidates exist.
+Devsy's workspace connection must already be running. The canonical recipe and
+create/resume workflow are in [REMOTE_WORKERS.md](REMOTE_WORKERS.md). Configure a
+source-selected target using config/targets.example.json: exact source
+https://github.com/joshyorko/codex-action-server.git, context, and provider.
+
+Inspect authoritative inventory first:
 
 ```bash
-export CODEX_ACTION_TARGETS="$HOME/.config/codex-action-server/targets.json"
-devsy --context default --result-format json workspace list --skip-pro > /tmp/codex-devsy-workspaces.json
-python3 - <<'PY'
-import json, os
-from pathlib import Path
-rows=json.loads(Path('/tmp/codex-devsy-workspaces.json').read_text())
-matches=[r for r in rows if r.get('context')=='default' and r.get('provider',{}).get('name')=='kubernetes' and r.get('source',{}).get('gitRepository')=='https://github.com/joshyorko/friday.git']
-if len(matches)!=1: raise SystemExit('Expected one matching workspace; inspect Devsy selection, do not guess')
-r=matches[0]
-p=Path(os.environ['CODEX_ACTION_TARGETS']); data=json.loads(p.read_text())
-data['targets']['devsy']={'transport':'devsy','context':'default','provider':'kubernetes','workspace':r['id'],'workspace_uid':r['uid'],'user':'vscode','codex_bin':'/home/vscode/.local/bin/codex'}
-tmp=p.with_suffix('.pending'); tmp.write_text(json.dumps(data,indent=2)+'\n'); tmp.replace(p)
-print('Configured logical devsy from authoritative workspace identity:',r['id'])
-PY
+devsy --context default --result-format json workspace list --skip-pro
 ```
+
+Select exactly one match. Do not pin a transient workspace name or UID when the
+operator wants delete/recreate tolerance. The resolver obtains the current ID,
+UID, and route each time and checks that identity on the actual remote connection.
+Zero/multiple candidates fail closed. Existing Friday-sourced workspaces are
+historical deployments: do not recreate or stop them during a source-code port.
+Use an explicitly pinned legacy target only if the operator chooses to retain it.
 
 Target configuration is read per request: no server/tunnel/native restart needed.
 From ChatGPT call list_targets, inspect_target(devsy), read_server_diagnostics(devsy),
@@ -173,3 +169,4 @@ on uncertainty. No blind resubmission with a new ID.
 
 Native Unix-socket and hosted remote proofs are operator acceptance on Dakota.
 They were not performed by changing your live system from this VM.
+
