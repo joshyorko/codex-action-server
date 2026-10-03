@@ -251,6 +251,36 @@ def run(args, report):
         report["stage"] = "complete"
 
 
+def failure_diagnostics(args):
+    """Inspect only this scope's full ID; never export Config, Env, or exec logs."""
+    result = {}
+    try:
+        worker = cli(args, "status", timeout=15)
+        if worker is None:
+            return {"worker": "absent"}
+        identity = full_container_id(worker)
+        result["container_id"] = identity
+        rows = json.loads(engine(args, "container", "inspect", identity, timeout=15))
+        if (
+            not isinstance(rows, list)
+            or len(rows) != 1
+            or rows[0].get("Id") != identity
+        ):
+            raise RuntimeError("Failure inspection returned a different identity")
+        state = rows[0].get("State", {})
+        result["state"] = {
+            "status": str(state.get("Status", ""))[:120],
+            "error": str(state.get("Error", ""))[:4096],
+        }
+        # The provider's PID 1 is fixed sleep, not the setup exec or native daemon.
+        result["pid1_logs_tail"] = engine(
+            args, "logs", "--tail", "40", identity, timeout=15
+        )[-4096:]
+    except Exception as error:
+        result["diagnostic_error"] = f"{type(error).__name__}: {error}"[:1000]
+    return result
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--engine", required=True, choices=["docker", "podman"])
@@ -270,6 +300,8 @@ def main():
         report["error"] = f"{type(error).__name__}: {error}"
     finally:
         signal.alarm(0)
+        if report["status"] != "passed":
+            report["failure_diagnostics"] = failure_diagnostics(args)
         try:
             report["cleanup"] = cleanup(ROOT, args.engine, args.endpoint, args.owner)
         except Exception as error:

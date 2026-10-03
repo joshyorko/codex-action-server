@@ -175,3 +175,108 @@ def test_driver_rejects_owner_longer_than_provider_limit():
     )
     assert result.returncode == 2
     assert "owner must be a unique run-scoped identifier" in result.stderr
+
+
+def load_live_checks():
+    load_driver()
+    spec = importlib.util.spec_from_file_location(
+        "provider_acceptance", ROOT / "ci/provider_acceptance.py"
+    )
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def test_failure_diagnostics_keep_only_state_and_bounded_pid1_logs(monkeypatch):
+    import json
+
+    checks = load_live_checks()
+    identity = "a" * 64
+    monkeypatch.setattr(checks, "cli", lambda *a, **kw: {"container_id": identity})
+    calls = []
+
+    def engine(args, *operation, **kwargs):
+        calls.append((operation, kwargs))
+        if operation[:2] == ("container", "inspect"):
+            return json.dumps(
+                [
+                    {
+                        "Id": identity,
+                        "State": {
+                            "Status": "created",
+                            "Error": "start failed",
+                            "Secret": "hide",
+                        },
+                        "Config": {"Env": ["SECRET=do-not-export"]},
+                    }
+                ]
+            )
+        return "x" * 10000
+
+    monkeypatch.setattr(checks, "engine", engine)
+    assert hasattr(checks, "failure_diagnostics"), "Failure inspection is missing"
+    result = checks.failure_diagnostics(object())
+    assert result == {
+        "container_id": identity,
+        "state": {"status": "created", "error": "start failed"},
+        "pid1_logs_tail": "x" * 4096,
+    }
+    assert "do-not-export" not in json.dumps(result)
+    assert calls == [
+        (("container", "inspect", identity), {"timeout": 15}),
+        (("logs", "--tail", "40", identity), {"timeout": 15}),
+    ]
+
+
+def test_failure_diagnostics_do_not_guess_missing_identity(monkeypatch):
+    checks = load_live_checks()
+    monkeypatch.setattr(checks, "cli", lambda *a, **kw: None)
+    assert hasattr(checks, "failure_diagnostics"), "Failure inspection is missing"
+    assert checks.failure_diagnostics(object()) == {"worker": "absent"}
+
+
+def load_probe():
+    path = ROOT / "ci/worker_probe.py"
+    assert path.is_file(), "The CI-only real CLI diagnostic probe is missing"
+    spec = importlib.util.spec_from_file_location("worker_probe", path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def test_probe_redacts_credentials_and_bounds_engine_output():
+    probe = load_probe()
+    output = "install failed\nAuthorization: Bearer do-not-export\nAPI_KEY=hidden\n"
+    output += "device code: ABCD-EFGH\n" + "x" * 8000
+    cleaned = probe.redact_output(output)
+    assert len(cleaned) <= 1600
+    assert "do-not-export" not in cleaned
+    assert "hidden" not in cleaned
+    assert "ABCD-EFGH" not in cleaned
+
+
+def test_probe_preserves_engine_error_and_surfaces_hook_stage(capsys):
+    import json
+    from worker_containers import WorkerError
+
+    probe = load_probe()
+    native_error = WorkerError("container_command_failed:exec")
+
+    def failing_engine(self, args, **kwargs):
+        try:
+            raise subprocess.CalledProcessError(
+                1, ["podman", "exec"], output="installing", stderr="brew install failed"
+            )
+        except subprocess.CalledProcessError:
+            raise native_error from None
+
+    traced = probe.trace_engine_run(failing_engine)
+    with pytest.raises(WorkerError) as caught:
+        traced(object(), ["exec", "id", "/bin/sh", "-c", "/bin/bash scripts/remote/setup.sh"])
+    assert caught.value is native_error
+    diagnostic = json.loads(capsys.readouterr().err.strip())
+    assert diagnostic["stage"] == "recipe_create_hook"
+    assert diagnostic["operation"] == "exec"
+    assert diagnostic["returncode"] == 1
+    assert diagnostic["stderr"] == "brew install failed"
+    assert diagnostic["stdout"] == "installing"
