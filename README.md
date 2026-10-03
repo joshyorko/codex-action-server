@@ -9,7 +9,9 @@ or agent framework. Codex remains responsible for execution and authorization.
 ## Run independently
 
 Requires Linux/Python3.12, Actions Runtime1.0.1 (`action-server`), and a running
-native Codex daemon. SSH and Devsy1.19 are needed only for remote targets.
+native Codex daemon. SSH is needed for SSH/Devsy targets; Devsy1.19 is needed
+only for Devsy targets. Container targets use an explicitly selected Docker or
+Podman CLI and local engine socket. Local-only configuration needs no provider CLI.
 
 ```sh
 cp config/targets.example.json config/targets.local.json
@@ -25,6 +27,10 @@ MCP is `/mcp`, OpenAPI is `/openapi.json`. The launcher starts only this API.
 It never starts, restarts or authenticates Codex or Devsy.
 
 ## Targets
+
+For the production API image and Linux Compose mount/network contract, see
+[container deployment](docs/CONTAINERS.md). The tunnel kit owns the composed
+Executor and tunnel-client deployment.
 
 `list_targets` lists configured logical names. `inspect_target({payload:{target:
 "devsy"}})` resolves without connecting to native Codex. Then call
@@ -134,7 +140,8 @@ and rollback. Templates are not automatically installed or activated.
 
 ## Remote native Codex worker recipe
 
-[Remote workers](docs/REMOTE_WORKERS.md) owns the Devsy create/resume workflow,
+[Remote workers](docs/REMOTE_WORKERS.md) covers Devsy create/resume and explicit
+local Podman/Docker worker lifecycle,
 `.devcontainer/remote-worker/devcontainer.json`, setup/verification, Headroom/RTK,
 plugins, and native daemon startup. Friday only consumes the central typed API.
 The worker does not run another Codex Action Server. Source-based discovery keeps

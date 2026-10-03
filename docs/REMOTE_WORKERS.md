@@ -156,6 +156,11 @@ central service. The Podman API socket must already be enabled by the operator,
 for example with `systemctl --user enable --now podman.socket`. The provider never
 enables services, adds groups, configures credentials, or tries a different engine.
 
+This container-provider path currently runs in the host-installed central API.
+The separately packaged API image does not yet include the selected engine CLI
+or an engine-socket mount contract; enabling that is a packaging follow-up.
+Do not add a socket mount to that image without its operator security review.
+
 An engine socket grants control over that engine's containers and host mounts.
 Keep it and the central target file operator-owned; never expose engine selection,
 endpoint, image, source, or worker names as caller-controlled action parameters.
