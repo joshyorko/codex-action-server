@@ -215,7 +215,7 @@ def test_failure_diagnostics_keep_only_state_and_bounded_pid1_logs(monkeypatch):
 
     monkeypatch.setattr(checks, "engine", engine)
     assert hasattr(checks, "failure_diagnostics"), "Failure inspection is missing"
-    result = checks.failure_diagnostics(object())
+    result = checks.failure_diagnostics(object(), scope_was_absent=True)
     assert result == {
         "container_id": identity,
         "state": {"status": "created", "error": "start failed"},
@@ -232,7 +232,9 @@ def test_failure_diagnostics_do_not_guess_missing_identity(monkeypatch):
     checks = load_live_checks()
     monkeypatch.setattr(checks, "cli", lambda *a, **kw: None)
     assert hasattr(checks, "failure_diagnostics"), "Failure inspection is missing"
-    assert checks.failure_diagnostics(object()) == {"worker": "absent"}
+    assert checks.failure_diagnostics(object(), scope_was_absent=True) == {
+        "worker": "absent"
+    }
 
 
 def load_probe():
@@ -247,9 +249,10 @@ def load_probe():
 def test_probe_redacts_credentials_and_bounds_engine_output():
     probe = load_probe()
     output = "install failed\nAuthorization: Bearer do-not-export\nAPI_KEY=hidden\n"
-    output += "device code: ABCD-EFGH\n" + "x" * 8000
+    output += "device code: ABCD-EFGH\n"
     cleaned = probe.redact_output(output)
-    assert len(cleaned) <= 1600
+    assert len(probe.redact_output("x" * 8000)) == 1600
+    assert "install failed" in cleaned
     assert "do-not-export" not in cleaned
     assert "hidden" not in cleaned
     assert "ABCD-EFGH" not in cleaned
@@ -272,7 +275,10 @@ def test_probe_preserves_engine_error_and_surfaces_hook_stage(capsys):
 
     traced = probe.trace_engine_run(failing_engine)
     with pytest.raises(WorkerError) as caught:
-        traced(object(), ["exec", "id", "/bin/sh", "-c", "/bin/bash scripts/remote/setup.sh"])
+        traced(
+            object(),
+            ["exec", "id", "/bin/sh", "-c", "/bin/bash scripts/remote/setup.sh"],
+        )
     assert caught.value is native_error
     diagnostic = json.loads(capsys.readouterr().err.strip())
     assert diagnostic["stage"] == "recipe_create_hook"
@@ -280,3 +286,47 @@ def test_probe_preserves_engine_error_and_surfaces_hook_stage(capsys):
     assert diagnostic["returncode"] == 1
     assert diagnostic["stderr"] == "brew install failed"
     assert diagnostic["stdout"] == "installing"
+
+
+def test_failure_diagnostics_skip_unproven_preexisting_scope(monkeypatch):
+    checks = load_live_checks()
+
+    def forbidden_status(*args, **kwargs):
+        pytest.fail("An unproven scope must not be inspected")
+
+    monkeypatch.setattr(checks, "cli", forbidden_status)
+    assert checks.failure_diagnostics(object(), scope_was_absent=False) == {
+        "worker": "scope_not_proven_empty"
+    }
+
+
+def test_driver_refuses_preexisting_scope_without_cleanup(monkeypatch, tmp_path):
+    from types import SimpleNamespace
+    import json
+
+    driver = load_driver()
+    report = tmp_path / "report.json"
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["driver", "--engine", "docker", "--socket", "/s", "--output", str(report)],
+    )
+    monkeypatch.setattr(driver, "validate_socket", lambda value: Path(value))
+    monkeypatch.setattr(driver, "prepare_source", lambda *args: "a" * 40)
+    monkeypatch.setattr(
+        driver, "worker_status", lambda *args: {"container_id": "b" * 64}, raising=False
+    )
+    canary = SimpleNamespace(
+        poll=lambda: None, terminate=lambda: None, wait=lambda **kw: None
+    )
+    monkeypatch.setattr(driver.subprocess, "Popen", lambda *a, **kw: canary)
+    cleanup_calls = []
+    monkeypatch.setattr(driver, "cleanup", lambda *args: cleanup_calls.append(args))
+
+    async def unexpected_acceptance(*args):
+        pytest.fail("Existing worker must be refused before Dagger")
+
+    monkeypatch.setattr(driver, "acceptance", unexpected_acceptance)
+    assert driver.main() == 1
+    assert cleanup_calls == []
+    assert "already has a worker" in json.loads(report.read_text())["error"]

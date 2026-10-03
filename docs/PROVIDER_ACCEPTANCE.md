@@ -38,7 +38,7 @@ dagger run python ci/dagger_acceptance.py \
 
 Each invocation uses a unique owner scope unless `--owner` is supplied. Do not
 reuse that scope for any other work. The pipeline refuses a pre-existing worker
-in the selected scope, but failure cleanup still owns that scope. Output belongs
+in the selected scope and skips automatic cleanup for that unowned scope. Output belongs
 outside the checkout so it does not make the source dirty.
 
 The driver shallow-fetches the selected local commit into a fresh temporary Git

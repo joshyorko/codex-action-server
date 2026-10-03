@@ -65,9 +65,8 @@ def full_container_id(worker) -> str:
     return identity
 
 
-def cleanup(source: Path, engine: str, endpoint: str, owner: str) -> dict:
-    """Reconcile once, then let the provider recheck ownership and the exact ID."""
-    prefix = [
+def worker_prefix(source: Path, engine: str, endpoint: str, owner: str) -> list[str]:
+    return [
         sys.executable,
         str(source / "scripts/remote/worker.py"),
         "--engine",
@@ -79,6 +78,17 @@ def cleanup(source: Path, engine: str, endpoint: str, owner: str) -> dict:
         "--worker",
         "acceptance",
     ]
+
+
+def worker_status(source: Path, engine: str, endpoint: str, owner: str):
+    return json.loads(
+        command([*worker_prefix(source, engine, endpoint, owner), "status"])
+    )
+
+
+def cleanup(source: Path, engine: str, endpoint: str, owner: str) -> dict:
+    """Reconcile once, then let the provider recheck ownership and the exact ID."""
+    prefix = worker_prefix(source, engine, endpoint, owner)
     worker = json.loads(command([*prefix, "status"]))
     if worker is None:
         return {"status": "absent"}
@@ -187,6 +197,12 @@ def main() -> int:
         with tempfile.TemporaryDirectory(prefix="provider-acceptance-") as temporary:
             snapshot = Path(temporary) / "source"
             report["source_commit"] = prepare_source(args.source, snapshot)
+            report["stage"] = "preflight_absent"
+            if worker_status(snapshot, args.engine, endpoint, args.owner) is not None:
+                raise RuntimeError(
+                    "Run scope already has a worker; refusing to reuse it"
+                )
+            report["scope_owned"] = True
             report["stage"] = "dagger_acceptance"
             try:
                 native = asyncio.run(

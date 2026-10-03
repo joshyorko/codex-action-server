@@ -28,7 +28,7 @@ def cli(args, *operation, check=True, timeout=1000):
     process = subprocess.run(
         [
             sys.executable,
-            str(ROOT / "scripts/remote/worker.py"),
+            str(ROOT / "ci/worker_probe.py"),
             "--engine",
             args.engine,
             "--endpoint",
@@ -152,6 +152,7 @@ def run(args, report):
     report["stage"] = "preflight_absent"
     if cli(args, "status") is not None:
         raise RuntimeError("Run scope already has a worker; refusing to reuse it")
+    report["worker_scope_was_absent"] = True
     with tempfile.TemporaryDirectory(prefix="native-acceptance-") as temporary:
         target_file = Path(temporary) / "targets.json"
         report["stage"] = "create"
@@ -251,8 +252,10 @@ def run(args, report):
         report["stage"] = "complete"
 
 
-def failure_diagnostics(args):
+def failure_diagnostics(args, *, scope_was_absent):
     """Inspect only this scope's full ID; never export Config, Env, or exec logs."""
+    if not scope_was_absent:
+        return {"worker": "scope_not_proven_empty"}
     result = {}
     try:
         worker = cli(args, "status", timeout=15)
@@ -301,9 +304,16 @@ def main():
     finally:
         signal.alarm(0)
         if report["status"] != "passed":
-            report["failure_diagnostics"] = failure_diagnostics(args)
+            report["failure_diagnostics"] = failure_diagnostics(
+                args, scope_was_absent=report.get("worker_scope_was_absent", False)
+            )
         try:
-            report["cleanup"] = cleanup(ROOT, args.engine, args.endpoint, args.owner)
+            if report.get("worker_scope_was_absent", False):
+                report["cleanup"] = cleanup(
+                    ROOT, args.engine, args.endpoint, args.owner
+                )
+            else:
+                report["cleanup"] = {"status": "skipped_unowned_scope"}
         except Exception as error:
             report["status"] = "failed"
             report["cleanup_error"] = f"{type(error).__name__}: {error}"
