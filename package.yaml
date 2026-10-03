@@ -1,0 +1,42 @@
+spec-version: v2
+
+name: codex-action-server
+description: Typed MCP actions for an existing Codex App Server daemon.
+version: 0.1.0
+
+dependencies:
+  conda-forge:
+    - python=3.12.11
+    - uv=0.11.8
+  pypi:
+    - actions-core=1.0.1
+    - pydantic=2.13.5
+    - websockets=15.0.1
+
+pythonpath:
+  - src
+  - tests
+
+dev-dependencies:
+  pypi:
+    - anyio=4.15.1
+    - mcp=2.0.0
+    - pytest=8.3.3
+    - ruff=0.8.6
+
+dev-tasks:
+  test: pytest tests -v
+  lint: |
+    ruff check src tests
+    ruff format --check src tests
+
+packaging:
+  exclude:
+    - ./.git/**
+    - ./.action-server/**
+    - ./.venv/**
+    - ./output/**
+    - ./**/*.pyc
+    - ./**/__pycache__/**
+    - ./**/.env
+

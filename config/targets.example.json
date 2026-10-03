@@ -1,0 +1,13 @@
+{
+  "targets": {
+    "local": {"transport": "local", "codex_bin": "codex"},
+    "devsy": {
+      "transport": "devsy",
+      "context": "default",
+      "provider": "kubernetes",
+      "workspace": "REPLACE_WITH_OPERATOR_SELECTED_WORKSPACE",
+      "user": "vscode",
+      "codex_bin": "/home/vscode/.local/bin/codex"
+    }
+  }
+}

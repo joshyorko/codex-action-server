@@ -1,0 +1,821 @@
+{
+  "fixture_kind": "sanitized_protocol_contract",
+  "provenance": {
+    "codex_version": "codex-cli 0.153.4",
+    "schema": "experimental ClientRequest v2",
+    "source": "installed Codex app-server generated schema; no live response"
+  },
+  "bounded_native_methods": [
+    "thread/list",
+    "thread/read",
+    "thread/resume",
+    "thread/start",
+    "thread/turns/list",
+    "thread/items/list",
+    "thread/settings/update",
+    "thread/goal/get",
+    "thread/goal/set",
+    "thread/goal/clear",
+    "thread/loaded/list",
+    "turn/start",
+    "turn/settings/update",
+    "turn/steer",
+    "turn/interrupt",
+    "model/list",
+    "modelProvider/capabilities/read",
+    "server/diagnostics",
+    "mcpServerStatus/list"
+  ],
+  "baseline_typed_methods": [
+    "thread/list",
+    "thread/read",
+    "thread/resume",
+    "thread/start",
+    "turn/start",
+    "turn/steer",
+    "turn/interrupt"
+  ],
+  "priority_new_methods": [
+    "thread/turns/list",
+    "thread/items/list",
+    "thread/settings/update",
+    "turn/settings/update",
+    "thread/goal/get",
+    "thread/goal/set",
+    "thread/goal/clear",
+    "model/list",
+    "modelProvider/capabilities/read",
+    "server/diagnostics",
+    "mcpServerStatus/list",
+    "thread/loaded/list"
+  ],
+  "method_contracts": {
+    "thread/start": {
+      "native_required": [],
+      "bounded_fields": {
+        "cwd": "absolute string selected by the action boundary",
+        "model": "string or null",
+        "modelProvider": "string or null"
+      },
+      "native_effective_response_fields": [
+        "model",
+        "modelProvider",
+        "reasoningEffort",
+        "thread"
+      ],
+      "forbidden_native_field": "effort",
+      "reasoning_effort_boundary": "thread/settings/update"
+    },
+    "thread/resume": {
+      "native_required": [
+        "threadId"
+      ],
+      "bounded_fields": {
+        "threadId": "verified thread identifier",
+        "cwd": "exact expected worktree; identity guard",
+        "excludeTurns": "true for metadata-only attach",
+        "model": "string or null",
+        "modelProvider": "string or null"
+      },
+      "native_effective_response_fields": [
+        "model",
+        "modelProvider",
+        "reasoningEffort",
+        "thread"
+      ],
+      "forbidden_native_field": "effort",
+      "reasoning_effort_boundary": "thread/settings/update"
+    },
+    "turn/start": {
+      "native_required": [
+        "threadId",
+        "input"
+      ],
+      "bounded_fields": {
+        "threadId": "verified thread identifier",
+        "cwd": "exact expected worktree; identity guard",
+        "input": "one typed text input",
+        "model": "string or null",
+        "effort": "non-empty string or null"
+      },
+      "forbidden_native_field": "modelProvider",
+      "preservation": "Omitted model and effort inherit existing native settings."
+    },
+    "turn/steer": {
+      "native_required": [
+        "threadId",
+        "expectedTurnId",
+        "input"
+      ],
+      "bounded_fields": {
+        "threadId": "verified thread identifier",
+        "expectedTurnId": "verified active turn identifier",
+        "input": "one typed text input"
+      },
+      "forbidden_native_field": "modelProvider",
+      "model_change_boundary": "turn/settings/update"
+    },
+    "thread/settings/update": {
+      "native_required": [
+        "threadId"
+      ],
+      "bounded_fields": {
+        "threadId": "verified thread identifier",
+        "model": "string or null",
+        "effort": "non-empty string or null"
+      },
+      "forbidden_native_field": "modelProvider",
+      "semantics": "Applies to subsequent turns; omitted fields remain unchanged."
+    },
+    "turn/settings/update": {
+      "native_required": [
+        "threadId",
+        "turnId"
+      ],
+      "bounded_fields": {
+        "threadId": "verified thread identifier",
+        "turnId": "verified active turn identifier",
+        "model": "string or null",
+        "effort": "non-empty string or null"
+      },
+      "forbidden_native_field": "modelProvider",
+      "semantics": "Targets one running turn; omitted or null model/effort leaves that setting unchanged. Never emulate this with interrupt and replay."
+    },
+    "thread/list": {
+      "native_required": [],
+      "bounded_fields": {
+        "cwd": "exact selected worktree filter",
+        "limit": "integer 1..100 at the action boundary",
+        "cursor": "opaque string"
+      },
+      "response_fields": [
+        "data",
+        "nextCursor",
+        "backwardsCursor"
+      ]
+    },
+    "thread/turns/list": {
+      "native_required": [
+        "threadId"
+      ],
+      "bounded_fields": {
+        "threadId": "verified thread identifier",
+        "limit": "integer 1..100 at the action boundary",
+        "cursor": "opaque string",
+        "sortDirection": "asc or desc",
+        "itemsView": "notLoaded, summary, or full"
+      },
+      "response_fields": [
+        "data",
+        "nextCursor",
+        "backwardsCursor"
+      ]
+    },
+    "thread/items/list": {
+      "native_required": [
+        "threadId"
+      ],
+      "bounded_fields": {
+        "threadId": "verified thread identifier",
+        "turnId": "string or null filter",
+        "limit": "integer 1..100 at the action boundary",
+        "cursor": "opaque string",
+        "sortDirection": "asc or desc"
+      },
+      "response_fields": [
+        "data",
+        "nextCursor",
+        "backwardsCursor"
+      ]
+    },
+    "thread/goal/get": {
+      "native_required": [
+        "threadId"
+      ],
+      "bounded_fields": {
+        "threadId": "verified persisted thread identifier"
+      },
+      "response_fields": [
+        "goal"
+      ],
+      "ephemeral": "unsupported; native goals require a persisted thread"
+    },
+    "thread/goal/set": {
+      "native_required": [
+        "threadId"
+      ],
+      "bounded_fields": {
+        "threadId": "verified persisted thread identifier",
+        "objective": "optional string or null",
+        "status": "active, paused, blocked, usageLimited, budgetLimited, or complete",
+        "tokenBudget": "integer or null"
+      },
+      "response_fields": [
+        "goal"
+      ],
+      "ephemeral": "unsupported; native goals require a persisted thread"
+    },
+    "thread/goal/clear": {
+      "native_required": [
+        "threadId"
+      ],
+      "bounded_fields": {
+        "threadId": "verified persisted thread identifier"
+      },
+      "response_fields": [
+        "cleared"
+      ],
+      "ephemeral": "unsupported; native goals require a persisted thread"
+    },
+    "model/list": {
+      "native_required": [],
+      "bounded_fields": {
+        "limit": "integer 1..100 at the action boundary",
+        "cursor": "opaque string",
+        "includeHidden": "boolean or null"
+      },
+      "response_fields": [
+        "data",
+        "nextCursor"
+      ]
+    },
+    "modelProvider/capabilities/read": {
+      "native_required": [],
+      "bounded_fields": {},
+      "response_fields": [
+        "imageGeneration",
+        "namespaceTools",
+        "webSearch"
+      ]
+    },
+    "server/diagnostics": {
+      "native_required": [],
+      "bounded_fields": {},
+      "response_fields": [
+        "gauges",
+        "process"
+      ]
+    },
+    "mcpServerStatus/list": {
+      "native_required": [],
+      "bounded_fields": {
+        "threadId": "string or null",
+        "limit": "integer 1..100 at the action boundary",
+        "cursor": "opaque string",
+        "detail": "full or toolsAndAuthOnly"
+      },
+      "response_fields": [
+        "data",
+        "nextCursor"
+      ]
+    },
+    "thread/loaded/list": {
+      "native_required": [],
+      "bounded_fields": {
+        "limit": "integer 1..100 at the action boundary",
+        "cursor": "opaque string"
+      },
+      "response_fields": [
+        "data",
+        "nextCursor"
+      ]
+    }
+  },
+  "wire_examples": {
+    "kind": "sanitized_shape_only",
+    "identity": {
+      "threadId": "00000000-0000-7000-8000-000000000001",
+      "turnId": "00000000-0000-7000-8000-000000000002",
+      "cwd": "/workspaces/fixture-worktree"
+    },
+    "thread_settings_update": {
+      "threadId": "00000000-0000-7000-8000-000000000001",
+      "model": "gpt-6-luna",
+      "effort": "max"
+    },
+    "turn_settings_update": {
+      "threadId": "00000000-0000-7000-8000-000000000001",
+      "turnId": "00000000-0000-7000-8000-000000000002",
+      "effort": "max"
+    },
+    "thread_turns_page": {
+      "data": [],
+      "nextCursor": "opaque-next-cursor",
+      "backwardsCursor": null
+    },
+    "thread_items_page": {
+      "data": [],
+      "nextCursor": null,
+      "backwardsCursor": "opaque-backwards-cursor"
+    },
+    "goal": {
+      "threadId": "00000000-0000-7000-8000-000000000001",
+      "objective": "Complete the bounded verification",
+      "status": "active",
+      "tokenBudget": 1000,
+      "tokensUsed": 0,
+      "timeUsedSeconds": 0,
+      "createdAt": 1700000000,
+      "updatedAt": 1700000000
+    }
+  },
+  "intentionally_excluded_native_methods": {
+    "thread/backgroundTerminals/list": "No authorized FRIDAY workflow currently needs background terminal inventory; terminate/clean controls remain excluded.",
+    "command/exec": "Raw command execution is outside the typed control surface.",
+    "fs/readFile": "Raw filesystem RPC is outside the typed control surface.",
+    "account/read": "Account and authentication state are outside the worker lifecycle.",
+    "remoteControl/status/read": "Remote-control families are outside the authorized worker lifecycle.",
+    "thread/realtime/start": "Realtime voice control is outside this package's normal typed worker lifecycle.",
+    "thread/delete": "Destructive thread mutation has no authorized workflow here."
+  },
+  "actions": {
+    "list_thread_turns": "ThreadTurnsListRequest",
+    "list_thread_items": "ThreadItemsListRequest",
+    "update_thread_settings": "ThreadSettingsUpdateRequest",
+    "update_turn_settings": "TurnSettingsUpdateRequest",
+    "get_thread_goal": "ThreadGoalGetRequest",
+    "set_thread_goal": "ThreadGoalSetRequest",
+    "clear_thread_goal": "ThreadGoalClearRequest",
+    "list_models": "ModelListRequest",
+    "read_model_provider_capabilities": "ModelProviderCapabilitiesRequest",
+    "read_server_diagnostics": "ServerDiagnosticsRequest",
+    "list_mcp_server_status": "McpServerStatusListRequest",
+    "list_loaded_threads": "LoadedThreadListRequest"
+  },
+  "request_models": {
+    "ThreadStartRequest": [
+      "target",
+      "cwd",
+      "model",
+      "model_provider",
+      "effort",
+      "request_id"
+    ],
+    "ThreadResumeRequest": [
+      "target",
+      "cwd",
+      "thread_id",
+      "model",
+      "model_provider",
+      "effort"
+    ],
+    "TurnStartRequest": [
+      "target",
+      "cwd",
+      "thread_id",
+      "text",
+      "model",
+      "effort",
+      "wait_for_completion",
+      "request_id",
+      "wait_seconds"
+    ],
+    "ThreadTurnsListRequest": [
+      "target",
+      "cwd",
+      "thread_id",
+      "limit",
+      "cursor",
+      "sort_direction",
+      "items_view"
+    ],
+    "ThreadItemsListRequest": [
+      "target",
+      "cwd",
+      "thread_id",
+      "turn_id",
+      "limit",
+      "cursor",
+      "sort_direction"
+    ],
+    "ThreadSettingsUpdateRequest": [
+      "target",
+      "cwd",
+      "thread_id",
+      "model",
+      "effort"
+    ],
+    "TurnSettingsUpdateRequest": [
+      "target",
+      "cwd",
+      "thread_id",
+      "turn_id",
+      "model",
+      "effort"
+    ],
+    "ThreadGoalGetRequest": [
+      "target",
+      "cwd",
+      "thread_id"
+    ],
+    "ThreadGoalSetRequest": [
+      "target",
+      "cwd",
+      "thread_id",
+      "objective",
+      "status",
+      "token_budget"
+    ],
+    "ThreadGoalClearRequest": [
+      "target",
+      "cwd",
+      "thread_id"
+    ],
+    "ModelListRequest": [
+      "target",
+      "limit",
+      "cursor",
+      "include_hidden"
+    ],
+    "ModelProviderCapabilitiesRequest": [
+      "target"
+    ],
+    "ServerDiagnosticsRequest": [
+      "target"
+    ],
+    "McpServerStatusListRequest": [
+      "target",
+      "thread_id",
+      "limit",
+      "cursor",
+      "detail"
+    ],
+    "LoadedThreadListRequest": [
+      "target",
+      "limit",
+      "cursor"
+    ]
+  },
+  "forbidden_public_fields": {
+    "TurnStartRequest": [
+      "model_provider"
+    ],
+    "TurnSteerRequest": [
+      "model",
+      "model_provider",
+      "effort"
+    ],
+    "ThreadSettingsUpdateRequest": [
+      "model_provider"
+    ],
+    "TurnSettingsUpdateRequest": [
+      "model_provider"
+    ]
+  },
+  "wire_mappings": {
+    "ThreadStartRequest": {
+      "thread/start": {
+        "cwd": "cwd",
+        "model": "model",
+        "model_provider": "modelProvider"
+      },
+      "thread/settings/update": {
+        "effort": "effort"
+      }
+    },
+    "ThreadResumeRequest": {
+      "thread/resume": {
+        "thread_id": "threadId",
+        "cwd": "cwd",
+        "model": "model",
+        "model_provider": "modelProvider",
+        "exclude_turns": "excludeTurns"
+      },
+      "thread/settings/update": {
+        "effort": "effort"
+      }
+    },
+    "TurnStartRequest": {
+      "turn/start": {
+        "thread_id": "threadId",
+        "cwd": "cwd",
+        "text": "input[0].text",
+        "model": "model",
+        "effort": "effort"
+      }
+    },
+    "TurnSteerRequest": {
+      "turn/steer": {
+        "thread_id": "threadId",
+        "turn_id": "expectedTurnId",
+        "text": "input[0].text"
+      }
+    },
+    "ThreadTurnsListRequest": {
+      "thread/turns/list": {
+        "thread_id": "threadId",
+        "limit": "limit",
+        "cursor": "cursor",
+        "sort_direction": "sortDirection",
+        "items_view": "itemsView"
+      }
+    },
+    "ThreadItemsListRequest": {
+      "thread/items/list": {
+        "thread_id": "threadId",
+        "turn_id": "turnId",
+        "limit": "limit",
+        "cursor": "cursor",
+        "sort_direction": "sortDirection"
+      }
+    },
+    "ThreadSettingsUpdateRequest": {
+      "thread/settings/update": {
+        "thread_id": "threadId",
+        "model": "model",
+        "effort": "effort"
+      }
+    },
+    "TurnSettingsUpdateRequest": {
+      "turn/settings/update": {
+        "thread_id": "threadId",
+        "turn_id": "turnId",
+        "model": "model",
+        "effort": "effort"
+      }
+    },
+    "ThreadGoalSetRequest": {
+      "thread/goal/set": {
+        "thread_id": "threadId",
+        "token_budget": "tokenBudget",
+        "objective": "objective",
+        "status": "status"
+      }
+    },
+    "McpServerStatusListRequest": {
+      "mcpServerStatus/list": {
+        "thread_id": "threadId",
+        "limit": "limit",
+        "cursor": "cursor",
+        "detail": "detail"
+      }
+    }
+  },
+  "enum_literals": {
+    "sortDirection": [
+      "asc",
+      "desc"
+    ],
+    "itemsView": [
+      "notLoaded",
+      "summary",
+      "full"
+    ],
+    "mcpServerStatus.detail": [
+      "full",
+      "toolsAndAuthOnly"
+    ],
+    "threadGoal.status": [
+      "active",
+      "paused",
+      "blocked",
+      "usageLimited",
+      "budgetLimited",
+      "complete"
+    ]
+  },
+  "response_shapes": {
+    "thread/start": {
+      "schema_title": "ThreadStartResponse",
+      "required": [
+        "approvalPolicy",
+        "approvalsReviewer",
+        "cwd",
+        "model",
+        "modelProvider",
+        "sandbox",
+        "thread"
+      ],
+      "properties": [
+        "approvalPolicy",
+        "approvalsReviewer",
+        "cwd",
+        "model",
+        "modelProvider",
+        "reasoningEffort",
+        "sandbox",
+        "thread"
+      ],
+      "effective_configuration": [
+        "model",
+        "modelProvider",
+        "reasoningEffort"
+      ]
+    },
+    "thread/resume": {
+      "schema_title": "ThreadResumeResponse",
+      "required": [
+        "approvalPolicy",
+        "approvalsReviewer",
+        "cwd",
+        "model",
+        "modelProvider",
+        "sandbox",
+        "thread"
+      ],
+      "properties": [
+        "approvalPolicy",
+        "approvalsReviewer",
+        "cwd",
+        "model",
+        "modelProvider",
+        "reasoningEffort",
+        "sandbox",
+        "thread"
+      ],
+      "effective_configuration": [
+        "model",
+        "modelProvider",
+        "reasoningEffort"
+      ]
+    },
+    "thread/read": {
+      "schema_title": "ThreadReadResponse",
+      "required": [
+        "thread"
+      ],
+      "properties": [
+        "thread"
+      ]
+    },
+    "thread/list": {
+      "schema_title": "ThreadListResponse",
+      "required": [
+        "data"
+      ],
+      "properties": [
+        "backwardsCursor",
+        "data",
+        "nextCursor"
+      ],
+      "pagination": [
+        "data",
+        "nextCursor",
+        "backwardsCursor"
+      ]
+    },
+    "turn/start": {
+      "schema_title": "TurnStartResponse",
+      "required": [
+        "turn"
+      ],
+      "properties": [
+        "turn"
+      ]
+    },
+    "turn/steer": {
+      "schema_title": "TurnSteerResponse",
+      "required": [
+        "turnId"
+      ],
+      "properties": [
+        "turnId"
+      ]
+    },
+    "turn/interrupt": {
+      "schema_title": "TurnInterruptResponse",
+      "required": [],
+      "properties": []
+    },
+    "thread/settings/update": {
+      "schema_title": "ThreadSettingsUpdateResponse",
+      "required": [],
+      "properties": []
+    },
+    "turn/settings/update": {
+      "schema_title": "TurnSettingsUpdateResponse",
+      "required": [
+        "status"
+      ],
+      "properties": [
+        "status"
+      ]
+    },
+    "thread/goal/get": {
+      "schema_title": "ThreadGoalGetResponse",
+      "required": [],
+      "properties": [
+        "goal"
+      ],
+      "nullable": [
+        "goal"
+      ]
+    },
+    "thread/goal/set": {
+      "schema_title": "ThreadGoalSetResponse",
+      "required": [
+        "goal"
+      ],
+      "properties": [
+        "goal"
+      ]
+    },
+    "thread/goal/clear": {
+      "schema_title": "ThreadGoalClearResponse",
+      "required": [
+        "cleared"
+      ],
+      "properties": [
+        "cleared"
+      ]
+    },
+    "thread/turns/list": {
+      "schema_title": "ThreadTurnsListResponse",
+      "required": [
+        "data"
+      ],
+      "properties": [
+        "backwardsCursor",
+        "data",
+        "nextCursor"
+      ],
+      "pagination": [
+        "data",
+        "nextCursor",
+        "backwardsCursor"
+      ]
+    },
+    "thread/items/list": {
+      "schema_title": "ThreadItemsListResponse",
+      "required": [
+        "data"
+      ],
+      "properties": [
+        "backwardsCursor",
+        "data",
+        "nextCursor"
+      ],
+      "pagination": [
+        "data",
+        "nextCursor",
+        "backwardsCursor"
+      ]
+    },
+    "model/list": {
+      "schema_title": "ModelListResponse",
+      "required": [
+        "data"
+      ],
+      "properties": [
+        "data",
+        "nextCursor"
+      ],
+      "pagination": [
+        "data",
+        "nextCursor"
+      ]
+    },
+    "mcpServerStatus/list": {
+      "schema_title": "ListMcpServerStatusResponse",
+      "required": [
+        "data"
+      ],
+      "properties": [
+        "data",
+        "nextCursor"
+      ],
+      "pagination": [
+        "data",
+        "nextCursor"
+      ]
+    },
+    "thread/loaded/list": {
+      "schema_title": "ThreadLoadedListResponse",
+      "required": [
+        "data"
+      ],
+      "properties": [
+        "data",
+        "nextCursor"
+      ],
+      "pagination": [
+        "data",
+        "nextCursor"
+      ]
+    },
+    "modelProvider/capabilities/read": {
+      "schema_title": "ModelProviderCapabilitiesReadResponse",
+      "required": [
+        "imageGeneration",
+        "namespaceTools",
+        "webSearch"
+      ],
+      "properties": [
+        "imageGeneration",
+        "namespaceTools",
+        "webSearch"
+      ]
+    },
+    "server/diagnostics": {
+      "schema_title": "ServerDiagnosticsResponse",
+      "required": [
+        "gauges",
+        "process"
+      ],
+      "properties": [
+        "gauges",
+        "process"
+      ]
+    }
+  }
+}
