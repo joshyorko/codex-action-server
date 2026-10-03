@@ -124,3 +124,9 @@ Codex actions into agent messages. Set CODEX_MCP_URL to the selected loopback po
 Friday can use that same MCP URL. This repository owns the typed implementation;
 Friday removes its private copy and keeps only a standalone-client compatibility shim. No live cutover or merge
 is implied by a passing test or a draft PR.
+
+## Durable process supervision
+
+After proving the foreground path, see [SUPERVISION.md](docs/SUPERVISION.md) for
+separate user-service templates, private persistent state, read-only acceptance,
+and rollback. Templates are not automatically installed or activated.

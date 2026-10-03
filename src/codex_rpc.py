@@ -1062,15 +1062,23 @@ class Client:
         }
 
     def close(self):
-        if self.ws is not None:
-            self.ws.close()
-        if self.proc is not None:
-            self.proc.terminate()
-            try:
-                self.proc.wait(timeout=5)
-            except subprocess.TimeoutExpired:
-                self.proc.kill()
-                self.proc.wait()
+        # Only the transient proxy owned by this connection, never the daemon.
+        ws, proc = self.ws, self.proc
+        self.ws = self.proc = None
+        try:
+            if ws is not None:
+                ws.close()
+        finally:
+            if proc is not None:
+                try:
+                    proc.terminate()
+                except ProcessLookupError:
+                    pass
+                try:
+                    proc.wait(timeout=5)
+                except subprocess.TimeoutExpired:
+                    proc.kill()
+                    proc.wait()
 
     def __exit__(self, *_):
         if self.bridge and self.bridge.pending:

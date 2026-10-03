@@ -1,0 +1,20 @@
+[Unit]
+Description=Standalone typed Codex control API
+StartLimitIntervalSec=120
+StartLimitBurst=3
+
+[Service]
+Type=simple
+EnvironmentFile=%h/.config/codex-action-server/service.env
+ExecStart=/usr/bin/bash ${CODEX_ACTION_ROOT}/scripts/run.sh
+WorkingDirectory=%h
+UMask=0077
+Restart=on-failure
+RestartSec=10
+TimeoutStopSec=30
+KillMode=control-group
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=default.target

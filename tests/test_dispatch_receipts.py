@@ -60,3 +60,30 @@ def test_concurrent_different_payload_conflicts(tmp_path):
         with pytest.raises(ValueError, match="request_id_conflict"):
             with d.reserve(tmp_path, "job-1", {"text": "b"}):
                 pass
+
+
+@pytest.mark.parametrize("accepted", [False, True])
+def test_process_crash_reopens_without_redispatch(tmp_path, accepted):
+    import os
+    import subprocess
+    import dispatch_receipts as d
+
+    source = str(Path(__file__).parents[1] / "src")
+    program = """import os, sys
+import dispatch_receipts as d
+with d.reserve(sys.argv[1], 'crash-key', {'text': 'same'}) as receipt:
+    if sys.argv[2] == 'True':
+        receipt.update(state='accepted', thread_id='t1', turn_id='u1')
+    os._exit(17)
+"""
+    result = subprocess.run(
+        [sys.executable, "-c", program, str(tmp_path), str(accepted)],
+        env={**os.environ, "PYTHONPATH": source},
+    )
+    assert result.returncode == 17
+    with d.reserve(tmp_path, "crash-key", {"text": "same"}) as receipt:
+        assert receipt.replayed
+        assert receipt.data["state"] == ("accepted" if accepted else "unknown")
+        if accepted:
+            assert receipt.data["thread_id"] == "t1"
+            assert receipt.data["turn_id"] == "u1"

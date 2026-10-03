@@ -20,5 +20,5 @@ jobs:
           chmod +x "$RUNNER_TEMP/codex-action-test-bin/action-server"
           echo "$RUNNER_TEMP/codex-action-test-bin" >> "$GITHUB_PATH"
       - run: pytest -q -rs
-      - run: ruff check src tests
-      - run: ruff format --check src tests
+      - run: ruff check src tests scripts/preflight.py
+      - run: ruff format --check src tests scripts/preflight.py

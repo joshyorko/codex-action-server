@@ -42,7 +42,7 @@ export CODEX_ACTION_RECEIPTS="$HOME/.local/state/codex-action-server/receipts"
 export CODEX_ACTION_DATA="$HOME/.local/state/codex-action-server/runtime"
 export CODEX_ACTION_PORT=8088
 # Refuse to overwrite an existing operator configuration.
-test ! -e "$CODEX_ACTION_TARGETS" || { echo 'Existing target config: inspect before changing'; return 1; }
+test ! -e "$CODEX_ACTION_TARGETS" || { echo 'Existing target config: inspect before changing'; exit 1; }
 python3 - <<'PY'
 import json, os
 from pathlib import Path
