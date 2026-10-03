@@ -7,7 +7,8 @@ cannot establish real engine or native daemon readiness.
 
 Dagger owns the test environment. The provider under test still creates real
 workers through the selected Docker or Podman engine. An explicitly selected
-host Unix socket is forwarded into the test environment, never into a worker.
+host Unix socket enters the test controller, never a worker. Docker uses Dagger's
+Unix socket forwarding. Podman uses the direct socket route described below.
 The worker uses the existing digest-pinned remote-worker image and repository
 create/start hooks. There is no additional worker image build or image publish.
 
@@ -33,6 +34,7 @@ dagger run python ci/dagger_acceptance.py \
 # Rootless Podman example, after starting the user's Podman socket service.
 dagger run python ci/dagger_acceptance.py \
   --engine podman --socket "$XDG_RUNTIME_DIR/podman/podman.sock" \
+  --controller-socket /var/run/docker.sock \
   --output /tmp/provider-acceptance-podman.json
 ```
 
@@ -72,6 +74,29 @@ The test uses the deliberately unreachable, credential-free Headroom address
 or uses a live account. A passing result proves provider and native read-only
 control, not authentication, inference, Headroom availability, Devsy, Kubernetes,
 or tunnel reachability.
+
+## Podman test-controller route
+
+Real CI identified an exec-completion failure through Dagger 0.21.10's forwarded
+Unix socket. Podman completed `mkdir`, but its client waited until timeout.
+On the same container, `/bin/true` timed out through Dagger and succeeded through
+the direct host socket. The result persisted with matching Podman 4.9.3 client
+and server versions. This is a test-transport limitation, not a passing result.
+
+For Podman, Dagger still builds and caches the complete test-controller image,
+including the verified static 4.9.3 client and committed source. The driver
+exports Docker-media-type image data, loads it through the explicitly selected
+local Docker socket, and runs an exact-ID disposable controller. Its only bind
+mount is the selected Podman socket. It runs the unchanged full acceptance
+program against actual rootless Podman workers, copies the JSON result using
+the exact controller ID, and removes that controller in `finally`. No worker
+image is rebuilt or published, and worker containers remain mount-free.
+
+Both controller and worker commands have bounded timeouts. An uncertain
+controller create is reconciled by its random run name and label before cleanup
+uses the verified full ID. The local controller image is retained as a cache;
+the driver never force-removes images that another run might use. Docker's
+acceptance route remains entirely within Dagger's forwarded-socket environment.
 
 ## Failure and cleanup
 

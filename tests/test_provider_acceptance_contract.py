@@ -439,3 +439,80 @@ def test_runner_uses_verified_matching_static_podman_without_changing_base():
     assert "sha256sum -c -" in source
     assert "client.http(" in source
     assert "/usr/local/bin/podman" in source
+
+
+def test_controller_cleanup_uses_exact_id_after_failure(monkeypatch, tmp_path):
+    from types import SimpleNamespace
+
+    driver = load_driver()
+    assert hasattr(driver, "run_host_controller"), "Direct-socket controller is missing"
+    identity = "b" * 64
+    calls = []
+
+    def command(args, **kwargs):
+        calls.append(args)
+        operation = args[3]
+        if operation == "load":
+            return "Loaded image ID: sha256:" + "a" * 64
+        if operation == "create":
+            return identity
+        if operation == "start":
+            raise RuntimeError("controller start failed")
+        if operation == "rm":
+            return identity
+        raise AssertionError(args)
+
+    monkeypatch.setattr(driver, "command", command)
+    args = SimpleNamespace(
+        socket="/tmp/podman.sock", controller_socket="/tmp/docker.sock"
+    )
+    with pytest.raises(RuntimeError, match="controller start failed"):
+        driver.run_host_controller(tmp_path / "image.tar", args, "owner", tmp_path)
+    assert calls[-1] == [
+        "docker",
+        "--host",
+        "unix:///tmp/docker.sock",
+        "rm",
+        "--force",
+        identity,
+    ]
+    created = next(call for call in calls if call[3] == "create")
+    assert created.count("--mount") == 1
+    assert "type=bind,source=/tmp/podman.sock,target=/run/provider.sock" in created
+    assert "--privileged" not in created
+
+
+def test_controller_returns_same_full_acceptance_report(monkeypatch, tmp_path):
+    import json
+    from types import SimpleNamespace
+
+    driver = load_driver()
+    assert hasattr(driver, "run_host_controller"), "Direct-socket controller is missing"
+    identity = "c" * 64
+    calls = []
+
+    def command(args, **kwargs):
+        calls.append(args)
+        operation = args[3]
+        if operation == "load":
+            return "Loaded image ID: sha256:" + "a" * 64
+        if operation == "create":
+            return identity
+        if operation == "wait":
+            return "0"
+        if operation == "cp":
+            assert args[4] == identity + ":/evidence/result.json"
+            Path(args[5]).write_text(
+                json.dumps({"status": "passed", "stage": "complete"})
+            )
+        return ""
+
+    monkeypatch.setattr(driver, "command", command)
+    args = SimpleNamespace(
+        socket="/tmp/podman.sock", controller_socket="/tmp/docker.sock"
+    )
+    result = driver.run_host_controller(tmp_path / "image.tar", args, "owner", tmp_path)
+    assert result["status"] == "passed"
+    assert result["controller_id"] == identity
+    assert result["test_transport"] == "direct_bind_socket"
+    assert calls[-1][-3:] == ["rm", "--force", identity]

@@ -107,6 +107,94 @@ def cleanup(source: Path, engine: str, endpoint: str, owner: str) -> dict:
     return {"status": "deleted", "container_id": identity}
 
 
+def run_host_controller(image_archive: Path, args, owner: str, temporary: Path) -> dict:
+    """Run the Dagger-built test image with only the selected Podman socket bound."""
+    if any(character in args.socket for character in ",\r\n"):
+        raise ValueError("A controller socket path cannot contain commas or newlines")
+    prefix = ["docker", "--host", "unix://" + args.controller_socket]
+    loaded = command([*prefix, "load", "--input", str(image_archive)], timeout=300)
+    images = re.findall(
+        r"^Loaded image ID: (sha256:[0-9a-f]{64})$", loaded, re.MULTILINE
+    )
+    if len(images) != 1:
+        raise RuntimeError("Expected one immutable image ID from controller image load")
+    image_id = images[0]
+    nonce = uuid.uuid4().hex
+    name = "provider-acceptance-controller-" + nonce
+    label = "io.codex-action-server.acceptance-controller"
+    identity = None
+    try:
+        identity = full_container_id(
+            {
+                "container_id": command(
+                    [
+                        *prefix,
+                        "create",
+                        "--name",
+                        name,
+                        "--label",
+                        label + "=" + nonce,
+                        "--mount",
+                        "type=bind,source="
+                        + args.socket
+                        + ",target=/run/provider.sock",
+                        "--workdir",
+                        "/workspace",
+                        "--entrypoint",
+                        "python",
+                        image_id,
+                        "ci/provider_acceptance.py",
+                        "--engine",
+                        "podman",
+                        "--endpoint",
+                        "unix:///run/provider.sock",
+                        "--owner",
+                        owner,
+                        "--output",
+                        "/evidence/result.json",
+                    ],
+                    timeout=30,
+                )
+            }
+        )
+        command([*prefix, "start", identity], timeout=30)
+        exit_code = command([*prefix, "wait", identity], timeout=1900)
+        evidence = temporary / "controller-result.json"
+        command(
+            [*prefix, "cp", identity + ":/evidence/result.json", str(evidence)],
+            timeout=30,
+        )
+        report = json.loads(evidence.read_text())
+        report["test_transport"] = "direct_bind_socket"
+        report["controller_id"] = identity
+        report["controller_image_id"] = image_id
+        if exit_code != "0":
+            report["status"] = "failed"
+            report["controller_exit_code"] = exit_code
+        return report
+    finally:
+        if identity is None:
+            # A timed-out create may have succeeded. Reconcile this unpredictable
+            # run-specific name and label once, then remove only its verified ID.
+            try:
+                rows = json.loads(
+                    command([*prefix, "container", "inspect", name], timeout=15)
+                )
+            except subprocess.CalledProcessError:
+                rows = []
+            if rows:
+                if (
+                    len(rows) != 1
+                    or rows[0].get("Config", {}).get("Labels", {}).get(label) != nonce
+                ):
+                    raise RuntimeError(
+                        "Controller cleanup identity could not be verified"
+                    )
+                identity = full_container_id({"container_id": rows[0].get("Id")})
+        if identity is not None:
+            command([*prefix, "rm", "--force", identity], timeout=30)
+
+
 async def acceptance(snapshot: Path, args, owner: str) -> dict:
     # Lazy import keeps source/cleanup checks usable without a Dagger installation.
     import dagger
@@ -167,35 +255,42 @@ async def acceptance(snapshot: Path, args, owner: str) -> dict:
                     'podman --version; rm -rf /tmp/bin /tmp/podman-*.tar.gz',
                 ]
             )
-        runner = (
-            runner.with_directory("/workspace", client.host().directory(str(snapshot)))
-            .with_workdir("/workspace")
-            .with_unix_socket(
+        runner = runner.with_directory(
+            "/workspace", client.host().directory(str(snapshot))
+        ).with_workdir("/workspace")
+        test_command = [
+            "python",
+            "ci/provider_acceptance.py",
+            "--engine",
+            args.engine,
+            "--endpoint",
+            "unix:///run/provider.sock",
+            "--owner",
+            owner,
+            "--output",
+            "/evidence/result.json",
+        ]
+        if args.engine == "podman":
+            with tempfile.TemporaryDirectory(
+                prefix="provider-controller-"
+            ) as directory:
+                temporary = Path(directory)
+                archive = temporary / "controller.tar"
+                await runner.export(
+                    str(archive), media_types=dagger.ImageMediaTypes.DOCKER
+                )
+                return await asyncio.to_thread(
+                    run_host_controller, archive, args, owner, temporary
+                )
+        # External lifecycle effects must always execute, even if source is unchanged.
+        executed = (
+            runner.with_unix_socket(
                 "/run/provider.sock", client.host().unix_socket(args.socket)
             )
-            # Engine calls mutate external state. Never reuse their cached result.
             .with_env_variable("ACCEPTANCE_RUN_NONCE", uuid.uuid4().hex)
-            .with_exec(
-                [
-                    "python",
-                    "ci/provider_acceptance.py",
-                    "--engine",
-                    args.engine,
-                    "--endpoint",
-                    "unix:///run/provider.sock",
-                    "--owner",
-                    owner,
-                    "--output",
-                    "/evidence/result.json",
-                    *(
-                        ["--defer-failed-podman-cleanup"]
-                        if args.engine == "podman"
-                        else []
-                    ),
-                ]
-            )
+            .with_exec(test_command)
         )
-        return json.loads(await runner.file("/evidence/result.json").contents())
+        return json.loads(await executed.file("/evidence/result.json").contents())
 
 
 def main() -> int:
@@ -210,10 +305,20 @@ def main() -> int:
         "--output", type=Path, default=Path("/tmp/provider-acceptance.json")
     )
     parser.add_argument("--cleanup-only", action="store_true")
+    parser.add_argument(
+        "--controller-socket",
+        help="Explicit local Docker socket for the Podman test controller",
+    )
     args = parser.parse_args()
     if not re.fullmatch(r"[a-zA-Z0-9][a-zA-Z0-9_.-]{0,63}", args.owner):
         parser.error("owner must be a unique run-scoped identifier")
     endpoint = "unix://" + str(validate_socket(args.socket))
+    if args.engine == "podman" and not args.cleanup_only:
+        if not args.controller_socket:
+            parser.error(
+                "Podman acceptance requires --controller-socket for local Docker"
+            )
+        args.controller_socket = str(validate_socket(args.controller_socket))
     if args.cleanup_only:
         print(
             json.dumps(

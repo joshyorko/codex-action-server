@@ -70,7 +70,8 @@ jobs:
           dagger version
           dagger run python ci/dagger_acceptance.py \
             --engine '${{ matrix.engine }}' --socket "$ACCEPTANCE_SOCKET" \
-            --owner "$ACCEPTANCE_OWNER" --output "$ACCEPTANCE_OUTPUT"
+            --owner "$ACCEPTANCE_OWNER" --output "$ACCEPTANCE_OUTPUT" \
+            --controller-socket /var/run/docker.sock
       - name: Reconcile and clean only this run's worker
         if: always() && env.ACCEPTANCE_SOCKET != ''
         run: |
