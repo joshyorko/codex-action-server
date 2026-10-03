@@ -1,0 +1,2 @@
+# Official SDK release pins its matching Engine and CLI.
+dagger-io==0.21.10
