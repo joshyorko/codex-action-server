@@ -26,6 +26,10 @@ It never starts, restarts or authenticates Codex or Devsy.
 
 ## Targets
 
+For the production API image and Linux Compose mount/network contract, see
+[container deployment](docs/CONTAINERS.md). The tunnel kit owns the composed
+Executor and tunnel-client deployment.
+
 `list_targets` lists configured logical names. `inspect_target({payload:{target:
 "devsy"}})` resolves without connecting to native Codex. Then call
 `read_server_diagnostics` for connectivity and native home/socket identity.
