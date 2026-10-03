@@ -425,3 +425,17 @@ def test_read_only_transport_probe_records_timeout_without_retry(monkeypatch):
     assert len(calls) == 2
     assert result["exec_true"]["timeout_seconds"] == 10
     assert "ABCD-EFGH" not in result["exec_true"]["stderr"]
+
+
+def test_runner_uses_verified_matching_static_podman_without_changing_base():
+    driver = load_driver()
+    assert driver.PODMAN_REMOTE_VERSION == "4.9.3"
+    assert driver.PODMAN_REMOTE_SHA256 == {
+        "amd64": "b21cad103bda0c71648e424b40730bb59e668fc5bb98ed17209c9b1c93880991",
+        "arm64": "a432625b0a697ddcd7a74044d2a5e1ff28026df1985bafe15c30194051c157f5",
+    }
+    source = (ROOT / "ci/dagger_acceptance.py").read_text()
+    assert '.from_("python:3.12-slim-bookworm")' in source
+    assert "sha256sum -c -" in source
+    assert "client.http(" in source
+    assert "/usr/local/bin/podman" in source

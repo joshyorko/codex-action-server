@@ -15,6 +15,12 @@ import tempfile
 import uuid
 
 DAGGER_VERSION = "0.21.10"
+PODMAN_REMOTE_VERSION = "4.9.3"
+# Verified against the official v4.9.3 release's shasums, not resolved at runtime.
+PODMAN_REMOTE_SHA256 = {
+    "amd64": "b21cad103bda0c71648e424b40730bb59e668fc5bb98ed17209c9b1c93880991",
+    "arm64": "a432625b0a697ddcd7a74044d2a5e1ff28026df1985bafe15c30194051c157f5",
+}
 DOCKER_CLI_IMAGE = (
     "docker:28.5.2-cli@sha256:"
     "625d9431a9f54c5a2bc90f24f0e1c3d55b1349fd857dd85035f98c2c9acbdd4d"
@@ -136,7 +142,33 @@ async def acceptance(snapshot: Path, args, owner: str) -> dict:
                 client.cache_volume("provider-acceptance-pip-py312-v1"),
             )
             .with_exec(["python", "-m", "pip", "install", "websockets==15.0.1"])
-            .with_directory("/workspace", client.host().directory(str(snapshot)))
+        )
+        if args.engine == "podman":
+            for architecture in PODMAN_REMOTE_SHA256:
+                runner = runner.with_file(
+                    f"/tmp/podman-{architecture}.tar.gz",
+                    client.http(
+                        "https://github.com/podman-container-tools/podman/releases/download/"
+                        f"v{PODMAN_REMOTE_VERSION}/podman-remote-static-linux_{architecture}.tar.gz"
+                    ),
+                )
+            runner = runner.with_exec(
+                [
+                    "sh",
+                    "-ec",
+                    'case "$(uname -m)" in '
+                    f"x86_64) arch=amd64; digest={PODMAN_REMOTE_SHA256['amd64']} ;; "
+                    f"aarch64) arch=arm64; digest={PODMAN_REMOTE_SHA256['arm64']} ;; "
+                    '*) echo "Unsupported Podman client architecture" >&2; exit 2 ;; esac; '
+                    'printf "%s  /tmp/podman-%s.tar.gz\\n" "$digest" "$arch" | sha256sum -c -; '
+                    'tar -xzf "/tmp/podman-$arch.tar.gz" -C /tmp "bin/podman-remote-static-linux_$arch"; '
+                    'install -m 0755 "/tmp/bin/podman-remote-static-linux_$arch" /usr/local/bin/podman; '
+                    'test "$(command -v podman)" = /usr/local/bin/podman; '
+                    'podman --version; rm -rf /tmp/bin /tmp/podman-*.tar.gz',
+                ]
+            )
+        runner = (
+            runner.with_directory("/workspace", client.host().directory(str(snapshot)))
             .with_workdir("/workspace")
             .with_unix_socket(
                 "/run/provider.sock", client.host().unix_socket(args.socket)
