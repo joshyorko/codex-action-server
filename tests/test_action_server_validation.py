@@ -11,7 +11,6 @@ from __future__ import annotations
 
 import json
 import os
-from datetime import timedelta
 from pathlib import Path
 import shutil
 import socket
@@ -324,7 +323,7 @@ class ActionServerValidationTests(unittest.TestCase):
                         async with ClientSession(
                             read_stream,
                             write_stream,
-                            read_timeout_seconds=timedelta(seconds=10),
+                            read_timeout_seconds=10,
                         ) as session:
                             initialized = await session.initialize()
                             server_info = getattr(
