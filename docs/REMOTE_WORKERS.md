@@ -5,15 +5,16 @@
 This repository owns the reusable worker recipe. Friday is a client of the
 central typed API and does not install, bootstrap, or own remote workers.
 
-Dakota runs one central Codex Action Server. Its logical targets reach the local
+Run one central Codex Action Server on the operator host. Its logical targets reach the local
 native Codex daemon and remote native Codex daemons. A remote worker runs native
 `codex app-server` only: do not start another Actions Runtime, tunnel, Hermes
 profile, scheduler, or control database inside it.
 
-Devsy owns workspace lifecycle, provider, source/image, IDE, readiness, and retry
-semantics. The central API owns logical target resolution and typed Codex RPC.
-Provisioning is an explicit operator/client workflow through Devsy's native MCP
-or CLI; it is not a new Action Server tool that creates arbitrary machines.
+Devsy retains its native workspace lifecycle, provider, source/image, IDE,
+readiness, and retry semantics. Operators without Devsy can use the local
+Podman/Docker workflow below. The central API owns logical target resolution
+and typed Codex RPC. Lifecycle stays in explicit operator commands, never in
+a new Action Server tool that creates arbitrary machines.
 
 ## Recipe
 
@@ -147,14 +148,122 @@ Do not create threads to disguise empty discovery. Do not restart parked swarms
 or change their provider/model configuration for acceptance. Hosted fixture tests
 are not live Kubernetes, Headroom, authentication, or ChatGPT tunnel proof.
 
-## Provider seam
+## Local workers without Devsy
 
-Devsy is the only compute lifecycle supported by this recipe today. Keep its
-native lifecycle outside typed Codex actions. A future Podman/Docker lifecycle
-adapter must supply an operator-owned workspace identity and an already-running
-native Codex endpoint; it can then use an explicit logical-target resolver
-transport. No future provider implementation, generic remote shell API, job
-registry, or second scheduler is added by this port.
+Use Linux with Docker Engine or rootless Podman and the selected CLI installed.
+For Bluefin, rootless Podman avoids granting a rootful Docker socket to the
+central service. The Podman API socket must already be enabled by the operator,
+for example with `systemctl --user enable --now podman.socket`. The provider never
+enables services, adds groups, configures credentials, or tries a different engine.
+
+An engine socket grants control over that engine's containers and host mounts.
+Keep it and the central target file operator-owned; never expose engine selection,
+endpoint, image, source, or worker names as caller-controlled action parameters.
+Do not forward a TCP engine API. Run the central server as the same user who owns
+the rootless socket, or deliberately grant only the required existing socket access.
+
+From a clean committed checkout containing this change:
+
+```sh
+# Rootless Podman example. Choose a stable, unique owner and worker name.
+ENGINE=podman
+ENDPOINT="unix:///run/user/$(id -u)/podman/podman.sock"
+OWNER=workstation
+WORKER=build
+worker() {
+  python3 scripts/remote/worker.py --engine "$ENGINE" --endpoint "$ENDPOINT" \
+    --owner "$OWNER" --worker "$WORKER" "$@"
+}
+worker create --source . --headroom-url https://your-headroom.example/v1
+worker status
+```
+
+For Docker, explicitly set `ENGINE=docker` and select the real operator socket,
+for example `ENDPOINT=unix:///var/run/docker.sock`. A rootless Docker socket can
+also be selected. There is no automatic engine/context fallback. Public registry
+access and network access for the recipe's Brew/Codex/plugin installs are required.
+Supply your credential-free Headroom endpoint; the example above is a placeholder.
+
+`create` reads the image, user, and exact hooks from the committed devcontainer
+recipe. It copies `git archive HEAD`, excluding untracked files and the host's
+`.git` config, auth files, and homes. Commit any intended recipe changes first.
+The copied recipe runs as `vscode`; workers always use `/home/vscode/.codex` and
+`/home/vscode/.local/bin/codex` in this first container adapter. Setup is first-create
+only; start runs the copied recipe's start hook. A running worker's start command
+only verifies readiness. No image build or second Action Server runs in the worker.
+The copied recipe tree has no `.git`; `source_commit` records its exact archived SHA.
+Clone a workload repository separately inside the disposable worker when needed.
+
+Bind the central server with an operator-owned target file. Replace the socket
+path and owner/name with those used above; preserve any existing targets:
+
+```json
+{
+  "targets": {
+    "local": {"transport": "local"},
+    "build": {
+      "transport": "container",
+      "engine": "podman",
+      "endpoint": "unix:///run/user/1000/podman/podman.sock",
+      "owner": "workstation",
+      "worker": "build"
+    }
+  }
+}
+```
+
+Each request selects exactly one matching owner/name/schema label set, verifies
+its full container ID, user, source SHA, fixed home/binary, and isolation, then
+pins native daemon version/proxy to that immutable ID. Initialize must return the
+expected Codex home. If the container disappears or the name is reused after
+resolution, the old route fails instead of switching to the replacement. Labels
+are ownership checks, not authentication against someone who controls the engine.
+Keep the socket and target config within the operator trust boundary.
+
+Run the central `inspect_target`, `read_server_diagnostics`, and `discover_threads`
+actions using target `build`. `inspect_target` proves resolution only, not native
+readiness. No auth or model inference is needed to prove the daemon/protocol route.
+Authentication and any canary turn remain separate operator-authorized steps.
+Never copy host Codex auth into the worker automatically.
+
+For lifecycle after creation, copy the full `container_id` from status:
+
+```sh
+ID=<full-64-character-container-id>
+worker stop --container-id "$ID"
+worker start --container-id "$ID"
+worker stop --container-id "$ID"
+worker delete --container-id "$ID"
+```
+
+Stop and delete never invoke host Codex, daemon stop, process-name killing, or
+engine-wide cleanup. They operate on that verified full container ID. Delete
+requires a stopped worker and removes its disposable filesystem. Export any work
+you need before deletion. No worker mounts the host home, host PID namespace, or
+engine socket. Existing mounted/privileged/host-PID containers are rejected.
+
+After a timeout or failed create, run status. Do not repeat create blindly or
+select the newest container. A partially installed worker remains available for
+explicit stop/delete/recreate. Missing setup completion refuses installer replay.
+A stale `--container-id`, ambiguous labels, missing engine, or stopped target
+fails closed. Concurrent create attempts share a deterministic engine name, so
+they cannot silently create a second same-name worker.
+
+## Provider contract and limits
+
+`ContainerProvider` owns only the local engine boundary. It returns a `Worker`
+with an immutable ID, operator identity, source SHA, and native endpoint command.
+`Target` uses that command for native version/proxy; it does not know create,
+stop, or delete. Devsy's existing authoritative list/status/SSH identity checks
+remain independent and unchanged. Local-only configuration invokes neither provider.
+
+This adapter deliberately supports the repository's current image + string hook
+recipe, not arbitrary devcontainer features, Compose/build definitions, automatic
+scheduling, generic shell actions, remote TCP/SSH engine APIs, or persistent host
+mounts. It rejects new unsupported devcontainer fields rather than ignoring them.
+Docker and Podman have parameterized executable-contract tests. Actual engine,
+image/bootstrap, and native protocol results are tracked by the separate Dagger
+provider acceptance workflow; fixture passes alone are not runtime proof.
 
 ## Provenance
 
