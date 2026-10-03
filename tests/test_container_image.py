@@ -3,6 +3,8 @@
 import asyncio
 import json
 import os
+from pathlib import Path
+import runpy
 import subprocess
 import time
 import uuid
@@ -98,6 +100,33 @@ def test_production_image_mcp_native_socket_and_persistent_receipt(tmp_path):
                     await session.initialize()
                     catalog = await session.list_tools()
                     assert len(catalog.tools) == 23
+                    policy = runpy.run_path(
+                        str(
+                            Path(__file__).parents[1]
+                            / "scripts/install_runtime_annotation_patch.py"
+                        )
+                    )
+                    reads = policy["READ_ONLY_TOOLS"]
+                    controls = policy["CONTROL_TOOLS"]
+                    assert {tool.name for tool in catalog.tools} == reads | controls
+                    for tool in catalog.tools:
+                        assert tool.annotations is not None
+                        assert tool.annotations.read_only_hint is (tool.name in reads)
+                        assert tool.annotations.destructive_hint is (
+                            tool.name in controls
+                        )
+                    schema = await http.get(f"http://{gateway}:8088/openapi.json")
+                    assert schema.status_code == 200
+                    assert (
+                        len(
+                            [
+                                path
+                                for path in schema.json()["paths"]
+                                if path.endswith("/run")
+                            ]
+                        )
+                        == 23
+                    )
                     diagnostics = await session.call_tool(
                         "read_server_diagnostics", {"payload": {"target": "local"}}
                     )

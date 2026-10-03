@@ -51,7 +51,7 @@ jobs:
       - name: Prove catalog, native socket, and receipt persistence
         env:
           CODEX_ACTION_CONTAINER_IMAGE: codex-action-server:verified
-        run: pytest -q -rs tests/test_container_runtime.py tests/test_runtime_transport_patch.py tests/test_container_image.py
+        run: pytest -q -rs tests/test_container_runtime.py tests/test_runtime_transport_patch.py tests/test_mcp_annotations.py tests/test_container_image.py
       - name: Retain the verified image
         run: |
           set -euo pipefail

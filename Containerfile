@@ -37,6 +37,8 @@ COPY src/ ./src/
 COPY scripts/run-container.sh scripts/preflight.py scripts/container_health.py ./scripts/
 COPY scripts/install_runtime_transport_patch.py ./scripts/
 RUN python3 scripts/install_runtime_transport_patch.py
+COPY scripts/install_runtime_annotation_patch.py ./scripts/
+RUN python3 scripts/install_runtime_annotation_patch.py
 
 USER 1000:1000
 FROM base AS prepared

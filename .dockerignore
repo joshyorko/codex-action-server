@@ -8,3 +8,4 @@
 !scripts/preflight.py
 !scripts/container_health.py
 !scripts/install_runtime_transport_patch.py
+!scripts/install_runtime_annotation_patch.py

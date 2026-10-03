@@ -141,7 +141,11 @@ catalog and a real mounted Unix-socket fixture, then restarts the API and verifi
 dispatch replay protection. It does not contact an operator daemon. Live local
 native acceptance remains a separate operator gate in the composed stack.
 
-Actions Runtime 1.0.2 conservatively emits `readOnlyHint=false` for ordinary
-actions even when `is_consequential=false`. Its pinned `@action` decorator does
-not accept an explicit read-only hint. Replacing it with an MCP tool changes the
-operation contract, so this container change preserves existing action metadata.
+The image projects the explicit 23-tool policy in
+`scripts/install_runtime_annotation_patch.py` through the pinned runtime's MCP
+adapter. Its 13 proven reads advertise `readOnlyHint=true` and
+`destructiveHint=false`; its 10 mutation/control tools and unknown tools remain
+non-read-only and destructive. Package, source-file, runtime-version, and source
+hash guards prevent the policy from changing foreign tools. HTTP action kinds,
+schemas, authorization, receipts, target checks, and other hints are unchanged.
+The older host CLI is not patched by this image-specific correction.
