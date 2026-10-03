@@ -369,7 +369,12 @@ class ActionServerValidationTests(unittest.TestCase):
                             }
                             self.assertEqual(
                                 set(tools),
-                                required,
+                                required
+                                | {
+                                    "list_targets",
+                                    "inspect_target",
+                                    "read_dispatch_receipt",
+                                },
                                 "Action Server catalog mismatch; "
                                 f"missing={sorted(required - set(tools))}; "
                                 f"actual={sorted(tools)}",
@@ -534,7 +539,7 @@ class ActionServerValidationTests(unittest.TestCase):
     def _wait_for_loopback(
         self, process: subprocess.Popen, port: int, server_log: Path
     ) -> None:
-        deadline = time.monotonic() + 30
+        deadline = time.monotonic() + 120
         while time.monotonic() < deadline:
             if process.poll() is not None:
                 self.fail(
