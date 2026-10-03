@@ -130,3 +130,12 @@ is implied by a passing test or a draft PR.
 After proving the foreground path, see [SUPERVISION.md](docs/SUPERVISION.md) for
 separate user-service templates, private persistent state, read-only acceptance,
 and rollback. Templates are not automatically installed or activated.
+
+
+## Remote native Codex worker recipe
+
+[Remote workers](docs/REMOTE_WORKERS.md) owns the Devsy create/resume workflow,
+`.devcontainer/remote-worker/devcontainer.json`, setup/verification, Headroom/RTK,
+plugins, and native daemon startup. Friday only consumes the central typed API.
+The worker does not run another Codex Action Server. Source-based discovery keeps
+logical targets stable across workspace recreation; ambiguous matches fail closed.

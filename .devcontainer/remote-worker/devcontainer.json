@@ -1,0 +1,9 @@
+{
+  "name": "Codex worker remote runtime",
+  "image": "ghcr.io/joshyorko/room-of-requirement:secure@sha256:de48bf9e2c93f8e358fcb5ac13e3159473245f5f271456c8f7d4dcc2ab881338",
+  "remoteUser": "vscode",
+  "waitFor": "postCreateCommand",
+  "postCreateCommand": "set -eu; test -x /bin/bash; /bin/bash scripts/remote/setup.sh",
+  "postStartCommand": "set -eu; CODEX_HOME=\"${CODEX_WORKER_CODEX_HOME:-${CODEX_HOME:-/home/vscode/.codex}}\"; CODEX_BIN=\"${CODEX_WORKER_CODEX_BIN:-/home/vscode/.local/bin/codex}\"; CODEX_CONFIG=\"${CODEX_WORKER_CODEX_CONFIG:-$CODEX_HOME/config.toml}\"; if [ \"$CODEX_CONFIG\" != \"$CODEX_HOME/config.toml\" ]; then printf 'Codex config path must be CODEX_HOME/config.toml\\n' >&2; exit 2; fi; export CODEX_HOME CODEX_WORKER_CODEX_HOME=\"$CODEX_HOME\" CODEX_WORKER_CODEX_BIN=\"$CODEX_BIN\"; \"$CODEX_BIN\" app-server daemon start; /bin/bash scripts/remote/verify.sh"
+}
+

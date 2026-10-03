@@ -242,3 +242,65 @@ def test_wrong_context_same_name_cannot_reach_native_command(tmp_path):
         )
         assert good.returncode == 0
         assert "app-server" in good.stdout
+
+
+def test_source_target_rebinds_after_workspace_recreation(tmp_path, monkeypatch):
+    source = "https://github.com/joshyorko/codex-action-server.git"
+    configure(
+        tmp_path,
+        monkeypatch,
+        {
+            "devsy": {
+                "transport": "devsy",
+                "context": "default",
+                "provider": "kubernetes",
+                "source": source,
+                "socket_path": "/workspaces/worker-state/codex/app-server-control/app-server-control.sock",
+                "user": "vscode",
+            }
+        },
+    )
+    current = {"id": "worker-before", "uid": "uid-before", "port": 10801}
+    calls = []
+
+    def run(args, **kwargs):
+        calls.append(args)
+        if "list" in args:
+            out = json.dumps(
+                [
+                    {
+                        "id": current["id"],
+                        "uid": current["uid"],
+                        "context": "default",
+                        "provider": {"name": "kubernetes"},
+                        "source": {"gitRepository": source},
+                    }
+                ]
+            )
+        elif "status" in args:
+            out = json.dumps(
+                {"id": current["id"], "context": "default", "state": "Running"}
+            )
+        else:
+            out = f"hostname 127.0.0.1\nport {current['port']}\nuser vscode\n"
+        return subprocess.CompletedProcess(args, 0, out, "")
+
+    monkeypatch.setattr(subprocess, "run", run)
+    before = boundary.resolve_target("devsy")
+    current.update(id="different-worker-after", uid="uid-after", port=10802)
+    after = boundary.resolve_target("devsy")
+    assert before.target == "worker-before.devsy"
+    assert after.target == "different-worker-after.devsy"
+    assert before.workspace_uid == "uid-before"
+    assert after.workspace_uid == "uid-after"
+    assert before.logical_name == after.logical_name == "devsy"
+    assert "10802" in after.ssh_options
+    assert all(
+        not any(x in args for x in ["create", "start", "stop", "delete"])
+        for args in calls
+    )
+
+    assert (
+        after.socket_path
+        == "/workspaces/worker-state/codex/app-server-control/app-server-control.sock"
+    )

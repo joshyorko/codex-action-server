@@ -1,13 +1,16 @@
 {
   "targets": {
-    "local": {"transport": "local", "codex_bin": "codex"},
+    "local": {
+      "transport": "local",
+      "codex_bin": "codex"
+    },
     "devsy": {
       "transport": "devsy",
       "context": "default",
       "provider": "kubernetes",
-      "workspace": "REPLACE_WITH_OPERATOR_SELECTED_WORKSPACE",
       "user": "vscode",
-      "codex_bin": "/home/vscode/.local/bin/codex"
+      "codex_bin": "/home/vscode/.local/bin/codex",
+      "source": "https://github.com/joshyorko/codex-action-server.git"
     }
   }
 }
