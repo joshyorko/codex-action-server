@@ -12,6 +12,7 @@ import uuid
 import pytest
 
 from test_action_server_validation import NativeFixture
+from test_thread_discovery import assert_scoped_mcp_discovery
 
 
 IMAGE = os.environ.get("CODEX_ACTION_CONTAINER_IMAGE")
@@ -115,6 +116,9 @@ def test_production_image_mcp_native_socket_and_persistent_receipt(tmp_path):
                         assert tool.annotations.destructive_hint is (
                             tool.name in controls
                         )
+                    await assert_scoped_mcp_discovery(
+                        session, {tool.name: tool for tool in catalog.tools}, native
+                    )
                     schema = await http.get(f"http://{gateway}:8088/openapi.json")
                     assert schema.status_code == 200
                     assert (

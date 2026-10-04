@@ -89,7 +89,7 @@ Reconnect/refresh the ChatGPT app to replace the old tool catalog. Expect23tools
 including list_targets, inspect_target and read_dispatch_receipt. Old enum-only
 remote target schemas mean the catalog is stale.
 
-## 4. First five read-only ChatGPT MCP calls, in order
+## 4. Read-only ChatGPT MCP workflow
 
 These exact IDs/cwds were read from existing native local metadata during the
 investigation. If an ID is absent or cwd differs, stop and reconcile discovery;
@@ -99,12 +99,19 @@ never create a replacement.
    `{"payload":{"target":"local"}}`
 2. read_model_provider_capabilities
    `{"payload":{"target":"local"}}`
-3. discover_threads
-   `{"payload":{"target":"local","limit":100}}`
+3. discover_threads separately for the two exact worktrees
+   - Review: `{"payload":{"target":"local","cwd":"/home/kdlocpanda/second_brain/Areas/dinosaurs/projectbluefin/review","limit":100}}`
+   - Josh Room: `{"payload":{"target":"local","cwd":"/home/kdlocpanda/second_brain/Projects/automation-control-plane/RPA/robots/JATT/josh-room","limit":100}}`
 4. read_thread (Review coordinator)
    `{"payload":{"target":"local","cwd":"/home/kdlocpanda/second_brain/Areas/dinosaurs/projectbluefin/review","thread_id":"01a0fe92-10f7-7620-8b87-b565bff05650","include_turns":false}}`
 5. read_thread (Josh Room coordinator)
    `{"payload":{"target":"local","cwd":"/home/kdlocpanda/second_brain/Projects/automation-control-plane/RPA/robots/JATT/josh-room","thread_id":"01a0fe86-7558-7e21-a060-54e2139ceac3","include_turns":false}}`
+
+Keep the exact target and cwd when following `nextCursor`. Discovery no longer
+accepts omitted or null cwd, so refresh the MCP catalog after upgrading. Known
+thread IDs can still be read directly with their exact cwd. Loaded-thread IDs
+do not replace persisted discovery. Read-only annotations remain unchanged;
+this contract does not bypass any client approval or safety decision.
 
 Then list_models with `{"payload":{"target":"local"}}` for the actual model and
 reasoning catalog. Do not infer provider inheritance from a model name.
@@ -147,7 +154,8 @@ Use an explicitly pinned legacy target only if the operator chooses to retain it
 
 Target configuration is read per request: no server/tunnel/native restart needed.
 From ChatGPT call list_targets, inspect_target(devsy), read_server_diagnostics(devsy),
-discover_threads(devsy). Use the returned exact cwd and ID in read_thread(devsy).
+discover_threads(devsy) with the exact remote worktree cwd from worker
+verification. Use that same cwd and the returned ID in read_thread(devsy).
 No empty list may be called a read proof. Resolver checks list/status, authoritative
 SSH config, pinned TCP route/user, and verifies remote DEVSY_WORKSPACE_UID/ID before
 each native probe/proxy command. Missing environment identity fails closed.
@@ -169,4 +177,3 @@ on uncertainty. No blind resubmission with a new ID.
 
 Native Unix-socket and hosted remote proofs are operator acceptance on Dakota.
 They were not performed by changing your live system from this VM.
-

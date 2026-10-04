@@ -63,6 +63,32 @@ The API accepts stable logical target strings; the runtime allowlist rejects any
 unconfigured name before connection. Thread mutations require exact cwd/thread
 and turn identity where relevant. Native protocol mapping remains explicit.
 
+### Persisted thread discovery
+
+`discover_threads` requires an exact absolute `cwd` on every call, including
+cursor pages. For example:
+
+```json
+{"payload":{"target":"local","cwd":"/absolute/worktree","limit":50}}
+```
+
+Discovery returns persisted native thread records for that worktree, including
+their existing metadata and `nextCursor`. Pass the same target and cwd with the
+returned cursor for the next page. Call separately for another known worktree.
+An omitted, null, empty, or invalid cwd fails before native access. There is no
+default cross-worktree history search or new global navigation action.
+
+This tightens the previous optional-cwd contract: clients that omitted cwd or
+sent null must supply it and refresh their MCP catalog. Existing exact-cwd
+discovery and `read_thread` calls keep their response format. `read_thread`
+continues to require an exact cwd and thread ID and checks both in the result.
+`list_loaded_threads` remains a list of currently loaded IDs; it is not a
+replacement for persisted discovery. See the [read-only workflow](docs/OPERATIONS.md#4-read-only-chatgpt-mcp-workflow)
+for the Review and Josh Room worktrees.
+
+Discovery remains read-only. Requiring scope does not grant approval or change
+client safety policy; a client may still decline a call.
+
 ## Dispatch and retry
 
 Persist your own unique request_id before calling `create_thread_and_start_turn`

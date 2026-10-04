@@ -23,7 +23,9 @@ class BoundaryTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "configured"):
             boundary.resolve_target("ror-codex.devsy")
         actions = load_actions()
-        assert actions.ThreadListRequest(target="devsy").target == "devsy"
+        assert (
+            actions.ThreadListRequest(target="devsy", cwd="/trusted").target == "devsy"
+        )
 
     def test_target_options_and_untrusted_cwds_are_rejected(self):
         import boundary
