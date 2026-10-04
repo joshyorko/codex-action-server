@@ -140,7 +140,8 @@ and route availability are separate from container and daemon readiness.
 2. Live workspace: correct source HEAD, tools, running native daemon and socket
 3. Operator auth completion: separate from workspace readiness
 4. Central `list_targets`, `inspect_target`, `read_server_diagnostics`, then
-   `discover_threads` and an existing exact-cwd `read_thread`
+   `discover_threads` with the exact remote worktree cwd and an existing
+   `read_thread` with that same cwd and the returned thread ID
 5. Only with explicit authorization, one bounded authenticated canary turn,
    tracked through exact thread/turn IDs to terminal state
 

@@ -72,6 +72,25 @@ class NativeFixture:
         self.codex_home = str(codex_home)
         self.thread_id = "fixture-thread"
         self.turn_id = "fixture-turn"
+        self.discovery_records = [
+            {
+                "id": self.thread_id,
+                "cwd": self.cwd,
+                "preview": "Review coordinator",
+                "path": f"{self.codex_home}/sessions/review.jsonl",
+                "modelProvider": "fixture-provider",
+                "gitInfo": {
+                    "branch": "review",
+                    "originUrl": "https://example.test/repo",
+                },
+            },
+            {"id": "fixture-followup", "cwd": self.cwd, "preview": "Review follow-up"},
+            {
+                "id": "fixture-other-thread",
+                "cwd": self.cwd + "-other",
+                "preview": "Josh Room coordinator",
+            },
+        ]
         self.calls: list[dict] = []
         self._lock = threading.Lock()
         self._server = unix_serve(self._handle, str(socket_path), compression=None)
@@ -120,9 +139,19 @@ class NativeFixture:
                     "codexHome": self.codex_home,
                 }
             elif method == "thread/list":
+                params = message.get("params", {})
+                records = [
+                    record
+                    for record in self.discovery_records
+                    if params.get("cwd") is None or record["cwd"] == params["cwd"]
+                ]
+                offset = int(params.get("cursor", "fixture-offset-0").rsplit("-", 1)[1])
+                end = offset + params.get("limit", 50)
                 result = {
-                    "data": [{"id": self.thread_id, "cwd": self.cwd}],
-                    "nextCursor": None,
+                    "data": records[offset:end],
+                    "nextCursor": f"fixture-offset-{end}"
+                    if end < len(records)
+                    else None,
                 }
             elif method == "thread/start":
                 result = self._thread_state(False)
@@ -130,6 +159,8 @@ class NativeFixture:
                 result = self._thread_state(
                     message.get("params", {}).get("includeTurns", False)
                 )
+                if message.get("params", {}).get("threadId") == "fixture-other-thread":
+                    result = {"thread": self.discovery_records[-1]}
             elif method == "thread/resume":
                 result = self._thread_state(False)
             elif method == "turn/start":
@@ -382,6 +413,11 @@ class ActionServerValidationTests(unittest.TestCase):
                                 removed_provisioning.isdisjoint(tools),
                                 "Removed provisioning actions remain in the Action Server catalog",
                             )
+                            from test_thread_discovery import (
+                                assert_scoped_mcp_discovery,
+                            )
+
+                            await assert_scoped_mcp_discovery(session, tools, native)
                             for name in required:
                                 schema = getattr(
                                     tools[name],

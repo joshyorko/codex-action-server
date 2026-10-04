@@ -36,8 +36,8 @@ class ThreadListRequest(StrictModel):
     target: TargetName = Field(
         description="Configured target name, never a shell command"
     )
-    cwd: str | None = Field(
-        default=None, description="Optional exact absolute worktree path"
+    cwd: str = Field(
+        description="Required exact absolute worktree path; discovery never spans worktrees"
     )
     limit: int = Field(default=50, ge=1, le=100)
     cursor: str | None = None
@@ -607,14 +607,15 @@ def _apply_thread_effort(
 
 @action(is_consequential=False)
 def discover_threads(payload: ThreadListRequest) -> Response[RpcEnvelope]:
-    """Discover persisted threads on one configured Codex target.
+    """Discover persisted threads in one exact worktree on a configured target.
 
     Args:
-        payload: Target and optional exact cwd/list pagination controls.
+        payload: Target, required exact absolute cwd, and bounded pagination controls.
     """
-    params: dict[str, Any] = {"limit": payload.limit}
-    if payload.cwd is not None:
-        params["cwd"] = _action_cwd(payload.cwd)
+    params: dict[str, Any] = {
+        "cwd": _action_cwd(payload.cwd),
+        "limit": payload.limit,
+    }
     if payload.cursor is not None:
         params["cursor"] = payload.cursor
     return _run(

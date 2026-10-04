@@ -11,6 +11,8 @@ import time
 
 import pytest
 
+from test_thread_discovery import assert_mcp_cwd_rejected
+
 
 def test_standalone_http_boot_catalog_and_safe_diagnostics(tmp_path):
     binary = shutil.which("action-server")
@@ -86,6 +88,22 @@ def test_standalone_http_boot_catalog_and_safe_diagnostics(tmp_path):
                         } <= tools.keys()
                         schema = tools["create_thread_and_start_turn"].input_schema
                         assert "request_id" in json.dumps(schema)
+                        discovery = tools["discover_threads"].input_schema[
+                            "properties"
+                        ]["payload"]
+                        assert "cwd" in discovery["required"]
+                        assert discovery["properties"]["cwd"]["type"] == "string"
+                        for scope in (
+                            {},
+                            {"cwd": None},
+                            {"cwd": ""},
+                            {"cwd": "relative/path"},
+                        ):
+                            await assert_mcp_cwd_rejected(
+                                session,
+                                "discover_threads",
+                                {"target": "local", **scope},
+                            )
                         r = await session.call_tool("list_targets", {})
                         assert not r.is_error
                         assert r.structured_content["result"]["targets"] == [
