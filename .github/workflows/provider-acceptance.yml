@@ -1,0 +1,96 @@
+name: real-provider-acceptance
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - '.github/workflows/provider-acceptance.yml'
+      - 'ci/**'
+      - '.devcontainer/remote-worker/**'
+      - 'scripts/remote/**'
+      - 'src/worker_containers.py'
+      - 'src/boundary.py'
+      - 'src/codex_rpc.py'
+      - 'tests/test_provider_acceptance_contract.py'
+permissions:
+  contents: read
+jobs:
+  provider:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        engine: [docker, podman]
+    env:
+      ACCEPTANCE_OWNER: gha-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.engine }}
+    steps:
+      - name: Set runner output path
+        run: echo "ACCEPTANCE_OUTPUT=$RUNNER_TEMP/provider-acceptance-${{ matrix.engine }}.json" >> "$GITHUB_ENV"
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: ci/requirements.txt
+      - name: Install matching Dagger SDK
+        run: python -m pip install -r ci/requirements.txt
+      - name: Install Dagger v0.21.10
+        uses: dagger/dagger-for-github@v8.2.0
+        with:
+          version: v0.21.10
+      - name: Select Docker socket
+        if: matrix.engine == 'docker'
+        run: |
+          test -S /var/run/docker.sock
+          docker --host unix:///var/run/docker.sock version
+          echo "ACCEPTANCE_SOCKET=/var/run/docker.sock" >> "$GITHUB_ENV"
+      - name: Start rootless Podman socket
+        if: matrix.engine == 'podman'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y podman uidmap slirp4netns fuse-overlayfs
+          test "$(id -u)" -ne 0
+          runtime="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
+          test -d "$runtime"
+          socket="$runtime/provider-acceptance-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}.sock"
+          podman system service --time=0 "unix://$socket" >"$RUNNER_TEMP/podman-service.log" 2>&1 &
+          echo "$!" > "$RUNNER_TEMP/podman-service.pid"
+          for attempt in $(seq 1 30); do
+            test ! -S "$socket" || break
+            sleep 1
+          done
+          test -S "$socket"
+          podman --remote --url "unix://$socket" info
+          test "$(podman --remote --url "unix://$socket" info --format '{{.Host.Security.Rootless}}')" = true
+          echo "ACCEPTANCE_SOCKET=$socket" >> "$GITHUB_ENV"
+      - name: Exercise real provider through Dagger
+        run: |
+          dagger version
+          dagger run python ci/dagger_acceptance.py \
+            --engine '${{ matrix.engine }}' --socket "$ACCEPTANCE_SOCKET" \
+            --owner "$ACCEPTANCE_OWNER" --output "$ACCEPTANCE_OUTPUT" \
+            --controller-socket /var/run/docker.sock
+      - name: Reconcile and clean only this run's worker
+        if: always() && env.ACCEPTANCE_SOCKET != ''
+        run: |
+          python ci/dagger_acceptance.py --cleanup-only \
+            --engine '${{ matrix.engine }}' --socket "$ACCEPTANCE_SOCKET" \
+            --owner "$ACCEPTANCE_OWNER"
+      - name: Stop this run's Podman service
+        if: always() && matrix.engine == 'podman'
+        run: |
+          if test -f "$RUNNER_TEMP/podman-service.pid"; then
+            kill "$(cat "$RUNNER_TEMP/podman-service.pid")" 2>/dev/null || true
+          fi
+      - name: Upload acceptance evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: provider-acceptance-${{ matrix.engine }}-${{ github.run_attempt }}
+          path: |
+            ${{ env.ACCEPTANCE_OUTPUT }}
+            ${{ runner.temp }}/podman-service.log
+          if-no-files-found: warn
+          retention-days: 14

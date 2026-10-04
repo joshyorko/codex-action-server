@@ -11,6 +11,7 @@ import re
 import subprocess
 
 from codex_rpc import Target
+from worker_containers import ContainerProvider
 
 _NAME = re.compile(r"^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,127}$")
 _IDENTIFIER = re.compile(r"^[^\s\r\n]+$")
@@ -199,6 +200,18 @@ def resolve_target(name: str) -> Target:
     if not isinstance(name, str) or name not in configs:
         raise ResolutionError("Target is not configured")
     config = configs[name]
+    if config.get("transport") == "container":
+        if set(config) != {"transport", "engine", "endpoint", "owner", "worker"}:
+            raise ResolutionError("invalid_target_configuration")
+        worker = ContainerProvider(
+            config["engine"], config["endpoint"], config["owner"], config["worker"]
+        ).resolve()
+        return Target(
+            f"{worker.engine.name}:{worker.container_id}",
+            worker.codex_bin,
+            logical_name=name,
+            container=worker,
+        )
     allowed = {
         "transport",
         "codex_bin",
