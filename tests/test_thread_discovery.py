@@ -15,15 +15,16 @@ async def assert_mcp_cwd_rejected(session, name, payload):
     try:
         result = await session.call_tool(name, {"payload": payload})
     except MCPError as error:
-        # Runtime schema validation uses JSON-RPC errors; action validation may
-        # return an error result instead. Both must identify the rejected cwd.
+        # Runtime schema validation rejects the call at the JSON-RPC boundary.
         assert "cwd" in str(error).lower()
     else:
-        assert result.is_error, payload
-        assert (
-            "cwd"
-            in " ".join(getattr(item, "text", "") for item in result.content).lower()
-        )
+        # ActionError uses the Actions Runtime's typed error envelope, even when
+        # the MCP result itself is not marked is_error.
+        error = result.structured_content
+        assert isinstance(error, dict), payload
+        assert error.get("result") is None, error
+        assert isinstance(error.get("error"), str), error
+        assert "cwd" in error["error"].lower(), error
 
 
 async def assert_scoped_mcp_discovery(session, tools, native):
