@@ -22,6 +22,7 @@ import sys
 import time
 from websockets.sync.client import connect, unix_connect
 from websockets.exceptions import ConnectionClosed
+from worker_containers import Worker
 
 METHODS = {
     "mcpServerStatus/list",
@@ -82,6 +83,7 @@ class Target:
     ssh_options: tuple[str, ...] = ()
     workspace_uid: str | None = None
     workspace_id: str | None = None
+    container: Worker | None = None
 
     def __post_init__(self):
         if (
@@ -94,6 +96,8 @@ class Target:
             )
 
     def command(self, args):
+        if self.container is not None:
+            return self.container.command(args)
         command = [self.codex_bin, *args]
         if self.target == "local":
             return command
@@ -503,6 +507,11 @@ class Client:
                     "capabilities": {"experimentalApi": True},
                 },
             )
+            if (
+                self.target.container is not None
+                and self.metadata.get("codexHome") != self.target.container.codex_home
+            ):
+                raise RpcError("Native Codex home identity mismatch")
             if self.workstream is not None:
                 self.workstream["codexHome"] = self.metadata.get("codexHome")
             self.ws.send(json.dumps({"method": "initialized"}))

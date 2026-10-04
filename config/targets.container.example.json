@@ -1,0 +1,12 @@
+{
+  "targets": {
+    "local": {"transport": "local"},
+    "build": {
+      "transport": "container",
+      "engine": "podman",
+      "endpoint": "unix:///run/user/1000/podman/podman.sock",
+      "owner": "workstation",
+      "worker": "build"
+    }
+  }
+}
