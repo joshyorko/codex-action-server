@@ -9,6 +9,23 @@ from test_actions import FakeClient, load_actions
 from test_action_server_validation import _result_data
 
 
+async def assert_mcp_cwd_rejected(session, name, payload):
+    from mcp.shared.exceptions import MCPError
+
+    try:
+        result = await session.call_tool(name, {"payload": payload})
+    except MCPError as error:
+        # Runtime schema validation uses JSON-RPC errors; action validation may
+        # return an error result instead. Both must identify the rejected cwd.
+        assert "cwd" in str(error).lower()
+    else:
+        assert result.is_error, payload
+        assert (
+            "cwd"
+            in " ".join(getattr(item, "text", "") for item in result.content).lower()
+        )
+
+
 async def assert_scoped_mcp_discovery(session, tools, native):
     """Exercise the published schema and calls through the real Action Server."""
     schema = tools["discover_threads"].input_schema["properties"]["payload"]
@@ -26,10 +43,9 @@ async def assert_scoped_mcp_discovery(session, tools, native):
         {"cwd": "relative/path"},
         {"cwd": "/work/../other"},
     ):
-        rejected = await session.call_tool(
-            "discover_threads", {"payload": {"target": "local", **scope}}
+        await assert_mcp_cwd_rejected(
+            session, "discover_threads", {"target": "local", **scope}
         )
-        assert rejected.is_error, scope
     assert native.calls == before, "Unscoped discovery reached the native daemon"
 
     expected = native.discovery_records
@@ -80,17 +96,11 @@ async def assert_scoped_mcp_discovery(session, tools, native):
         assert read["id"] == record["id"]
         assert read["cwd"] == record["cwd"]
 
-    rejected_read = await session.call_tool(
+    await assert_mcp_cwd_rejected(
+        session,
         "read_thread",
-        {
-            "payload": {
-                "target": "local",
-                "cwd": other_cwd,
-                "thread_id": native.thread_id,
-            }
-        },
+        {"target": "local", "cwd": other_cwd, "thread_id": native.thread_id},
     )
-    assert rejected_read.is_error
     calls = native.calls[len(before) :]
     assert {call["method"] for call in calls} <= {
         "initialize",
