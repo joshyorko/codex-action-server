@@ -28,6 +28,19 @@ def docker(*args, check=True):
     )
 
 
+def test_production_image_embeds_devsy_1_20_0():
+    result = docker(
+        "run",
+        "--rm",
+        "--entrypoint",
+        "/usr/local/bin/devsy",
+        IMAGE,
+        "--version",
+    )
+
+    assert result.stdout.strip() == "v1.20.0"
+
+
 def test_production_image_mcp_native_socket_and_persistent_receipt(tmp_path):
     import httpx
     from mcp import ClientSession

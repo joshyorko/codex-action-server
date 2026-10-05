@@ -10,8 +10,8 @@ RUN test "$TARGETARCH" = amd64 \
     && echo '9aef9ec55c17d90ec11a32d8d4da694def92502ba46a73621c35267f230873d3  /tmp/runtime-wheel/actions_runtime-1.0.2-cp312-cp312-manylinux_2_17_x86_64.manylinux_2_5_x86_64.manylinux1_x86_64.manylinux2014_x86_64.whl' | sha256sum -c - \
     && python -m pip install --no-cache-dir /tmp/runtime-wheel/*.whl actions-core==1.0.1 mcp==2.0.0 \
     && rm -rf /tmp/runtime-wheel \
-    && curl -fL --max-time 120 --retry 2 https://github.com/joshyorko/homebrew-tools/releases/download/devsy-1.19.0/devsy-linux-amd64 -o /usr/local/bin/devsy \
-    && echo '2f43f28ab5b399b379091aeb09628ec6b70dc82212a64d30de8e2a4a18a49ef5  /usr/local/bin/devsy' | sha256sum -c - \
+    && curl -fL --max-time 120 --retry 2 https://github.com/joshyorko/homebrew-tools/releases/download/devsy-1.20.0/devsy-linux-amd64 -o /usr/local/bin/devsy \
+    && echo 'e6e1de6ca5db0564f995c64ac72526a1276b2cdb60f55323f40097e88c087ed8  /usr/local/bin/devsy' | sha256sum -c - \
     && chmod 0755 /usr/local/bin/devsy \
     && groupadd --gid 1000 codex-actions \
     && useradd --uid 1000 --gid 1000 --create-home codex-actions \
