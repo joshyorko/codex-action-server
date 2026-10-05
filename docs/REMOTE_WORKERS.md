@@ -48,13 +48,18 @@ The endpoint accepts hostname/IPv4, port, and path, not embedded credentials,
 query parameters, shell syntax, or IPv6 literals. Existing config/provider/model
 choices are preserved; changing this variable does not rewrite a retained config.
 
-Fresh defaults preserve the existing Luna model/effort/context policy. Headroom
-initialization selects its provider; RTK owns its native integration. The Brew
-tap is `joshyorko/tools` (repository `joshyorko/homebrew-tools`), and the upstream
-Codex installer is `https://chatgpt.com/codex/install.sh`. The image is digest-pinned,
-but Brew formulas, installer, and plugin marketplace main are upstream-moving
-inputs. Record installed versions and selected source SHA in acceptance evidence;
-this recipe does not claim a bit-for-bit reproducible toolchain.
+Fresh defaults preserve the existing Luna model/effort/context policy and set
+Codex to `sandbox_mode = "workspace-write"`, `approval_policy = "on-request"`,
+and `approvals_reviewer = "user"`. Workspace-write allows network access and
+adds `/workspaces` as a writable root. Setup fills only absent sandbox and
+approval keys in a retained config; explicit operator values and all unrelated
+settings remain intact. Headroom initialization selects its provider; RTK owns
+its native integration. The Brew tap is `joshyorko/tools` (repository
+`joshyorko/homebrew-tools`), and the upstream Codex installer is
+`https://chatgpt.com/codex/install.sh`. The image is digest-pinned, but Brew
+formulas, installer, and plugin marketplace main are upstream-moving inputs.
+Record installed versions and selected source SHA in acceptance evidence; this
+recipe does not claim a bit-for-bit reproducible toolchain.
 
 ## Create or resume with Devsy
 

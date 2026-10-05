@@ -86,4 +86,10 @@ def test_retained_headroom_policy_is_not_rewritten(worker_setup):
         ["bash", str(SETUP)], env=env, capture_output=True, text=True
     )
     assert result.returncode == 0, result.stderr
-    assert config.read_text() == original
+    parsed = tomllib.loads(config.read_text())
+    assert parsed["model_provider"] == "headroom"
+    assert parsed["model_providers"]["headroom"]["base_url"] == (
+        "http://operator.example/v1"
+    )
+    assert parsed["model_providers"]["headroom"]["requires_openai_auth"] is False
+    assert parsed["sandbox_mode"] == "workspace-write"

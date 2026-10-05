@@ -2,6 +2,7 @@ from pathlib import Path
 import subprocess
 import sys
 import tempfile
+import tomllib
 import unittest
 
 
@@ -54,20 +55,28 @@ class RemoteSetupRetainedConfigTests(unittest.TestCase):
         )
 
     def test_setup_preserves_explicit_model_provider_and_skips_headroom_rewrite(self):
-        original = self.config.read_text()
         result = self.run_setup()
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        self.assertEqual(self.config.read_text(), original)
+        parsed = tomllib.loads(self.config.read_text())
+        self.assertEqual(parsed["model"], "operator-model")
+        self.assertEqual(parsed["model_provider"], "operator-provider")
+        self.assertEqual(
+            parsed["model_providers"]["operator-provider"]["base_url"],
+            "http://provider.example/v1",
+        )
+        self.assertEqual(parsed["sandbox_mode"], "workspace-write")
         self.assertNotIn("headroom init", self.calls.read_text())
 
     def test_setup_preserves_retained_native_default_provider(self):
         self.config.write_text(
             'model = "operator-model"\nmodel_reasoning_effort = "low"\n'
         )
-        original = self.config.read_text()
         result = self.run_setup()
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        self.assertEqual(self.config.read_text(), original)
+        parsed = tomllib.loads(self.config.read_text())
+        self.assertEqual(parsed["model"], "operator-model")
+        self.assertEqual(parsed["model_reasoning_effort"], "low")
+        self.assertEqual(parsed["sandbox_mode"], "workspace-write")
         self.assertNotIn("headroom init", self.calls.read_text())
 
     def test_setup_rejects_config_outside_selected_codex_home_before_side_effects(self):
@@ -90,10 +99,11 @@ class RemoteSetupRetainedConfigTests(unittest.TestCase):
     def test_setup_uses_explicit_friday_home_to_derive_config_path(self):
         self.env.pop("CODEX_WORKER_CODEX_CONFIG")
         self.config.write_text('model_provider = "operator-provider"\n')
-        original = self.config.read_text()
         result = self.run_setup()
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        self.assertEqual(self.config.read_text(), original)
+        parsed = tomllib.loads(self.config.read_text())
+        self.assertEqual(parsed["model_provider"], "operator-provider")
+        self.assertEqual(parsed["sandbox_mode"], "workspace-write")
 
     def test_setup_installs_missing_codex_binary_at_selected_destination(self):
         destination = self.root / "selected-bin" / "codex"
@@ -128,7 +138,54 @@ class RemoteSetupRetainedConfigTests(unittest.TestCase):
         created = self.config.read_text()
         self.assertIn('model = "gpt-6-luna"', created)
         self.assertIn("requires_openai_auth = true", created)
+        parsed = tomllib.loads(created)
+        self.assertEqual(parsed["sandbox_mode"], "workspace-write")
+        self.assertEqual(parsed["approval_policy"], "on-request")
+        self.assertEqual(parsed["approvals_reviewer"], "user")
+        self.assertTrue(parsed["sandbox_workspace_write"]["network_access"])
+        self.assertEqual(
+            parsed["sandbox_workspace_write"]["writable_roots"], ["/workspaces"]
+        )
         self.assertIn("headroom init --global --proxy-url", self.calls.read_text())
+
+    def test_setup_preserves_explicit_worker_policy_and_fills_only_missing_keys(self):
+        self.config.write_text(
+            'model = "operator-model"\n'
+            'approval_policy = "never"\n'
+            'approvals_reviewer = "auto_review"\n'
+            "sandbox_workspace_write = { network_access = false }\n"
+            'sandbox_mode = "read-only"\n'
+        )
+        result = self.run_setup()
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        parsed = tomllib.loads(self.config.read_text())
+        self.assertEqual(parsed["sandbox_mode"], "read-only")
+        self.assertEqual(parsed["approval_policy"], "never")
+        self.assertEqual(parsed["approvals_reviewer"], "auto_review")
+        self.assertFalse(parsed["sandbox_workspace_write"]["network_access"])
+        self.assertEqual(
+            parsed["sandbox_workspace_write"]["writable_roots"], ["/workspaces"]
+        )
+
+    def test_setup_preserves_explicit_workspace_write_roots(self):
+        self.config.write_text(
+            'sandbox_workspace_write = { network_access = false, writable_roots = ["/operator"] }\n'
+        )
+        result = self.run_setup()
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        parsed = tomllib.loads(self.config.read_text())
+        self.assertFalse(parsed["sandbox_workspace_write"]["network_access"])
+        self.assertEqual(
+            parsed["sandbox_workspace_write"]["writable_roots"], ["/operator"]
+        )
+
+    def test_setup_is_idempotent_for_retained_config(self):
+        first = self.run_setup()
+        self.assertEqual(first.returncode, 0, first.stdout + first.stderr)
+        configured = self.config.read_text()
+        second = self.run_setup()
+        self.assertEqual(second.returncode, 0, second.stdout + second.stderr)
+        self.assertEqual(self.config.read_text(), configured)
 
     def test_fresh_setup_uses_operator_proxy_endpoint(self):
         self.config.unlink()

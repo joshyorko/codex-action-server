@@ -104,6 +104,7 @@ if provider.get("requires_openai_auth") is not True:
     path.write_text(updated)
 PY
 fi
+"$PYTHON" "${BASH_SOURCE[0]%/*}/ensure_worker_defaults.py" "$CONFIG"
 "$RTK" init --codex
 "$RTK" verify
 "$CODEX" plugin marketplace add joshyorko/plugins --ref main

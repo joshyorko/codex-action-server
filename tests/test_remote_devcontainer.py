@@ -66,6 +66,20 @@ def test_poststart_propagates_selected_home_and_binary_to_daemon_and_verifier():
     assert "CODEX_WORKER_CODEX_CONFIG" in start
 
 
+def test_worker_config_defaults_flow_through_setup_and_native_daemon_start():
+    definition = json.loads(DEFINITION.read_text())
+    start = definition["postStartCommand"]
+    setup = SETUP.read_text()
+    verify = VERIFY.read_text()
+
+    assert "ensure_worker_defaults.py" in setup
+    assert "export CODEX_HOME" in start
+    assert '"$CODEX_BIN" app-server daemon start' in start
+    assert "--sandbox" not in start
+    assert "tomllib.load" in verify
+    assert 'CONFIG="${CODEX_WORKER_CODEX_CONFIG:-$CODEX_HOME/config.toml}"' in verify
+
+
 def test_scripts_are_independently_runnable_and_secret_safe():
     verify_text = VERIFY.read_text().lower()
     assert "requires_openai_auth" in verify_text
