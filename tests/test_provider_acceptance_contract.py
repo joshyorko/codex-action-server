@@ -349,6 +349,185 @@ def test_worker_exec_uses_source_cwd_instead_of_pid1_cwd(monkeypatch):
     assert result[result.index("--workdir") + 1] == worker_root
 
 
+@pytest.mark.parametrize(
+    (
+        "user_agent",
+        "diagnostics_result",
+        "expected_diagnostics_status",
+        "expected_methods",
+        "expected_error",
+    ),
+    [
+        (
+            "codex-cli 0.160.1",
+            {"process": {"id": 1}, "gauges": []},
+            "passed",
+            ["thread/list", "server/diagnostics"],
+            None,
+        ),
+        (
+            "codex-cli 0.159.2",
+            None,
+            "skipped",
+            ["thread/list"],
+            None,
+        ),
+        (
+            "codex-cli 0.160.1",
+            "rpc-error",
+            "failed",
+            ["thread/list", "server/diagnostics"],
+            "RpcError",
+        ),
+        (
+            "codex-cli 0.160.1",
+            {"process": {}, "gauges": []},
+            "failed",
+            ["thread/list", "server/diagnostics"],
+            "invalid_response",
+        ),
+    ],
+)
+def test_provider_smoke_gates_diagnostics_by_exact_native_version(
+    monkeypatch,
+    tmp_path,
+    user_agent,
+    diagnostics_result,
+    expected_diagnostics_status,
+    expected_methods,
+    expected_error,
+):
+    from types import SimpleNamespace
+    import codex_rpc
+
+    checks = load_live_checks()
+    calls = []
+    # smoke() sets its process-wide target file as the real driver does. Keep
+    # that mutation within this test instead of leaking it to the suite.
+    monkeypatch.setenv("CODEX_ACTION_TARGETS", "restore-after-smoke-test")
+
+    class NativeClient:
+        metadata = {
+            "codexHome": "/home/vscode/.codex",
+            "userAgent": user_agent,
+        }
+
+        def __init__(self, target, timeout):
+            self.target = target
+            self.timeout = timeout
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+        def request(self, method, params):
+            calls.append((method, params))
+            if method == "server/diagnostics":
+                if diagnostics_result == "rpc-error":
+                    raise codex_rpc.RpcError("private native error detail")
+                return diagnostics_result
+            if method == "thread/list":
+                return {"data": []}
+            pytest.fail(f"Unexpected native method in read-only smoke: {method}")
+
+    target = SimpleNamespace(native=True)
+    monkeypatch.setattr(codex_rpc, "Client", NativeClient)
+    monkeypatch.setattr("boundary.resolve_target", lambda name: target)
+
+    _, evidence = checks.smoke(
+        SimpleNamespace(engine="docker", endpoint="unix:///test.sock", owner="test"),
+        {"codex_home": "/home/vscode/.codex"},
+        tmp_path / "targets.json",
+    )
+
+    assert [method for method, _params in calls] == expected_methods
+    assert evidence == {
+        "codex_home": "/home/vscode/.codex",
+        "native_user_agent": user_agent,
+        "diagnostics_status": expected_diagnostics_status,
+        **({"diagnostics_error": expected_error} if expected_error is not None else {}),
+        **(
+            {"diagnostics_skip_reason": "native_user_agent_not_pinned"}
+            if expected_diagnostics_status == "skipped"
+            else {}
+        ),
+        "thread_list_read": True,
+        "discovered_threads": 0,
+    }
+
+
+def test_run_records_codex_version_before_pinned_diagnostics_failure(
+    monkeypatch, tmp_path
+):
+    import json
+    from types import SimpleNamespace
+
+    checks = load_live_checks()
+    recipe = json.loads(
+        (checks.ROOT / ".devcontainer/remote-worker/devcontainer.json").read_text()
+    )
+    worker = {
+        "container_id": "a" * 64,
+        "codex_bin": "/home/vscode/.local/bin/codex",
+        "codex_home": "/home/vscode/.codex",
+        "source_commit": "fixture-source-sha",
+    }
+    native_evidence = {
+        "native_user_agent": "codex-cli 0.160.1",
+        "diagnostics_status": "failed",
+        "diagnostics_error": "RpcError",
+    }
+    worker_commands = []
+
+    def fake_cli(_args, *operation, **_kwargs):
+        if operation == ("status",):
+            return None
+        if operation[0] == "create":
+            return worker
+        pytest.fail(f"Unexpected provider CLI operation: {operation}")
+
+    def fake_worker_exec(_args, _worker, *operation):
+        worker_commands.append(operation)
+        return "codex-cli 0.160.1"
+
+    monkeypatch.setattr(
+        checks, "command", lambda *_args, **_kwargs: "fixture-source-sha"
+    )
+    monkeypatch.setattr(checks, "engine", lambda *_args, **_kwargs: "engine-version")
+    monkeypatch.setattr(checks, "cli", fake_cli)
+    monkeypatch.setattr(
+        checks,
+        "check_isolation",
+        lambda *_args, **_kwargs: {
+            "image_reference": recipe["image"],
+            "image_id": "sha256:" + "b" * 64,
+            "mount_count": 0,
+            "privileged": False,
+        },
+    )
+    monkeypatch.setattr(checks, "worker_exec", fake_worker_exec)
+    monkeypatch.setattr(
+        checks,
+        "smoke",
+        lambda *_args, **_kwargs: (object(), native_evidence),
+    )
+    report = {}
+
+    with pytest.raises(RuntimeError, match="Pinned native diagnostics failed"):
+        checks.run(
+            SimpleNamespace(
+                engine="docker", endpoint="unix:///test.sock", owner="test"
+            ),
+            report,
+        )
+
+    assert report["first_rpc"] == native_evidence
+    assert report["installed_versions"]["codex"] == "codex-cli 0.160.1"
+    assert worker_commands == [("/home/vscode/.local/bin/codex", "--version")]
+
+
 @pytest.mark.parametrize("executable", ["mkdir", "chown", "touch", "test"])
 def test_probe_names_fixed_worker_preparation_commands(executable):
     probe = load_probe()

@@ -66,12 +66,20 @@ def _actions_runtime_python() -> str | None:
 class NativeFixture:
     """Small native App Server seam with real WebSocket framing."""
 
-    def __init__(self, socket_path: Path, cwd: Path, codex_home: Path):
+    def __init__(
+        self,
+        socket_path: Path,
+        cwd: Path,
+        codex_home: Path,
+        *,
+        user_agent: str = "friday-validation-native-fixture/0.153.4",
+    ):
         from websockets.sync.server import unix_serve
 
         self.socket_path = socket_path
         self.cwd = str(cwd)
         self.codex_home = str(codex_home)
+        self.user_agent = user_agent
         self.thread_id = "fixture-thread"
         self.turn_id = "fixture-turn"
         self.discovery_records = [
@@ -137,7 +145,7 @@ class NativeFixture:
                 continue
             if method == "initialize":
                 result = {
-                    "userAgent": "friday-validation-native-fixture/0.153.4",
+                    "userAgent": self.user_agent,
                     "codexHome": self.codex_home,
                 }
             elif method == "thread/list":
@@ -163,6 +171,8 @@ class NativeFixture:
                 )
                 if message.get("params", {}).get("threadId") == "fixture-other-thread":
                     result = {"thread": self.discovery_records[-1]}
+            elif method == "server/diagnostics":
+                result = {"process": {"id": 1}, "gauges": []}
             elif method == "thread/resume":
                 result = self._thread_state(False)
             elif method == "turn/start":

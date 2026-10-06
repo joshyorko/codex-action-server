@@ -44,7 +44,12 @@ def test_production_image_mcp_native_socket_and_persistent_receipt(tmp_path):
     native_dir = tmp_path / "native"
     native_dir.mkdir(mode=0o750)
     native_socket = native_dir / "native.sock"
-    native = NativeFixture(native_socket, tmp_path, tmp_path / "native-home")
+    native = NativeFixture(
+        native_socket,
+        tmp_path,
+        tmp_path / "native-home",
+        user_agent="codex-cli 0.160.1",
+    )
     native_socket.chmod(0o660)
     target = tmp_path / "targets.json"
     target.write_text(
@@ -137,7 +142,7 @@ def test_production_image_mcp_native_socket_and_persistent_receipt(tmp_path):
                     assert not diagnostics.is_error
                     connection = diagnostics.structured_content["result"]["connection"]
                     assert connection["socket"] == "/run/native-codex/native.sock"
-                    assert connection["server"].startswith("friday-validation-native")
+                    assert connection["server"] == "codex-cli 0.160.1"
                     result = await session.call_tool(
                         "create_thread_and_start_turn",
                         {
