@@ -112,7 +112,8 @@ deliver a response to a request on a closed WebSocket. Safely supporting this
 requires a process-owned retained-connection service, minimal fenced receipts,
 restart/expiry reconciliation, and an end-to-end native fixture proving
 same-connection response delivery; none exists here. This warrants a focused
-follow-on, “Retain and fence native app-server callback connections,” covering
+follow-on in [CAS #11](https://github.com/joshyorko/codex-action-server/issues/11),
+“Retain and fence native app-server callback connections,” covering
 connection ownership, exact thread/turn/request identity, one-shot responses,
 duplicate/conflicting replies, cancellation, timeout, restart/loss
 reconciliation, and native fixture proof. Until that lifecycle is designed and
