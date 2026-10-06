@@ -159,12 +159,14 @@ class NativeProtocolContractTests(unittest.TestCase):
 
     def test_bounded_native_allowlist_contains_the_priority_controls(self):
         import codex_rpc
+        from native_capabilities import CAS_ADDITIVE_METHODS
 
         self.assertTrue(
             set(self.contract["bounded_native_methods"]).issubset(codex_rpc.METHODS)
         )
         self.assertEqual(
-            codex_rpc.METHODS, set(self.contract["bounded_native_methods"])
+            codex_rpc.METHODS,
+            set(self.contract["bounded_native_methods"]) | CAS_ADDITIVE_METHODS,
         )
 
     def test_fixture_is_versioned_and_explicitly_non_live(self):

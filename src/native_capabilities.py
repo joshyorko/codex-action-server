@@ -21,6 +21,18 @@ OBSERVE_METHODS = frozenset(
     }
 )
 OPERATOR_CONTROL_METHODS = frozenset(METHODS) - OBSERVE_METHODS
+CAS_ADDITIVE_METHODS = frozenset(
+    {
+        "thread/archive",
+        "thread/compact/start",
+        "thread/delete",
+        "thread/fork",
+        "thread/metadata/update",
+        "thread/name/set",
+        "thread/revert",
+        "thread/unarchive",
+    }
+)
 
 FAMILIES = (
     {
@@ -127,19 +139,11 @@ FAMILIES = (
             "plugin/read",
             "review/start",
             "skills/list",
-            "thread/archive",
             "thread/attachment/add",
             "thread/attachment/list",
             "thread/attachment/remove",
-            "thread/compact/start",
-            "thread/delete",
-            "thread/fork",
             "thread/inject_items",
-            "thread/metadata/update",
-            "thread/name/set",
-            "thread/revert",
             "thread/section/move",
-            "thread/unarchive",
             "thread/backgroundTerminals/list",
             "thread/backgroundTerminals/terminate",
         ],

@@ -26,6 +26,14 @@ READS = {
     "read_dispatch_receipt",
 }
 CONTROLS = {
+    "fork_thread",
+    "archive_thread",
+    "unarchive_thread",
+    "delete_thread",
+    "set_thread_name",
+    "update_thread_metadata",
+    "revert_thread",
+    "compact_thread",
     "start_thread",
     "create_thread_and_start_turn",
     "resume_thread",

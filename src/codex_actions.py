@@ -247,6 +247,50 @@ class ThreadGoalClearRequest(ThreadGoalGetRequest):
     pass
 
 
+class ThreadMutationRequest(StrictModel):
+    request_id: str = Field(pattern=r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$")
+    target: TargetName
+    cwd: str
+    thread_id: str
+
+
+class ThreadForkRequest(ThreadMutationRequest):
+    last_turn_id: str | None = Field(default=None, min_length=1)
+    model: str | None = Field(default=None, min_length=1, max_length=256)
+    model_provider: str | None = Field(default=None, min_length=1, max_length=256)
+
+
+class ThreadNameSetRequest(ThreadMutationRequest):
+    name: str = Field(min_length=1, max_length=256)
+
+
+class ThreadGitInfoPatch(StrictModel):
+    sha: str | None = Field(default=None, max_length=256)
+    branch: str | None = Field(default=None, max_length=256)
+    origin_url: str | None = Field(default=None, max_length=2048)
+
+    @model_validator(mode="after")
+    def require_a_git_field(self):
+        if not self.model_fields_set:
+            raise ValueError("at least one git metadata field is required")
+        return self
+
+
+class ThreadMetadataUpdateRequest(ThreadMutationRequest):
+    project_id: str | None = Field(default=None, max_length=256)
+    git_info: ThreadGitInfoPatch | None = None
+
+    @model_validator(mode="after")
+    def require_a_metadata_change(self):
+        if self.project_id is None and self.git_info is None:
+            raise ValueError("at least one metadata field is required")
+        return self
+
+
+class ThreadRevertRequest(ThreadMutationRequest):
+    before_turn_id: str = Field(min_length=1, max_length=256)
+
+
 class ModelListRequest(StrictModel):
     target: TargetName = Field(
         description="Configured target name, never a shell command"
@@ -628,6 +672,37 @@ def _apply_thread_effort(
     }
 
 
+def _thread_control(
+    operation: str,
+    payload: ThreadMutationRequest,
+    method: str,
+    params: dict[str, Any],
+    *,
+    forked: bool = False,
+) -> Response[RpcEnvelope]:
+    thread_id = _action_id(payload.thread_id, "thread_id")
+    cwd = _action_cwd(payload.cwd)
+
+    def invoke(client, receipt):
+        _read_guarded_thread(client, thread_id, cwd)
+        result = client.request(method, {"threadId": thread_id, **params})
+        if forked:
+            thread = result.get("thread") if isinstance(result, dict) else None
+            if (
+                not isinstance(thread, dict)
+                or not isinstance(thread.get("id"), str)
+                or not thread["id"]
+                or thread.get("cwd") != cwd
+            ):
+                raise ActionError("Native fork response thread/cwd identity mismatch")
+            receipt.update(state="accepted", thread_id=thread["id"])
+        else:
+            receipt.update(state="accepted", thread_id=thread_id)
+        return result
+
+    return _dispatch_run(operation, payload, invoke)
+
+
 @action(is_consequential=False)
 def discover_threads(payload: ThreadListRequest) -> Response[RpcEnvelope]:
     """Discover persisted threads in one exact worktree on a configured target.
@@ -646,6 +721,118 @@ def discover_threads(payload: ThreadListRequest) -> Response[RpcEnvelope]:
         payload.target,
         lambda client: client.request("thread/list", params),
     )
+
+
+@action(is_consequential=True)
+def fork_thread(payload: ThreadForkRequest) -> Response[RpcEnvelope]:
+    """Fork one exact persisted thread without hydrating its transcript.
+
+    Args:
+        payload: Exact target, cwd, source thread, and bounded fork overrides.
+    """
+    params: dict[str, Any] = {"cwd": _action_cwd(payload.cwd), "excludeTurns": True}
+    for key, value in (
+        ("lastTurnId", payload.last_turn_id),
+        ("model", payload.model),
+        ("modelProvider", payload.model_provider),
+    ):
+        if value is not None:
+            params[key] = value
+    return _thread_control("fork_thread", payload, "thread/fork", params, forked=True)
+
+
+@action(is_consequential=True)
+def archive_thread(payload: ThreadMutationRequest) -> Response[RpcEnvelope]:
+    """Archive the exact persisted thread.
+
+    Args:
+        payload: Exact target, cwd, thread ID, and required dispatch receipt key.
+    """
+    return _thread_control("archive_thread", payload, "thread/archive", {})
+
+
+@action(is_consequential=True)
+def unarchive_thread(payload: ThreadMutationRequest) -> Response[RpcEnvelope]:
+    """Unarchive the exact persisted thread.
+
+    Args:
+        payload: Exact target, cwd, thread ID, and required dispatch receipt key.
+    """
+    return _thread_control("unarchive_thread", payload, "thread/unarchive", {})
+
+
+@action(is_consequential=True)
+def delete_thread(payload: ThreadMutationRequest) -> Response[RpcEnvelope]:
+    """Delete the exact persisted thread.
+
+    Args:
+        payload: Exact target, cwd, thread ID, and required dispatch receipt key.
+    """
+    return _thread_control("delete_thread", payload, "thread/delete", {})
+
+
+@action(is_consequential=True)
+def set_thread_name(payload: ThreadNameSetRequest) -> Response[RpcEnvelope]:
+    """Set the user-facing name of one exact persisted thread.
+
+    Args:
+        payload: Exact target, cwd, thread ID, name, and receipt key.
+    """
+    return _thread_control(
+        "set_thread_name", payload, "thread/name/set", {"name": payload.name}
+    )
+
+
+@action(is_consequential=True)
+def update_thread_metadata(
+    payload: ThreadMetadataUpdateRequest,
+) -> Response[RpcEnvelope]:
+    """Patch selected project and Git metadata without changing omitted fields.
+
+    Args:
+        payload: Exact thread identity and at least one typed metadata field.
+    """
+    params: dict[str, Any] = {}
+    if payload.project_id is not None:
+        params["projectId"] = payload.project_id
+    if payload.git_info is not None:
+        params["gitInfo"] = {
+            native: getattr(payload.git_info, field)
+            for field, native in (
+                ("sha", "sha"),
+                ("branch", "branch"),
+                ("origin_url", "originUrl"),
+            )
+            if field in payload.git_info.model_fields_set
+        }
+    return _thread_control(
+        "update_thread_metadata", payload, "thread/metadata/update", params
+    )
+
+
+@action(is_consequential=True)
+def revert_thread(payload: ThreadRevertRequest) -> Response[RpcEnvelope]:
+    """Revert persisted history to the prefix before one native turn ID.
+
+    Args:
+        payload: Exact thread identity and the native before-turn identifier.
+    """
+    return _thread_control(
+        "revert_thread",
+        payload,
+        "thread/revert",
+        {"beforeTurnId": _action_id(payload.before_turn_id, "before_turn_id")},
+    )
+
+
+@action(is_consequential=True)
+def compact_thread(payload: ThreadMutationRequest) -> Response[RpcEnvelope]:
+    """Request native compaction for the exact persisted thread.
+
+    Args:
+        payload: Exact target, cwd, thread ID, and required dispatch receipt key.
+    """
+    return _thread_control("compact_thread", payload, "thread/compact/start", {})
 
 
 @action(is_consequential=False)

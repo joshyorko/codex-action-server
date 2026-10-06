@@ -31,6 +31,14 @@ READ_ONLY_TOOLS = frozenset(
 )
 CONTROL_TOOLS = frozenset(
     {
+        "fork_thread",
+        "archive_thread",
+        "unarchive_thread",
+        "delete_thread",
+        "set_thread_name",
+        "update_thread_metadata",
+        "revert_thread",
+        "compact_thread",
         "update_thread_settings",
         "update_turn_settings",
         "set_thread_goal",

@@ -24,15 +24,14 @@ OBSERVE and OPERATOR_CONTROL list the native methods currently exposed by the
 strict RPC allowlist. EXPERIMENTAL distinguishes methods requiring experimental
 native support; only explicitly mapped methods are exposed. Queue, search, and
 timeline methods remain withheld. ADMIN inventories host, credential, package,
-process, and configuration mutations but does not expose them. The native
-schema's broader method families—including plugins/apps/hooks inventories,
-review, attachments, item injection, MCP resources/tools, account usage, and
-background terminals—are listed as deferred until typed request mappings,
-identity checks, and protocol tests are added.
+process, and configuration mutations but does not expose them. The native schema's broader method families—including plugins/apps/hooks
+inventories, review, attachments, item injection, MCP resources/tools, account
+usage, and background terminals—are listed as deferred until typed request
+mappings, identity checks, and protocol tests are added.
 
 The `DEFERRED/UNSUPPORTED` list is intentionally not callable. It includes
-thread lifecycle mutations and the first-party control tranche not yet
-implemented by CAS. No raw-RPC fallback exists.
+the remaining first-party control tranche not yet implemented by CAS. No
+raw-RPC fallback exists.
 
 ## Callback blocker
 
