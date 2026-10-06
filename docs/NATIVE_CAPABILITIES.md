@@ -22,11 +22,12 @@ mechanism.
 
 OBSERVE and OPERATOR_CONTROL list the native methods currently exposed by the
 strict RPC allowlist. EXPERIMENTAL distinguishes methods requiring experimental
-native support; only explicitly mapped methods are exposed. Queue methods remain
-withheld. Search and timeline methods are exposed only when the daemon reports the exact
-`codex-cli 0.160.1` user agent. Native search has no CWD parameter, so CAS
-requires an exact CWD and filters every result before returning it; raw native
-search receipts are not included in that response. ADMIN inventories host,
+native support; only explicitly mapped methods are exposed. Queue methods,
+search, and timeline are available only when the daemon reports the exact
+`codex-cli 0.160.1` user agent. Queue inputs are restricted to bounded text
+items and mutations require receipt keys. Native search has no CWD parameter,
+so CAS requires an exact CWD and filters every result before returning it; raw
+native search receipts are not included in that response. ADMIN inventories host,
 credential, package, process, and configuration mutations but does not expose
 them. The native schema's broader method families—including plugins/apps/hooks
 inventories, review, attachments, item injection, MCP resources/tools, account

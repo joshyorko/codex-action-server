@@ -6,7 +6,7 @@ this package does not start an MCP server or expose a shell command action.
 
 from __future__ import annotations
 
-from typing import Any, Literal
+from typing import Annotated, Any, Literal
 from contextlib import nullcontext
 import os
 from pathlib import Path
@@ -337,6 +337,46 @@ class ThreadTimelineListRequest(StrictModel):
     thread_id: str
     limit: int = Field(default=25, ge=1, le=100)
     cursor: str | None = Field(default=None, min_length=1)
+
+
+class ThreadQueueListRequest(StrictModel):
+    target: TargetName
+    cwd: str
+    thread_id: str
+    limit: int = Field(default=50, ge=1, le=100)
+    cursor: str | None = Field(default=None, min_length=1)
+
+
+class ThreadQueueAddRequest(ThreadMutationRequest):
+    text: str = Field(min_length=1, max_length=4096)
+    client_user_message_id: str = Field(pattern=r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$")
+
+
+class ThreadQueueUpdateRequest(ThreadMutationRequest):
+    queued_submission_id: str = Field(pattern=r"^[A-Za-z0-9][A-Za-z0-9_.:-]{0,255}$")
+    text: str = Field(min_length=1, max_length=4096)
+
+
+class ThreadQueueDeleteRequest(ThreadMutationRequest):
+    queued_submission_id: str = Field(pattern=r"^[A-Za-z0-9][A-Za-z0-9_.:-]{0,255}$")
+
+
+class ThreadQueueReorderRequest(ThreadMutationRequest):
+    queued_submission_ids: list[Annotated[str, Field(min_length=1, max_length=256)]] = (
+        Field(min_length=1, max_length=100)
+    )
+
+    @model_validator(mode="after")
+    def require_unique_submission_ids(self):
+        if len(set(self.queued_submission_ids)) != len(self.queued_submission_ids):
+            raise ValueError("queued_submission_ids must be unique")
+        return self
+
+
+class ThreadQueueStartRequest(ThreadMutationRequest):
+    queued_submission_id: str | None = Field(
+        default=None, pattern=r"^[A-Za-z0-9][A-Za-z0-9_.:-]{0,255}$"
+    )
 
 
 class ModelListRequest(StrictModel):
@@ -770,6 +810,53 @@ def _thread_control(
     return _dispatch_run(operation, payload, invoke)
 
 
+def _thread_queue_control(
+    operation: str,
+    payload: ThreadMutationRequest,
+    method: str,
+    params: dict[str, Any],
+    *,
+    expected_submission_id: str | None = None,
+    starts_turn: bool = False,
+) -> Response[RpcEnvelope]:
+    thread_id = _action_id(payload.thread_id, "thread_id")
+    cwd = _action_cwd(payload.cwd)
+
+    def invoke(client, receipt):
+        _read_guarded_thread(client, thread_id, cwd)
+        result = client.request(method, {"threadId": thread_id, **params})
+        if expected_submission_id is not None:
+            queued = (
+                result.get("queuedSubmission") if isinstance(result, dict) else None
+            )
+            if (
+                not isinstance(queued, dict)
+                or queued.get("id") != expected_submission_id
+            ):
+                raise RpcError("Native queued submission identity mismatch")
+        elif method == "thread/queue/add":
+            queued = (
+                result.get("queuedSubmission") if isinstance(result, dict) else None
+            )
+            if not isinstance(queued, dict) or not isinstance(queued.get("id"), str):
+                raise RpcError("Native queued submission response is missing its ID")
+        if method == "thread/queue/delete" and (
+            not isinstance(result, dict) or result.get("deleted") is not True
+        ):
+            raise RpcError("Native queue delete did not confirm deletion")
+        if starts_turn:
+            turn = result.get("turn") if isinstance(result, dict) else None
+            turn_id = turn.get("id") if isinstance(turn, dict) else None
+            if not isinstance(turn_id, str) or not turn_id:
+                raise RpcError("Native queued turn response is missing its turn ID")
+            receipt.update(state="accepted", thread_id=thread_id, turn_id=turn_id)
+        else:
+            receipt.update(state="accepted", thread_id=thread_id)
+        return result
+
+    return _dispatch_run(operation, payload, invoke)
+
+
 @action(is_consequential=False)
 def discover_threads(payload: ThreadListRequest) -> Response[RpcEnvelope]:
     """Discover persisted threads in one exact worktree on a configured target.
@@ -1019,6 +1106,120 @@ def list_thread_timeline(payload: ThreadTimelineListRequest) -> Response[RpcEnve
         return client.request("thread/timeline/list", params)
 
     return _run("list_thread_timeline", payload.target, invoke)
+
+
+@action(is_consequential=False)
+def list_thread_queue(payload: ThreadQueueListRequest) -> Response[RpcEnvelope]:
+    """List a bounded native queue page for one exact thread.
+
+    Args:
+        payload: Exact target, cwd, thread ID, and page controls.
+    """
+    thread_id = _action_id(payload.thread_id, "thread_id")
+    cwd = _action_cwd(payload.cwd)
+    params = {"threadId": thread_id, "limit": payload.limit}
+    if payload.cursor is not None:
+        params["cursor"] = payload.cursor
+
+    def invoke(client):
+        _read_guarded_thread(client, thread_id, cwd)
+        return client.request("thread/queue/list", params)
+
+    return _run("list_thread_queue", payload.target, invoke)
+
+
+@action(is_consequential=True)
+def add_thread_queue_item(payload: ThreadQueueAddRequest) -> Response[RpcEnvelope]:
+    """Add one bounded text submission to the exact native thread queue.
+
+    Args:
+        payload: Exact thread identity, client message ID, text, and receipt key.
+    """
+    return _thread_queue_control(
+        "add_thread_queue_item",
+        payload,
+        "thread/queue/add",
+        {
+            "input": [{"type": "text", "text": payload.text}],
+            "clientUserMessageId": payload.client_user_message_id,
+        },
+    )
+
+
+@action(is_consequential=True)
+def update_thread_queue_item(
+    payload: ThreadQueueUpdateRequest,
+) -> Response[RpcEnvelope]:
+    """Replace the typed text input for one exact queued submission.
+
+    Args:
+        payload: Exact thread and queue item identities, text, and receipt key.
+    """
+    return _thread_queue_control(
+        "update_thread_queue_item",
+        payload,
+        "thread/queue/update",
+        {
+            "queuedSubmissionId": payload.queued_submission_id,
+            "input": [{"type": "text", "text": payload.text}],
+        },
+        expected_submission_id=payload.queued_submission_id,
+    )
+
+
+@action(is_consequential=True)
+def delete_thread_queue_item(
+    payload: ThreadQueueDeleteRequest,
+) -> Response[RpcEnvelope]:
+    """Delete one exact queued submission.
+
+    Args:
+        payload: Exact thread and queue item identities, plus receipt key.
+    """
+    return _thread_queue_control(
+        "delete_thread_queue_item",
+        payload,
+        "thread/queue/delete",
+        {"queuedSubmissionId": payload.queued_submission_id},
+    )
+
+
+@action(is_consequential=True)
+def reorder_thread_queue(
+    payload: ThreadQueueReorderRequest,
+) -> Response[RpcEnvelope]:
+    """Set the order of a bounded set of unique queued submission IDs.
+
+    Args:
+        payload: Exact thread identity and an ordered, unique ID list.
+    """
+    return _thread_queue_control(
+        "reorder_thread_queue",
+        payload,
+        "thread/queue/reorder",
+        {"queuedSubmissionIds": payload.queued_submission_ids},
+    )
+
+
+@action(is_consequential=True)
+def start_thread_queue(payload: ThreadQueueStartRequest) -> Response[RpcEnvelope]:
+    """Start one exact queued submission or the native queue head.
+
+    Args:
+        payload: Exact thread identity and optional queued item ID.
+    """
+    params = (
+        {"queuedSubmissionId": payload.queued_submission_id}
+        if payload.queued_submission_id is not None
+        else {}
+    )
+    return _thread_queue_control(
+        "start_thread_queue",
+        payload,
+        "thread/queue/start",
+        params,
+        starts_turn=True,
+    )
 
 
 @action(is_consequential=False)
