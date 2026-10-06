@@ -6,6 +6,8 @@ import runpy
 
 import pytest
 
+from action_catalog_contract import EXPECTED_ACTION_NAMES
+
 
 ROOT = Path(__file__).parents[1]
 POLICY = runpy.run_path(str(ROOT / "scripts/install_runtime_annotation_patch.py"))
@@ -92,6 +94,7 @@ def test_complete_actual_catalog_is_intentionally_classified():
                         if k.arg == "is_consequential"
                     )
     assert set(declared) == READS | CONTROLS
+    assert set(declared) == EXPECTED_ACTION_NAMES
     assert POLICY["READ_ONLY_TOOLS"] == READS
     assert POLICY["CONTROL_TOOLS"] == CONTROLS
     assert not READS & CONTROLS

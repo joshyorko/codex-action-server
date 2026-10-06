@@ -128,7 +128,7 @@ same valid-Host, foreign-Host, foreign-Origin, and loopback regression checks.
 
 The image health command is
 `python3 /opt/codex-action-server/scripts/container_health.py`. It initializes a
-real MCP session, verifies the 23-tool catalog, and closes the session. It never
+real MCP session, verifies the 61-tool catalog, and closes the session. It never
 calls native Codex or Devsy. Healthy API status does not prove a native connection,
 authentication, remote readiness, or thread execution.
 
@@ -141,11 +141,11 @@ catalog and a real mounted Unix-socket fixture, then restarts the API and verifi
 dispatch replay protection. It does not contact an operator daemon. Live local
 native acceptance remains a separate operator gate in the composed stack.
 
-The image projects the explicit 23-tool policy in
+The image projects the explicit 61-tool policy in
 `scripts/install_runtime_annotation_patch.py` through the pinned runtime's MCP
-adapter. Its 13 proven reads advertise `readOnlyHint=true` and
-`destructiveHint=false`; its 10 mutation/control tools and unknown tools remain
-non-read-only and destructive. Package, source-file, runtime-version, and source
+adapter. Its 29 reads advertise `readOnlyHint=true` and `destructiveHint=false`;
+its 32 mutation/control tools and unknown tools remain non-read-only and
+destructive. Package, source-file, runtime-version, and source
 hash guards prevent the policy from changing foreign tools. HTTP action kinds,
 schemas, authorization, receipts, target checks, and other hints are unchanged.
 The older host CLI is not patched by this image-specific correction.

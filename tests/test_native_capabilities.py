@@ -1,10 +1,26 @@
 """Pinned native inventory and public action contract tests."""
 
+import json
+from pathlib import Path
+
+import pytest
 from test_actions import FakeClient, load_actions
 from unittest.mock import patch
 
 import codex_rpc
-from native_capabilities import inventory
+from native_capabilities import (
+    OPERATOR_CONTROL_METHODS,
+    OBSERVE_METHODS,
+    classify_exposed_method,
+    inventory,
+    validate_exposed_methods,
+)
+
+SCHEMA_MANIFEST = json.loads(
+    (
+        Path(__file__).parent / "fixtures/protocol/codex_0.160.1_client_requests.json"
+    ).read_text()
+)
 
 
 def test_inventory_is_versioned_and_classifies_exposure_without_expansion():
@@ -47,6 +63,40 @@ def test_supported_inventory_matches_rpc_allowlist_and_admin_is_never_exposed():
 
     assert supported == codex_rpc.METHODS
     assert not supported.intersection(admin)
+
+
+def test_pinned_schema_manifest_is_completely_classified():
+    families = inventory(None)["families"]
+    classified = {method for family in families for method in family["methods"]}
+    experimental = next(
+        family["methods"]
+        for family in families
+        if family["classification"] == "EXPERIMENTAL"
+    )
+    exposed_experimental = next(
+        family["exposed_methods"]
+        for family in families
+        if family["classification"] == "EXPERIMENTAL"
+    )
+    default = set(SCHEMA_MANIFEST["default_client_requests"])
+    experimental_only = set(SCHEMA_MANIFEST["experimental_only_client_requests"])
+
+    assert SCHEMA_MANIFEST["schema_version"] == "0.160.1"
+    assert len(default) == 104
+    assert len(default | experimental_only) == 167
+    assert len(experimental_only) == 63
+    assert default <= classified
+    assert set(experimental) == experimental_only
+    assert set(exposed_experimental) == experimental_only & codex_rpc.METHODS
+    assert codex_rpc.EXPERIMENTAL_METHODS <= set(exposed_experimental)
+
+
+def test_exposed_native_methods_require_explicit_classification():
+    assert not OBSERVE_METHODS & OPERATOR_CONTROL_METHODS
+    assert OBSERVE_METHODS | OPERATOR_CONTROL_METHODS == codex_rpc.METHODS
+    assert classify_exposed_method("future/nativeMethod") is None
+    with pytest.raises(ValueError, match="lack an explicit classification"):
+        validate_exposed_methods({"future/nativeMethod"})
 
 
 def test_capability_action_reports_runtime_version_and_profile():

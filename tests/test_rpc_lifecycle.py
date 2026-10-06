@@ -262,6 +262,7 @@ class NativeLifecycleTests(unittest.TestCase):
         fixture = NativeProtocolFixture(existing=True)
         client = connected_client(fixture)
         try:
+            client.metadata["userAgent"] = "codex-cli 0.160.1"
             client.set_workstream("/repo", "existing", "existing-turn")
             calls = {
                 "thread/list": {"cwd": "/repo", "limit": 1},
@@ -312,6 +313,21 @@ class NativeLifecycleTests(unittest.TestCase):
             self.assertEqual(len(fixture.calls), sent_count)
             with self.assertRaisesRegex(ValueError, "outside"):
                 client.request("command/exec", {})
+        finally:
+            client.close()
+
+    def test_experimental_native_methods_require_the_pinned_schema(self):
+        fixture = NativeProtocolFixture(existing=True)
+        client = connected_client(fixture)
+        try:
+            with self.assertRaisesRegex(
+                codex_rpc.RpcError, "pinned experimental Codex 0.160.1 schema"
+            ):
+                client.request("thread/search", {"searchTerm": "x", "limit": 1})
+            self.assertNotIn(
+                "thread/search",
+                [message.get("method") for message in fixture.calls],
+            )
         finally:
             client.close()
 

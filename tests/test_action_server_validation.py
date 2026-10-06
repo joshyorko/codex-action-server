@@ -23,6 +23,8 @@ import time
 import unittest
 from unittest.mock import patch
 
+from action_catalog_contract import EXPECTED_ACTION_NAMES
+
 
 PACKAGE = Path(__file__).resolve().parents[1]
 SRC = PACKAGE / "src"
@@ -399,16 +401,12 @@ class ActionServerValidationTests(unittest.TestCase):
                             }
                             self.assertEqual(
                                 set(tools),
-                                required
-                                | {
-                                    "list_targets",
-                                    "inspect_target",
-                                    "read_dispatch_receipt",
-                                },
+                                EXPECTED_ACTION_NAMES,
                                 "Action Server catalog mismatch; "
                                 f"missing={sorted(required - set(tools))}; "
                                 f"actual={sorted(tools)}",
                             )
+                            self.assertTrue(required <= set(tools))
                             self.assertTrue(
                                 removed_provisioning.isdisjoint(tools),
                                 "Removed provisioning actions remain in the Action Server catalog",

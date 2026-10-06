@@ -10,7 +10,11 @@ The inventory is based on Codex `rust-v0.160.1`
 The repo's checked-in native wire-contract fixture still comes from Codex
 `0.153.4`. The 0.160.1 catalog is protocol-source inventory, not proof of a
 live 0.160.1 acceptance run. No live daemon, credentials, or deployment are
-changed by this action.
+changed by this action. The default and experimental-only `ClientRequest`
+method lists are captured in
+`tests/fixtures/protocol/codex_0.160.1_client_requests.json` from the pinned
+`codex app-server generate-json-schema` output and checked for classification
+completeness.
 
 ## Exposure
 
@@ -22,9 +26,9 @@ mechanism.
 
 OBSERVE and OPERATOR_CONTROL list the native methods currently exposed by the
 strict RPC allowlist. EXPERIMENTAL distinguishes methods requiring experimental
-native support; only explicitly mapped methods are exposed. Queue, search,
-timeline, app inventory, and background-terminal methods are available only when the daemon reports the exact
-`codex-cli 0.160.1` user agent. Queue inputs are restricted to bounded text
+native support; only explicitly mapped methods are exposed. Queue, search/timeline,
+and background-terminal methods require the exact `codex-cli 0.160.1` user agent.
+Queue inputs are restricted to bounded text
 items and mutations require receipt keys. Native search has no CWD parameter,
 so CAS requires an exact CWD and filters every result before returning it; raw
 native search receipts are not included in that response. ADMIN inventories host,

@@ -85,7 +85,7 @@ Only after that passes, Ctrl-C the OLD foreground tunnel-client, then run:
 
 Equivalent kit command: CODEX_MCP_URL=http://127.0.0.1:8088/mcp
 `"$CUTOVER/tunnel-kit/launch-codex.zsh"`. Run only one client for this tunnel ID.
-Reconnect/refresh the ChatGPT app to replace the old tool catalog. Expect23tools,
+Reconnect/refresh the ChatGPT app to replace the old tool catalog. Expect 61 tools,
 including list_targets, inspect_target and read_dispatch_receipt. Old enum-only
 remote target schemas mean the catalog is stale.
 

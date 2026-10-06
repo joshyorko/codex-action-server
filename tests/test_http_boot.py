@@ -11,6 +11,7 @@ import time
 
 import pytest
 
+from action_catalog_contract import EXPECTED_ACTION_NAMES
 from test_thread_discovery import assert_mcp_cwd_rejected
 
 
@@ -79,7 +80,7 @@ def test_standalone_http_boot_catalog_and_safe_diagnostics(tmp_path):
                         await session.initialize()
                         catalog = await session.list_tools()
                         tools = {t.name: t for t in catalog.tools}
-                        assert len(tools) == 23
+                        assert set(tools) == EXPECTED_ACTION_NAMES
                         assert {
                             "list_targets",
                             "inspect_target",

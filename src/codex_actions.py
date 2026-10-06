@@ -291,13 +291,12 @@ class ThreadGitInfoPatch(StrictModel):
 
 
 class ThreadMetadataUpdateRequest(ThreadMutationRequest):
-    project_id: str | None = Field(default=None, max_length=256)
     git_info: ThreadGitInfoPatch | None = None
 
     @model_validator(mode="after")
     def require_a_metadata_change(self):
-        if self.project_id is None and self.git_info is None:
-            raise ValueError("at least one metadata field is required")
+        if self.git_info is None:
+            raise ValueError("git_info is required")
         return self
 
 
@@ -1136,16 +1135,13 @@ def set_thread_name(payload: ThreadNameSetRequest) -> Response[RpcEnvelope]:
 def update_thread_metadata(
     payload: ThreadMetadataUpdateRequest,
 ) -> Response[RpcEnvelope]:
-    """Patch selected project and Git metadata without changing omitted fields.
+    """Patch Git metadata without changing omitted fields.
 
     Args:
         payload: Exact thread identity and at least one typed metadata field.
     """
-    params: dict[str, Any] = {}
-    if payload.project_id is not None:
-        params["projectId"] = payload.project_id
-    if payload.git_info is not None:
-        params["gitInfo"] = {
+    params: dict[str, Any] = {
+        "gitInfo": {
             native: getattr(payload.git_info, field)
             for field, native in (
                 ("sha", "sha"),
@@ -1154,6 +1150,7 @@ def update_thread_metadata(
             )
             if field in payload.git_info.model_fields_set
         }
+    }
     return _thread_control(
         "update_thread_metadata", payload, "thread/metadata/update", params
     )

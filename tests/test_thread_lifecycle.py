@@ -1,5 +1,7 @@
 """Typed lifecycle controls must preserve native thread/cwd identity."""
 
+import json
+from pathlib import Path
 from unittest.mock import patch
 
 from test_actions import FakeClient, load_actions
@@ -76,7 +78,6 @@ def test_lifecycle_actions_send_only_typed_native_fields(tmp_path, monkeypatch):
                 cwd="/trusted",
                 thread_id="thread-1",
                 request_id="metadata",
-                project_id="project-1",
                 git_info={"branch": "topic", "sha": None},
             ),
         ),
@@ -120,7 +121,6 @@ def test_lifecycle_actions_send_only_typed_native_fields(tmp_path, monkeypatch):
     assert client.calls[5][1] == {"threadId": "thread-1", "name": "review"}
     assert client.calls[7][1] == {
         "threadId": "thread-1",
-        "projectId": "project-1",
         "gitInfo": {"branch": "topic", "sha": None},
     }
     assert client.calls[9][1] == {
@@ -157,9 +157,44 @@ def test_metadata_patch_requires_fields_and_models_reject_extra_rpc_fields():
         "thread_id": "thread-1",
         "request_id": "metadata",
     }
-    for patch_data in ({}, {"git_info": {}}, {"git_info": {"arbitrary": "value"}}):
+    for patch_data in (
+        {},
+        {"git_info": {}},
+        {"git_info": {"arbitrary": "value"}},
+        {"project_id": "project-1"},
+    ):
         try:
             module.ThreadMetadataUpdateRequest(**base, **patch_data)
         except ValueError:
             continue
         raise AssertionError("invalid metadata patch was accepted")
+
+
+def test_metadata_update_maps_only_fields_in_pinned_native_schema(
+    tmp_path, monkeypatch
+):
+    schema = json.loads(
+        (
+            Path(__file__).parent
+            / "fixtures/protocol/thread_metadata_update_params_0.160.1.json"
+        ).read_text()
+    )
+    monkeypatch.setenv("CODEX_ACTION_RECEIPTS", str(tmp_path))
+    module = load_actions()
+    client = LifecycleClient()
+    request = module.ThreadMetadataUpdateRequest(
+        target="local",
+        cwd="/trusted",
+        thread_id="thread-1",
+        request_id="metadata-schema",
+        git_info={"origin_url": None},
+    )
+
+    with patch.object(module, "Client", return_value=client):
+        module.update_thread_metadata(request)
+
+    method, params = client.calls[-1]
+    assert method == "thread/metadata/update"
+    assert set(params) <= set(schema["properties"])
+    assert set(params["gitInfo"]) <= set(schema["properties"]["gitInfo"]["properties"])
+    assert params == {"threadId": "thread-1", "gitInfo": {"originUrl": None}}

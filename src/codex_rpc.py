@@ -84,7 +84,6 @@ METHODS = {
 }
 
 EXPERIMENTAL_METHODS = {
-    "app/list",
     "thread/search",
     "thread/searchOccurrences",
     "thread/timeline/list",
