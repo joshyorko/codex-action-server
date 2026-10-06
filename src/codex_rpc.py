@@ -28,8 +28,23 @@ METHODS = {
     "mcpServerStatus/list",
     "model/list",
     "modelProvider/capabilities/read",
+    "account/rateLimits/read",
+    "account/usage/read",
+    "app/list",
+    "hooks/list",
+    "mcpServer/resource/read",
+    "mcpServer/tool/call",
+    "plugin/list",
+    "plugin/read",
+    "review/start",
     "server/diagnostics",
+    "skills/list",
     "thread/archive",
+    "thread/attachment/add",
+    "thread/attachment/list",
+    "thread/attachment/remove",
+    "thread/backgroundTerminals/list",
+    "thread/backgroundTerminals/terminate",
     "thread/compact/start",
     "thread/delete",
     "thread/fork",
@@ -37,6 +52,7 @@ METHODS = {
     "thread/goal/get",
     "thread/goal/set",
     "thread/items/list",
+    "thread/inject_items",
     "thread/list",
     "thread/loaded/list",
     "thread/metadata/update",
@@ -54,6 +70,9 @@ METHODS = {
     "thread/searchOccurrences",
     "thread/timeline/list",
     "threadSection/list",
+    "threadSection/create",
+    "threadSection/update",
+    "threadSection/delete",
     "thread/settings/update",
     "thread/start",
     "thread/turns/list",
@@ -65,6 +84,7 @@ METHODS = {
 }
 
 EXPERIMENTAL_METHODS = {
+    "app/list",
     "thread/search",
     "thread/searchOccurrences",
     "thread/timeline/list",
@@ -74,6 +94,8 @@ EXPERIMENTAL_METHODS = {
     "thread/queue/delete",
     "thread/queue/reorder",
     "thread/queue/start",
+    "thread/backgroundTerminals/list",
+    "thread/backgroundTerminals/terminate",
 }
 EXPERIMENTAL_NATIVE_USER_AGENT = "codex-cli 0.160.1"
 
@@ -82,7 +104,13 @@ THREAD_ID_METHODS = {
     "thread/goal/get",
     "thread/goal/set",
     "thread/items/list",
+    "thread/inject_items",
     "thread/archive",
+    "thread/attachment/add",
+    "thread/attachment/list",
+    "thread/attachment/remove",
+    "thread/backgroundTerminals/list",
+    "thread/backgroundTerminals/terminate",
     "thread/compact/start",
     "thread/delete",
     "thread/fork",
@@ -90,6 +118,8 @@ THREAD_ID_METHODS = {
     "thread/metadata/update",
     "thread/name/set",
     "thread/revert",
+    "review/start",
+    "mcpServer/tool/call",
     "thread/queue/add",
     "thread/queue/delete",
     "thread/queue/list",
@@ -114,7 +144,12 @@ TURN_ID_METHODS = {
     "turn/interrupt",
 }
 
-OPTIONAL_THREAD_ID_METHODS = {"mcpServerStatus/list"}
+OPTIONAL_THREAD_ID_METHODS = {
+    "account/usage/read",
+    "app/list",
+    "mcpServerStatus/list",
+    "mcpServer/resource/read",
+}
 
 
 class RpcError(RuntimeError):

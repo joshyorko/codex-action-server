@@ -22,21 +22,27 @@ mechanism.
 
 OBSERVE and OPERATOR_CONTROL list the native methods currently exposed by the
 strict RPC allowlist. EXPERIMENTAL distinguishes methods requiring experimental
-native support; only explicitly mapped methods are exposed. Queue methods,
-search, and timeline are available only when the daemon reports the exact
+native support; only explicitly mapped methods are exposed. Queue, search,
+timeline, app inventory, and background-terminal methods are available only when the daemon reports the exact
 `codex-cli 0.160.1` user agent. Queue inputs are restricted to bounded text
 items and mutations require receipt keys. Native search has no CWD parameter,
 so CAS requires an exact CWD and filters every result before returning it; raw
 native search receipts are not included in that response. ADMIN inventories host,
 credential, package, process, and configuration mutations but does not expose
-them. The native schema's broader method families—including plugins/apps/hooks
-inventories, review, attachments, item injection, MCP resources/tools, account
-usage, and background terminals—are listed as deferred until typed request
-mappings, identity checks, and protocol tests are added.
+them.
+
+The operator profile also exposes inline review; account rate-limit/usage reads;
+skills, hooks, plugins, and app inventories, plus named plugin detail reads;
+exact-thread MCP resource reads and
+explicit consequential MCP tool calls; and bounded background-terminal
+observation/termination. Thread attachments have bounded list/add/remove
+actions. MCP tool and attachment payloads are limited to 16 KiB, and MCP
+resource/tool results to 1 MiB. Terminal termination requires the process ID
+to match a native terminal record for the exact thread and CWD.
 
 The `DEFERRED/UNSUPPORTED` list is intentionally not callable. It includes
-the remaining first-party control tranche not yet implemented by CAS. No
-raw-RPC fallback exists.
+section movement, which still requires a reviewed typed mapping and protocol
+tests. No raw-RPC fallback exists.
 
 ## Callback blocker
 

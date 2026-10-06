@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from typing import Annotated, Any, Literal
 from contextlib import nullcontext
+import json
 import os
 from pathlib import Path
 import subprocess
@@ -379,6 +380,190 @@ class ThreadQueueStartRequest(ThreadMutationRequest):
     )
 
 
+class ReviewUncommittedChangesTarget(StrictModel):
+    type: Literal["uncommittedChanges"]
+
+
+class ReviewBaseBranchTarget(StrictModel):
+    type: Literal["baseBranch"]
+    branch: str = Field(min_length=1, max_length=256)
+
+
+class ReviewCommitTarget(StrictModel):
+    type: Literal["commit"]
+    sha: str = Field(min_length=1, max_length=256)
+    title: str | None = Field(default=None, max_length=512)
+
+
+class ReviewCustomTarget(StrictModel):
+    type: Literal["custom"]
+    instructions: str = Field(min_length=1, max_length=4096)
+
+
+ReviewTarget = Annotated[
+    ReviewUncommittedChangesTarget
+    | ReviewBaseBranchTarget
+    | ReviewCommitTarget
+    | ReviewCustomTarget,
+    Field(discriminator="type"),
+]
+
+
+class ReviewStartRequest(ThreadMutationRequest):
+    review_target: ReviewTarget
+
+
+class AccountRateLimitsRequest(StrictModel):
+    target: TargetName
+
+
+class AccountUsageRequest(StrictModel):
+    target: TargetName
+    thread_id: str | None = None
+    cwd: str | None = None
+
+    @model_validator(mode="after")
+    def require_exact_thread_scope(self):
+        if (self.thread_id is None) != (self.cwd is None):
+            raise ValueError("thread_id and cwd must be supplied together")
+        return self
+
+
+class CwdInventoryRequest(StrictModel):
+    target: TargetName
+    cwd: str
+
+
+class PluginReadRequest(StrictModel):
+    target: TargetName
+    plugin_name: str = Field(min_length=1, max_length=256)
+
+
+class AppsListRequest(StrictModel):
+    target: TargetName
+    limit: int = Field(default=50, ge=1, le=100)
+    cursor: str | None = Field(default=None, min_length=1)
+    thread_id: str | None = None
+    cwd: str | None = None
+
+    @model_validator(mode="after")
+    def require_exact_thread_scope(self):
+        if (self.thread_id is None) != (self.cwd is None):
+            raise ValueError("thread_id and cwd must be supplied together")
+        return self
+
+
+class McpResourceReadRequest(StrictModel):
+    target: TargetName
+    cwd: str
+    thread_id: str
+    server: str = Field(min_length=1, max_length=256)
+    uri: str = Field(min_length=1, max_length=2048)
+
+
+class McpToolCallRequest(ThreadMutationRequest):
+    server: str = Field(min_length=1, max_length=256)
+    tool: str = Field(min_length=1, max_length=256)
+    arguments: dict[str, Any] | None = None
+
+    @model_validator(mode="after")
+    def bound_arguments(self):
+        try:
+            encoded = json.dumps(self.arguments, allow_nan=False, separators=(",", ":"))
+        except (TypeError, ValueError) as error:
+            raise ValueError("arguments must be JSON-compatible") from error
+        if len(encoded.encode("utf-8")) > 16_384:
+            raise ValueError("arguments exceed the 16 KiB limit")
+        return self
+
+
+class ThreadBackgroundTerminalsListRequest(StrictModel):
+    target: TargetName
+    cwd: str
+    thread_id: str
+    limit: int = Field(default=50, ge=1, le=100)
+    cursor: str | None = Field(default=None, min_length=1)
+
+
+class ThreadBackgroundTerminalTerminateRequest(ThreadMutationRequest):
+    process_id: str = Field(min_length=1, max_length=256)
+
+
+class ThreadAttachmentListRequest(StrictModel):
+    target: TargetName
+    cwd: str
+    thread_id: str
+    limit: int = Field(default=50, ge=1, le=100)
+    cursor: str | None = Field(default=None, min_length=1)
+
+
+class ThreadAttachmentAddRequest(ThreadMutationRequest):
+    attachment_type: str = Field(
+        min_length=1, max_length=128, pattern=r"^[A-Za-z0-9][A-Za-z0-9_.:-]*$"
+    )
+    identity_key: str = Field(min_length=1, max_length=256)
+    payload: dict[str, Any]
+
+    @model_validator(mode="after")
+    def bound_payload(self):
+        try:
+            encoded = json.dumps(self.payload, allow_nan=False, separators=(",", ":"))
+        except (TypeError, ValueError) as error:
+            raise ValueError("payload must be JSON-compatible") from error
+        if len(encoded.encode("utf-8")) > 16_384:
+            raise ValueError("payload exceeds the 16 KiB limit")
+        return self
+
+
+class ThreadAttachmentRemoveRequest(ThreadMutationRequest):
+    attachment_type: str = Field(
+        min_length=1, max_length=128, pattern=r"^[A-Za-z0-9][A-Za-z0-9_.:-]*$"
+    )
+    identity_key: str = Field(min_length=1, max_length=256)
+
+
+class ThreadInjectedTextContent(StrictModel):
+    type: Literal["input_text"]
+    text: str = Field(min_length=1, max_length=4096)
+
+
+class ThreadInjectedTextMessage(StrictModel):
+    type: Literal["message"]
+    role: Literal["user"]
+    content: list[ThreadInjectedTextContent] = Field(min_length=1, max_length=4)
+
+
+class ThreadInjectItemsRequest(ThreadMutationRequest):
+    items: list[ThreadInjectedTextMessage] = Field(min_length=1, max_length=10)
+
+    @model_validator(mode="after")
+    def bound_injected_text(self):
+        total = sum(
+            len(content.text.encode("utf-8"))
+            for item in self.items
+            for content in item.content
+        )
+        if total > 16_384:
+            raise ValueError("injected text exceeds the 16 KiB limit")
+        return self
+
+
+class ThreadSectionCreateRequest(StrictModel):
+    request_id: str = Field(pattern=r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$")
+    target: TargetName
+    name: str = Field(min_length=1, max_length=128)
+
+
+class ThreadSectionUpdateRequest(ThreadSectionCreateRequest):
+    section_id: str = Field(min_length=1, max_length=256)
+
+
+class ThreadSectionDeleteRequest(StrictModel):
+    request_id: str = Field(pattern=r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$")
+    target: TargetName
+    section_id: str = Field(min_length=1, max_length=256)
+
+
 class ModelListRequest(StrictModel):
     target: TargetName = Field(
         description="Configured target name, never a shell command"
@@ -501,6 +686,16 @@ def _optional_page_params(payload) -> dict[str, Any]:
     if payload.sort_direction is not None:
         params["sortDirection"] = payload.sort_direction
     return params
+
+
+def _bounded_native_result(result: dict[str, Any], maximum_bytes: int = 1_048_576):
+    try:
+        encoded = json.dumps(result, ensure_ascii=True, allow_nan=False).encode("utf-8")
+    except (TypeError, ValueError) as error:
+        raise RpcError("Native result is not bounded JSON data") from error
+    if len(encoded) > maximum_bytes:
+        raise RpcError("Native result exceeds the 1 MiB action limit")
+    return result
 
 
 def _effective_configuration(result: dict[str, Any]) -> EffectiveConfiguration | None:
@@ -989,6 +1184,411 @@ def compact_thread(payload: ThreadMutationRequest) -> Response[RpcEnvelope]:
     return _thread_control("compact_thread", payload, "thread/compact/start", {})
 
 
+@action(is_consequential=True)
+def start_review(payload: ReviewStartRequest) -> Response[RpcEnvelope]:
+    """Start an inline native review on one exact thread.
+
+    Args:
+        payload: Exact thread identity, review target, and required receipt key.
+    """
+    thread_id = _action_id(payload.thread_id, "thread_id")
+    cwd = _action_cwd(payload.cwd)
+    params = {
+        "threadId": thread_id,
+        "target": payload.review_target.model_dump(exclude_none=True),
+    }
+
+    def invoke(client, receipt):
+        _read_guarded_thread(client, thread_id, cwd)
+        result = client.request("review/start", params)
+        turn = result.get("turn") if isinstance(result, dict) else None
+        turn_id = turn.get("id") if isinstance(turn, dict) else None
+        if (
+            result.get("reviewThreadId") != thread_id
+            or not isinstance(turn_id, str)
+            or not turn_id
+        ):
+            raise RpcError("Native review response identity mismatch")
+        receipt.update(state="accepted", thread_id=thread_id, turn_id=turn_id)
+        return result
+
+    return _dispatch_run("start_review", payload, invoke)
+
+
+@action(is_consequential=False)
+def read_account_rate_limits(
+    payload: AccountRateLimitsRequest,
+) -> Response[RpcEnvelope]:
+    """Read native account rate-limit status without consuming credits.
+
+    Args:
+        payload: The configured target.
+    """
+    return _run(
+        "read_account_rate_limits",
+        payload.target,
+        lambda client: client.request("account/rateLimits/read", {}),
+    )
+
+
+@action(is_consequential=False)
+def read_account_usage(payload: AccountUsageRequest) -> Response[RpcEnvelope]:
+    """Read account usage or a thread-scoped native usage estimate.
+
+    Args:
+        payload: Target and optional exact thread/CWD identity.
+    """
+    params = {}
+    if payload.thread_id is not None:
+        thread_id = _action_id(payload.thread_id, "thread_id")
+        cwd = _action_cwd(payload.cwd)
+        params["threadId"] = thread_id
+
+        def invoke(client):
+            _read_guarded_thread(client, thread_id, cwd)
+            return client.request("account/usage/read", params)
+
+    else:
+
+        def invoke(client):
+            return client.request("account/usage/read", params)
+
+    return _run("read_account_usage", payload.target, invoke)
+
+
+@action(is_consequential=False)
+def list_skills(payload: CwdInventoryRequest) -> Response[RpcEnvelope]:
+    """List skills discovered for one exact worktree.
+
+    Args:
+        payload: Configured target and exact absolute worktree path.
+    """
+    cwd = _action_cwd(payload.cwd)
+    return _run(
+        "list_skills",
+        payload.target,
+        lambda client: client.request("skills/list", {"cwds": [cwd]}),
+    )
+
+
+@action(is_consequential=False)
+def list_hooks(payload: CwdInventoryRequest) -> Response[RpcEnvelope]:
+    """List hooks discovered for one exact worktree.
+
+    Args:
+        payload: Configured target and exact absolute worktree path.
+    """
+    cwd = _action_cwd(payload.cwd)
+    return _run(
+        "list_hooks",
+        payload.target,
+        lambda client: client.request("hooks/list", {"cwds": [cwd]}),
+    )
+
+
+@action(is_consequential=False)
+def list_plugins(payload: CwdInventoryRequest) -> Response[RpcEnvelope]:
+    """List native plugins associated with one exact worktree.
+
+    Args:
+        payload: Configured target and exact absolute worktree path.
+    """
+    cwd = _action_cwd(payload.cwd)
+    return _run(
+        "list_plugins",
+        payload.target,
+        lambda client: client.request("plugin/list", {"cwds": [cwd]}),
+    )
+
+
+@action(is_consequential=False)
+def read_plugin(payload: PluginReadRequest) -> Response[RpcEnvelope]:
+    """Read one named plugin from the native plugin catalog.
+
+    Args:
+        payload: Configured target and exact native plugin name.
+    """
+    return _run(
+        "read_plugin",
+        payload.target,
+        lambda client: _bounded_native_result(
+            client.request("plugin/read", {"pluginName": payload.plugin_name})
+        ),
+        include_receipts=False,
+    )
+
+
+@action(is_consequential=False)
+def list_apps(payload: AppsListRequest) -> Response[RpcEnvelope]:
+    """List a bounded page of native apps/connectors.
+
+    Args:
+        payload: Target and bounded pagination; optional exact thread/CWD scope.
+    """
+    params: dict[str, Any] = {"limit": payload.limit}
+    if payload.cursor is not None:
+        params["cursor"] = payload.cursor
+    if payload.thread_id is not None:
+        thread_id = _action_id(payload.thread_id, "thread_id")
+        cwd = _action_cwd(payload.cwd)
+        params["threadId"] = thread_id
+
+        def invoke(client):
+            _read_guarded_thread(client, thread_id, cwd)
+            return client.request("app/list", params)
+
+    else:
+
+        def invoke(client):
+            return client.request("app/list", params)
+
+    return _run("list_apps", payload.target, invoke)
+
+
+@action(is_consequential=False)
+def read_mcp_resource(payload: McpResourceReadRequest) -> Response[RpcEnvelope]:
+    """Read one named native MCP resource with exact thread/CWD scope.
+
+    Args:
+        payload: Target, thread identity, server name, and resource URI.
+    """
+    thread_id = _action_id(payload.thread_id, "thread_id")
+    cwd = _action_cwd(payload.cwd)
+    params = {
+        "threadId": thread_id,
+        "server": payload.server,
+        "uri": payload.uri,
+    }
+
+    def invoke(client):
+        _read_guarded_thread(client, thread_id, cwd)
+        return _bounded_native_result(client.request("mcpServer/resource/read", params))
+
+    return _run("read_mcp_resource", payload.target, invoke, include_receipts=False)
+
+
+@action(is_consequential=True)
+def call_mcp_tool(payload: McpToolCallRequest) -> Response[RpcEnvelope]:
+    """Call one explicitly named native MCP tool under Codex's native authority.
+
+    Args:
+        payload: Exact thread, server/tool names, bounded arguments, and receipt key.
+    """
+    thread_id = _action_id(payload.thread_id, "thread_id")
+    cwd = _action_cwd(payload.cwd)
+    params: dict[str, Any] = {
+        "threadId": thread_id,
+        "server": payload.server,
+        "tool": payload.tool,
+    }
+    if payload.arguments is not None:
+        params["arguments"] = payload.arguments
+
+    def invoke(client, receipt):
+        _read_guarded_thread(client, thread_id, cwd)
+        result = _bounded_native_result(client.request("mcpServer/tool/call", params))
+        receipt.update(state="accepted", thread_id=thread_id)
+        return result
+
+    return _dispatch_run("call_mcp_tool", payload, invoke)
+
+
+@action(is_consequential=False)
+def list_background_terminals(
+    payload: ThreadBackgroundTerminalsListRequest,
+) -> Response[RpcEnvelope]:
+    """List a bounded page of terminals attached to one exact thread/worktree.
+
+    Args:
+        payload: Target, exact thread/CWD identity, and pagination controls.
+    """
+    thread_id = _action_id(payload.thread_id, "thread_id")
+    cwd = _action_cwd(payload.cwd)
+    params = {"threadId": thread_id, "limit": payload.limit}
+    if payload.cursor is not None:
+        params["cursor"] = payload.cursor
+
+    def invoke(client):
+        _read_guarded_thread(client, thread_id, cwd)
+        result = client.request("thread/backgroundTerminals/list", params)
+        page = result.get("data") if isinstance(result, dict) else None
+        if not isinstance(page, list):
+            raise RpcError("Native terminal list response is missing its data page")
+        selected = []
+        for terminal in page:
+            if not isinstance(terminal, dict) or not isinstance(
+                terminal.get("cwd"), str
+            ):
+                raise RpcError("Native terminal result is missing its CWD")
+            if terminal["cwd"] == cwd:
+                selected.append(terminal)
+        return {
+            "data": selected,
+            "nextCursor": result.get("nextCursor"),
+        }
+
+    return _run(
+        "list_background_terminals",
+        payload.target,
+        invoke,
+        include_receipts=False,
+    )
+
+
+@action(is_consequential=True)
+def terminate_background_terminal(
+    payload: ThreadBackgroundTerminalTerminateRequest,
+) -> Response[RpcEnvelope]:
+    """Terminate a listed native terminal only after exact identity reconciliation.
+
+    Args:
+        payload: Exact thread/CWD, process ID, and required receipt key.
+    """
+    thread_id = _action_id(payload.thread_id, "thread_id")
+    cwd = _action_cwd(payload.cwd)
+
+    def invoke(client, receipt):
+        _read_guarded_thread(client, thread_id, cwd)
+        page = client.request(
+            "thread/backgroundTerminals/list",
+            {"threadId": thread_id, "limit": 100},
+        )
+        terminals = page.get("data") if isinstance(page, dict) else None
+        if not isinstance(terminals, list):
+            raise RpcError("Native terminal list response is missing its data page")
+        matches = [
+            terminal
+            for terminal in terminals
+            if isinstance(terminal, dict)
+            and terminal.get("processId") == payload.process_id
+            and terminal.get("cwd") == cwd
+            and isinstance(terminal.get("itemId"), str)
+            and terminal["itemId"]
+        ]
+        if len(matches) != 1:
+            raise RpcError(
+                "Native terminal process identity is not unique in the bounded page"
+            )
+        result = client.request(
+            "thread/backgroundTerminals/terminate",
+            {"threadId": thread_id, "processId": payload.process_id},
+        )
+        if not isinstance(result, dict) or result.get("terminated") is not True:
+            raise RpcError("Native terminal termination was not confirmed")
+        receipt.update(state="accepted", thread_id=thread_id)
+        return result
+
+    return _dispatch_run("terminate_background_terminal", payload, invoke)
+
+
+@action(is_consequential=False)
+def list_thread_attachments(
+    payload: ThreadAttachmentListRequest,
+) -> Response[RpcEnvelope]:
+    """List a bounded attachment page from one exact thread.
+
+    Args:
+        payload: Exact target, cwd, thread ID, and pagination controls.
+    """
+    thread_id = _action_id(payload.thread_id, "thread_id")
+    cwd = _action_cwd(payload.cwd)
+    params = {"threadId": thread_id, "limit": payload.limit}
+    if payload.cursor is not None:
+        params["cursor"] = payload.cursor
+
+    def invoke(client):
+        _read_guarded_thread(client, thread_id, cwd)
+        return client.request("thread/attachment/list", params)
+
+    return _run("list_thread_attachments", payload.target, invoke)
+
+
+@action(is_consequential=True)
+def add_thread_attachment(
+    payload: ThreadAttachmentAddRequest,
+) -> Response[RpcEnvelope]:
+    """Create or locate one bounded, typed thread attachment.
+
+    Args:
+        payload: Exact thread identity, attachment type/key, bounded JSON payload,
+            and required dispatch receipt key.
+    """
+    thread_id = _action_id(payload.thread_id, "thread_id")
+    cwd = _action_cwd(payload.cwd)
+    params = {
+        "threadId": thread_id,
+        "attachmentType": payload.attachment_type,
+        "identityKey": payload.identity_key,
+        "payload": payload.payload,
+    }
+
+    def invoke(client, receipt):
+        _read_guarded_thread(client, thread_id, cwd)
+        result = client.request("thread/attachment/add", params)
+        attachment = result.get("attachment") if isinstance(result, dict) else None
+        if (
+            not isinstance(attachment, dict)
+            or attachment.get("attachmentType") != payload.attachment_type
+            or attachment.get("identityKey") != payload.identity_key
+            or not isinstance(attachment.get("id"), str)
+            or not attachment["id"]
+        ):
+            raise RpcError("Native attachment response identity mismatch")
+        receipt.update(state="accepted", thread_id=thread_id)
+        return result
+
+    return _dispatch_run("add_thread_attachment", payload, invoke)
+
+
+@action(is_consequential=True)
+def remove_thread_attachment(
+    payload: ThreadAttachmentRemoveRequest,
+) -> Response[RpcEnvelope]:
+    """Remove one thread attachment by its exact stable identity key.
+
+    Args:
+        payload: Exact thread, attachment type/key, and receipt key.
+    """
+    thread_id = _action_id(payload.thread_id, "thread_id")
+    cwd = _action_cwd(payload.cwd)
+    params = {
+        "threadId": thread_id,
+        "attachmentType": payload.attachment_type,
+        "identityKey": payload.identity_key,
+    }
+
+    def invoke(client, receipt):
+        _read_guarded_thread(client, thread_id, cwd)
+        result = client.request("thread/attachment/remove", params)
+        receipt.update(state="accepted", thread_id=thread_id)
+        return result
+
+    return _dispatch_run("remove_thread_attachment", payload, invoke)
+
+
+@action(is_consequential=True)
+def inject_thread_items(payload: ThreadInjectItemsRequest) -> Response[RpcEnvelope]:
+    """Append a bounded list of typed user-text message items to one thread.
+
+    Args:
+        payload: Exact thread identity, restricted input-text items, and receipt key.
+    """
+    thread_id = _action_id(payload.thread_id, "thread_id")
+    cwd = _action_cwd(payload.cwd)
+    params = {
+        "threadId": thread_id,
+        "items": [item.model_dump() for item in payload.items],
+    }
+
+    def invoke(client, receipt):
+        _read_guarded_thread(client, thread_id, cwd)
+        result = client.request("thread/inject_items", params)
+        receipt.update(state="accepted", thread_id=thread_id)
+        return result
+
+    return _dispatch_run("inject_thread_items", payload, invoke)
+
+
 @action(is_consequential=False)
 def list_thread_sections(payload: ThreadSectionListRequest) -> Response[RpcEnvelope]:
     """List a bounded page of native thread sections for one configured target.
@@ -1220,6 +1820,80 @@ def start_thread_queue(payload: ThreadQueueStartRequest) -> Response[RpcEnvelope
         params,
         starts_turn=True,
     )
+
+
+@action(is_consequential=True)
+def create_thread_section(
+    payload: ThreadSectionCreateRequest,
+) -> Response[RpcEnvelope]:
+    """Create one named native thread section.
+
+    Args:
+        payload: Configured target, bounded section name, and receipt key.
+    """
+
+    def invoke(client, receipt):
+        result = client.request("threadSection/create", {"name": payload.name})
+        section = result.get("section") if isinstance(result, dict) else None
+        if (
+            not isinstance(section, dict)
+            or not isinstance(section.get("id"), str)
+            or not section["id"]
+            or section.get("name") != payload.name
+        ):
+            raise RpcError("Native section creation response identity mismatch")
+        receipt.update(state="accepted")
+        return result
+
+    return _dispatch_run("create_thread_section", payload, invoke)
+
+
+@action(is_consequential=True)
+def update_thread_section(
+    payload: ThreadSectionUpdateRequest,
+) -> Response[RpcEnvelope]:
+    """Rename one exact native thread section.
+
+    Args:
+        payload: Configured target, stable section ID, name, and receipt key.
+    """
+
+    def invoke(client, receipt):
+        result = client.request(
+            "threadSection/update",
+            {"sectionId": payload.section_id, "name": payload.name},
+        )
+        section = result.get("section") if isinstance(result, dict) else None
+        if (
+            not isinstance(section, dict)
+            or section.get("id") != payload.section_id
+            or section.get("name") != payload.name
+        ):
+            raise RpcError("Native section update response identity mismatch")
+        receipt.update(state="accepted")
+        return result
+
+    return _dispatch_run("update_thread_section", payload, invoke)
+
+
+@action(is_consequential=True)
+def delete_thread_section(
+    payload: ThreadSectionDeleteRequest,
+) -> Response[RpcEnvelope]:
+    """Delete one exact native thread section by its stable ID.
+
+    Args:
+        payload: Configured target, stable section ID, and receipt key.
+    """
+
+    def invoke(client, receipt):
+        result = client.request(
+            "threadSection/delete", {"sectionId": payload.section_id}
+        )
+        receipt.update(state="accepted")
+        return result
+
+    return _dispatch_run("delete_thread_section", payload, invoke)
 
 
 @action(is_consequential=False)
