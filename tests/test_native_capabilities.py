@@ -87,8 +87,10 @@ def test_pinned_schema_manifest_is_completely_classified():
     assert len(default | experimental_only) == 167
     assert len(experimental_only) == 63
     assert default <= classified
-    assert set(experimental) == experimental_only
-    assert set(exposed_experimental) == experimental_only & codex_rpc.METHODS
+    assert set(experimental) == experimental_only | {"app/read"}
+    assert set(exposed_experimental) == (experimental_only & codex_rpc.METHODS) | {
+        "app/read"
+    }
     assert codex_rpc.EXPERIMENTAL_METHODS <= set(exposed_experimental)
 
 
@@ -100,7 +102,7 @@ def test_exposed_native_methods_require_explicit_classification():
         validate_exposed_methods({"future/nativeMethod"})
 
 
-def test_default_app_read_is_not_version_gated_as_experimental():
+def test_default_union_app_read_is_version_gated_by_schema_annotation():
     client = codex_rpc.Client(codex_rpc.Target("local", socket_path="fixture"))
     client.ws = Mock()
     client.metadata = {"userAgent": "codex-cli 0.153.4"}
@@ -108,7 +110,12 @@ def test_default_app_read_is_not_version_gated_as_experimental():
         {"id": 1, "result": {"apps": [], "missingAppIds": ["docs"]}}
     )
 
-    assert "app/read" not in codex_rpc.EXPERIMENTAL_METHODS
+    assert "app/read" in codex_rpc.EXPERIMENTAL_METHODS
+    with pytest.raises(codex_rpc.RpcError, match="pinned experimental"):
+        client.request("app/read", {"appIds": ["docs"]})
+    client.ws.send.assert_not_called()
+
+    client.metadata = {"userAgent": codex_rpc.EXPERIMENTAL_NATIVE_USER_AGENT}
     assert client.request("app/read", {"appIds": ["docs"]}) == {
         "apps": [],
         "missingAppIds": ["docs"],

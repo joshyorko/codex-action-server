@@ -155,6 +155,7 @@ FAMILIES = (
         "methods": [
             "account/bedrock/discover",
             "account/bedrock/setup",
+            "app/read",
             "collaborationMode/list",
             "environment/add",
             "environment/info",
@@ -218,6 +219,7 @@ FAMILIES = (
             "userVerification/verify",
         ],
         "exposed_methods": [
+            "app/read",
             "server/diagnostics",
             "thread/backgroundTerminals/list",
             "thread/backgroundTerminals/terminate",
