@@ -11,6 +11,7 @@ ROOT = Path(__file__).parents[1]
 POLICY = runpy.run_path(str(ROOT / "scripts/install_runtime_annotation_patch.py"))
 READS = {
     "list_targets",
+    "list_native_capabilities",
     "inspect_target",
     "discover_threads",
     "read_thread",

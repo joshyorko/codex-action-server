@@ -15,6 +15,7 @@ READ_ONLY_TOOLS = frozenset(
     {
         "read_dispatch_receipt",
         "list_targets",
+        "list_native_capabilities",
         "inspect_target",
         "discover_threads",
         "list_thread_turns",

@@ -19,6 +19,7 @@ from actions import ActionError, Response, action
 
 from boundary import configurations, resolve_target, validate_cwd, validate_identifier
 from codex_rpc import Client, RpcError
+from native_capabilities import inventory as native_capability_inventory
 
 TargetName = str  # Runtime operator allowlist is authoritative, not baked-in hostnames.
 SortDirection = Literal["asc", "desc"]
@@ -264,6 +265,12 @@ class ModelProviderCapabilitiesRequest(StrictModel):
 class ServerDiagnosticsRequest(StrictModel):
     target: TargetName = Field(
         description="Configured target name, never a shell command"
+    )
+
+
+class NativeCapabilitiesRequest(StrictModel):
+    target: TargetName = Field(
+        description="Configured target name; reports this daemon's advertised version"
     )
 
 
@@ -583,6 +590,22 @@ def inspect_target(payload: ServerDiagnosticsRequest) -> Response[dict[str, Any]
                 "error_code": str(error),
             }
         )
+
+
+@action(is_consequential=False)
+def list_native_capabilities(
+    payload: NativeCapabilitiesRequest,
+) -> Response[RpcEnvelope]:
+    """List the pinned native inventory and this server's exposure profile.
+
+    Args:
+        payload: The configured target whose native version should be reported.
+    """
+    return _run(
+        "list_native_capabilities",
+        payload.target,
+        lambda client: native_capability_inventory(client.metadata.get("userAgent")),
+    )
 
 
 def _apply_thread_effort(
