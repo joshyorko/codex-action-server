@@ -27,17 +27,18 @@ mechanism.
 ## Required tranche status: incomplete
 
 The exposed action count is not evidence that the issue's required operator
-tranche is complete. `threadSection/list` and section create/update/delete are
-typed, but `thread/section/move` remains deferred. `app/list` is exposed, but
-`app/read` remains deferred. Both omissions lack reviewed typed mappings and
-pinned request/response contract fixtures.
+tranche is complete. `thread/section/move` and `app/read` now have typed
+mappings, exact identity checks, and pinned 0.160.1 request/response fixtures.
+`app/read` is experimental and fails closed unless the daemon identifies as
+`codex-cli 0.160.1`.
 
 The checked-in 0.160.1 request manifest proves method inventory and
-classification completeness; it does not prove complete wire contracts.
-Queue, search/timeline, and background-terminal mappings still need pinned
-request/response fixtures and native acceptance before those parts of the
-required tranche can be called fully qualified. Do not treat the 61-action
-catalog or this PR as full required-tranche parity.
+classification completeness; the separate typed RPC contract fixture now
+records request and response fields for section movement, app reads, queue,
+search/occurrence, timeline, and background-terminal methods. Those fixtures
+and local fake-client tests do not establish native daemon acceptance. Do not
+treat the action catalog or this PR as full required-tranche parity until
+pinned-version acceptance is demonstrated.
 
 OBSERVE and OPERATOR_CONTROL list the native methods currently exposed by the
 strict RPC allowlist. EXPERIMENTAL distinguishes methods requiring experimental
@@ -59,9 +60,9 @@ actions. MCP tool and attachment payloads are limited to 16 KiB, and MCP
 resource/tool results to 1 MiB. Terminal termination requires the process ID
 to match a native terminal record for the exact thread and CWD.
 
-The `DEFERRED/UNSUPPORTED` list is intentionally not callable. In addition to
-section movement and `app/read`, it contains native operations without reviewed
-typed request/response contracts. No raw-RPC fallback exists.
+The `DEFERRED/UNSUPPORTED` list is intentionally not callable. It contains
+native operations without reviewed typed request/response contracts. No raw-RPC
+fallback exists.
 
 ADMIN remains disabled and unexposed. Its classification is a safety boundary,
 not completed admin parity; high-authority operations still require separately

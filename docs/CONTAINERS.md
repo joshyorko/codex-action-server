@@ -128,9 +128,10 @@ same valid-Host, foreign-Host, foreign-Origin, and loopback regression checks.
 
 The image health command is
 `python3 /opt/codex-action-server/scripts/container_health.py`. It initializes a
-real MCP session, verifies the 61-tool catalog, and closes the session. It never
-calls native Codex or Devsy. Healthy API status does not prove a native connection,
-authentication, remote readiness, or thread execution.
+real MCP session, verifies the exact tool-name set for the implemented operator
+profile, and closes the session. It never calls native Codex or Devsy. Healthy API
+status does not prove a native connection, authentication, remote readiness, or
+thread execution.
 
 From the repository root on the Linux host, build with
 `docker buildx build --platform linux/amd64 --load -f Containerfile -t codex-action-server:container-proof .`.
@@ -141,10 +142,10 @@ catalog and a real mounted Unix-socket fixture, then restarts the API and verifi
 dispatch replay protection. It does not contact an operator daemon. Live local
 native acceptance remains a separate operator gate in the composed stack.
 
-The image projects the explicit 61-tool policy in
+The image projects the explicit 63-tool operator policy in
 `scripts/install_runtime_annotation_patch.py` through the pinned runtime's MCP
-adapter. Its 29 reads advertise `readOnlyHint=true` and `destructiveHint=false`;
-its 32 mutation/control tools and unknown tools remain non-read-only and
+adapter. Its 30 reads advertise `readOnlyHint=true` and `destructiveHint=false`;
+its 33 mutation/control tools and unknown tools remain non-read-only and
 destructive. Package, source-file, runtime-version, and source
 hash guards prevent the policy from changing foreign tools. HTTP action kinds,
 schemas, authorization, receipts, target checks, and other hints are unchanged.

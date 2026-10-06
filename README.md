@@ -67,12 +67,12 @@ it does not grant methods merely because the daemon supports them. See
 [native capabilities](docs/NATIVE_CAPABILITIES.md).
 
 Additional typed native methods include thread fork/archive/unarchive/delete,
-name/metadata updates, revert/compact, section listing, CWD-filtered thread
-search, bounded search-occurrence/timeline reads, native queue controls,
-inline review, account usage reads, skills/hooks/plugin/app inventory, MCP
-resource/tool calls, thread attachments, and background-terminal
-observation/termination. Mutations require a request ID and verify exact
-thread/CWD identity before dispatch.
+name/metadata updates, revert/compact, section listing and exact section moves,
+CWD-filtered thread search, bounded search-occurrence/timeline reads, native
+queue controls, inline review, account usage reads, skills/hooks/plugin/app
+inventory and app metadata reads, MCP resource/tool calls, thread attachments,
+and background-terminal observation/termination. Mutations require a request
+ID and verify exact thread/CWD identity before dispatch.
 
 The API accepts stable logical target strings; the runtime allowlist rejects any
 unconfigured name before connection. Thread mutations require exact cwd/thread

@@ -31,6 +31,7 @@ METHODS = {
     "account/rateLimits/read",
     "account/usage/read",
     "app/list",
+    "app/read",
     "hooks/list",
     "mcpServer/resource/read",
     "mcpServer/tool/call",
@@ -66,6 +67,7 @@ METHODS = {
     "thread/queue/update",
     "thread/revert",
     "thread/resume",
+    "thread/section/move",
     "thread/search",
     "thread/searchOccurrences",
     "thread/timeline/list",
@@ -84,6 +86,7 @@ METHODS = {
 }
 
 EXPERIMENTAL_METHODS = {
+    "app/read",
     "thread/search",
     "thread/searchOccurrences",
     "thread/timeline/list",
@@ -116,6 +119,7 @@ THREAD_ID_METHODS = {
     "thread/read",
     "thread/metadata/update",
     "thread/name/set",
+    "thread/section/move",
     "thread/revert",
     "review/start",
     "mcpServer/tool/call",
@@ -146,6 +150,7 @@ TURN_ID_METHODS = {
 OPTIONAL_THREAD_ID_METHODS = {
     "account/usage/read",
     "app/list",
+    "app/read",
     "mcpServerStatus/list",
     "mcpServer/resource/read",
 }

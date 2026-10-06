@@ -1,0 +1,340 @@
+{
+  "schema_version": "0.160.1",
+  "source": "openai/codex rust-v0.160.1 d27764b82f7118f674371e6d6e76271d9d606edb app-server-protocol ClientRequest, protocol/v2/apps.rs, and protocol/v2/thread.rs",
+  "contracts": {
+    "app/read": {
+      "params": {
+        "required": ["appIds"],
+        "properties": {
+          "appIds": {"type": "array", "items": {"type": "string"}},
+          "threadId": {"type": ["string", "null"]},
+          "includeTools": {"type": "boolean"}
+        }
+      },
+      "response": {
+        "required": ["apps", "missingAppIds"],
+        "properties": {
+          "apps": {
+            "type": "array",
+            "items": {
+              "required": ["id", "name"],
+              "properties": {
+                "id": {"type": "string"},
+                "name": {"type": "string"},
+                "description": {"type": ["string", "null"]},
+                "distributionChannel": {"type": ["string", "null"]},
+                "iconUrl": {"type": ["string", "null"]},
+                "iconUrlDark": {"type": ["string", "null"]},
+                "installUrl": {"type": ["string", "null"]},
+                "pluginDisplayNames": {"type": "array"},
+                "toolSummaries": {
+                  "type": ["array", "null"],
+                  "items": {
+                    "required": ["name", "description"],
+                    "properties": {
+                      "name": {"type": "string"},
+                      "title": {"type": ["string", "null"]},
+                      "description": {"type": "string"},
+                      "isEnabled": {"type": "boolean"},
+                      "disabledReason": {"type": ["string", "null"]},
+                      "isReadOnly": {"type": "boolean"}
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "missingAppIds": {"type": "array", "items": {"type": "string"}}
+        }
+      }
+    },
+    "thread/section/move": {
+      "params": {
+        "required": ["threadId", "sectionId"],
+        "properties": {
+          "threadId": {"type": "string"},
+          "sectionId": {"type": ["string", "null"]},
+          "beforeThreadId": {"type": ["string", "null"]}
+        }
+      },
+      "response": {"required": [], "properties": {}}
+    },
+    "thread/queue/add": {
+      "params": {
+        "required": ["threadId", "input", "clientUserMessageId"],
+        "properties": {
+          "threadId": {"type": "string"},
+          "input": {"type": "array"},
+          "clientUserMessageId": {"type": "string"}
+        }
+      },
+      "response": {
+        "required": ["queuedSubmission"],
+        "properties": {
+          "queuedSubmission": {
+            "required": ["id", "input", "clientUserMessageId"],
+            "properties": {
+              "id": {"type": "string"},
+              "input": {"type": "array"},
+              "clientUserMessageId": {"type": "string"}
+            }
+          }
+        }
+      }
+    },
+    "thread/queue/list": {
+      "params": {
+        "required": ["threadId"],
+        "properties": {
+          "threadId": {"type": "string"},
+          "cursor": {"type": ["string", "null"]},
+          "limit": {"type": ["integer", "null"]}
+        }
+      },
+      "response": {
+        "required": ["data", "nextCursor"],
+        "properties": {"data": {"type": "array"}, "nextCursor": {"type": ["string", "null"]}}
+      }
+    },
+    "thread/queue/update": {
+      "params": {
+        "required": ["threadId", "queuedSubmissionId", "input"],
+        "properties": {
+          "threadId": {"type": "string"},
+          "queuedSubmissionId": {"type": "string"},
+          "input": {"type": "array"}
+        }
+      },
+      "response": {
+        "required": ["queuedSubmission"],
+        "properties": {
+          "queuedSubmission": {
+            "required": ["id", "input", "clientUserMessageId"],
+            "properties": {
+              "id": {"type": "string"},
+              "input": {"type": "array"},
+              "clientUserMessageId": {"type": "string"}
+            }
+          }
+        }
+      }
+    },
+    "thread/queue/delete": {
+      "params": {
+        "required": ["threadId", "queuedSubmissionId"],
+        "properties": {
+          "threadId": {"type": "string"},
+          "queuedSubmissionId": {"type": "string"}
+        }
+      },
+      "response": {"required": ["deleted"], "properties": {"deleted": {"type": "boolean"}}}
+    },
+    "thread/queue/reorder": {
+      "params": {
+        "required": ["threadId", "queuedSubmissionIds"],
+        "properties": {
+          "threadId": {"type": "string"},
+          "queuedSubmissionIds": {"type": "array", "items": {"type": "string"}}
+        }
+      },
+      "response": {"required": [], "properties": {}}
+    },
+    "thread/queue/start": {
+      "params": {
+        "required": ["threadId"],
+        "properties": {
+          "threadId": {"type": "string"},
+          "queuedSubmissionId": {"type": ["string", "null"]}
+        }
+      },
+      "response": {"required": ["turn"], "properties": {"turn": {"type": "object"}}}
+    },
+    "thread/search": {
+      "params": {
+        "required": ["searchTerm"],
+        "properties": {
+          "cursor": {"type": ["string", "null"]},
+          "limit": {"type": ["integer", "null"]},
+          "sortKey": {
+            "type": ["string", "null"],
+            "enum": ["created_at", "updated_at", "recency_at", null]
+          },
+          "sortDirection": {"type": ["string", "null"], "enum": ["asc", "desc", null]},
+          "sourceKinds": {
+            "type": ["array", "null"],
+            "items": {
+              "type": "string",
+              "enum": [
+                "cli", "vscode", "exec", "appServer", "subAgent",
+                "subAgentReview", "subAgentCompact", "subAgentThreadSpawn",
+                "subAgentOther", "unknown"
+              ]
+            }
+          },
+          "archived": {"type": ["boolean", "null"]},
+          "searchTerm": {"type": "string"}
+        }
+      },
+      "response": {
+        "required": ["data", "nextCursor", "backwardsCursor"],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "required": ["thread", "snippet"],
+              "properties": {
+                "thread": {"type": "object"},
+                "snippet": {"type": "string"}
+              }
+            }
+          },
+          "nextCursor": {"type": ["string", "null"]},
+          "backwardsCursor": {"type": ["string", "null"]}
+        }
+      }
+    },
+    "thread/searchOccurrences": {
+      "params": {
+        "required": ["threadId", "searchTerm"],
+        "properties": {
+          "threadId": {"type": "string"},
+          "searchTerm": {"type": "string"},
+          "cursor": {"type": ["string", "null"]},
+          "limit": {"type": ["integer", "null"]}
+        }
+      },
+      "response": {
+        "required": ["data", "nextCursor"],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "required": ["turnId", "itemId", "snippet", "snippetMatchRange", "turnCursor"],
+              "properties": {
+                "turnId": {"type": "string"},
+                "itemId": {"type": "string"},
+                "snippet": {"type": "string"},
+                "snippetMatchRange": {
+                  "required": ["start", "end"],
+                  "properties": {
+                    "start": {"type": "integer"},
+                    "end": {"type": "integer"}
+                  }
+                },
+                "turnCursor": {"type": "string"}
+              }
+            }
+          },
+          "nextCursor": {"type": ["string", "null"]}
+        }
+      }
+    },
+    "thread/timeline/list": {
+      "params": {
+        "required": ["threadId"],
+        "properties": {
+          "threadId": {"type": "string"},
+          "cursor": {"type": ["string", "null"]},
+          "limit": {"type": ["integer", "null"]}
+        }
+      },
+      "response": {
+        "required": ["data", "nextCursor", "activeRealtimeSessionAtPageStart"],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "oneOf": [
+                {
+                  "required": ["type", "position", "turnId", "item"],
+                  "properties": {
+                    "type": {"enum": ["item"]},
+                    "position": {"type": "integer"},
+                    "turnId": {"type": "string"},
+                    "item": {"type": "object"}
+                  }
+                },
+                {
+                  "required": ["type", "position", "item"],
+                  "properties": {
+                    "type": {"enum": ["realtime"]},
+                    "position": {"type": "integer"},
+                    "item": {"type": "object"}
+                  }
+                },
+                {
+                  "required": ["type", "position", "turnId", "startedAt"],
+                  "properties": {
+                    "type": {"enum": ["turnStarted"]},
+                    "position": {"type": "integer"},
+                    "turnId": {"type": "string"},
+                    "startedAt": {"type": ["integer", "null"]}
+                  }
+                },
+                {
+                  "required": [
+                    "type", "position", "turnId", "status", "error",
+                    "startedAt", "completedAt", "durationMs"
+                  ],
+                  "properties": {
+                    "type": {"enum": ["turnCompleted"]},
+                    "position": {"type": "integer"},
+                    "turnId": {"type": "string"},
+                    "status": {"type": "string"},
+                    "error": {"type": ["object", "null"]},
+                    "startedAt": {"type": ["integer", "null"]},
+                    "completedAt": {"type": ["integer", "null"]},
+                    "durationMs": {"type": ["integer", "null"]}
+                  }
+                }
+              ]
+            }
+          },
+          "nextCursor": {"type": ["string", "null"]},
+          "activeRealtimeSessionAtPageStart": {"type": ["string", "null"]}
+        }
+      }
+    },
+    "thread/backgroundTerminals/list": {
+      "params": {
+        "required": ["threadId"],
+        "properties": {
+          "threadId": {"type": "string"},
+          "cursor": {"type": ["string", "null"]},
+          "limit": {"type": ["integer", "null"]}
+        }
+      },
+      "response": {
+        "required": ["data", "nextCursor"],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "required": ["itemId", "processId", "command", "cwd"],
+              "properties": {
+                "itemId": {"type": "string"},
+                "processId": {"type": "string"},
+                "command": {"type": "string"},
+                "cwd": {"type": "string"},
+                "osPid": {"type": ["integer", "null"]},
+                "cpuPercent": {"type": ["number", "null"]},
+                "rssKb": {"type": ["integer", "null"]}
+              }
+            }
+          },
+          "nextCursor": {"type": ["string", "null"]}
+        }
+      }
+    },
+    "thread/backgroundTerminals/terminate": {
+      "params": {
+        "required": ["threadId", "processId"],
+        "properties": {
+          "threadId": {"type": "string"},
+          "processId": {"type": "string"}
+        }
+      },
+      "response": {"required": ["terminated"], "properties": {"terminated": {"type": "boolean"}}}
+    }
+  }
+}

@@ -5,6 +5,10 @@ from unittest.mock import patch
 import pytest
 
 from test_actions import FakeClient, load_actions
+from native_wire_contracts import (
+    assert_native_request_contract,
+    assert_native_response_contract,
+)
 
 
 class NativeSurfaceClient(FakeClient):
@@ -22,6 +26,12 @@ class NativeSurfaceClient(FakeClient):
             return {"plugin": {"name": params["pluginName"]}}
         if method == "app/list":
             return {"data": [], "nextCursor": None}
+        if method == "app/read":
+            app_id = params["appIds"][0]
+            return {
+                "apps": [{"id": app_id, "name": "Docs"}],
+                "missingAppIds": [],
+            }
         if method == "mcpServer/resource/read":
             return {"contents": [{"uri": params["uri"], "text": "resource"}]}
         if method == "mcpServer/tool/call":
@@ -114,6 +124,36 @@ def test_reads_are_target_and_cwd_scoped_with_exact_native_params():
     }
 
 
+def test_app_read_uses_pinned_fields_and_checks_exact_response_identity():
+    module = load_actions()
+    client = NativeSurfaceClient(None)
+    with patch.object(module, "Client", return_value=client):
+        response = module.read_app(
+            module.AppReadRequest(
+                target="local",
+                app_id="docs",
+                include_tools=True,
+                thread_id="thread-1",
+                cwd="/trusted",
+            )
+        )
+
+    assert response.result.result["apps"] == [{"id": "docs", "name": "Docs"}]
+    assert client.calls[-1] == (
+        "app/read",
+        {"appIds": ["docs"], "includeTools": True, "threadId": "thread-1"},
+    )
+    assert_native_request_contract("app/read", client.calls[-1][1])
+    assert_native_response_contract("app/read", response.result.result)
+    with pytest.raises(module.RpcError, match="identity mismatch"):
+        module._validate_app_read_response(
+            {"apps": [{"id": "other", "name": "Wrong"}], "missingAppIds": []},
+            "docs",
+        )
+    with pytest.raises(ValueError, match="supplied together"):
+        module.AppReadRequest(target="local", app_id="docs", thread_id="thread-1")
+
+
 def test_review_and_mcp_tool_calls_are_consequential_and_receipt_protected(
     tmp_path, monkeypatch
 ):
@@ -196,6 +236,21 @@ def test_terminal_list_filters_worktree_and_termination_reconciles_exact_process
     assert client.calls[-1] == (
         "thread/backgroundTerminals/terminate",
         {"threadId": "thread-1", "processId": "process-1"},
+    )
+    assert_native_request_contract(
+        "thread/backgroundTerminals/terminate", client.calls[-1][1]
+    )
+    assert_native_request_contract(
+        "thread/backgroundTerminals/list",
+        {
+            "threadId": "thread-1",
+            "limit": 10,
+        },
+    )
+    assert_native_response_contract("thread/backgroundTerminals/list", listed.result)
+    assert_native_response_contract(
+        "thread/backgroundTerminals/terminate",
+        {"terminated": terminated["terminated"]},
     )
 
 

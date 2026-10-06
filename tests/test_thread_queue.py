@@ -7,6 +7,10 @@ import pytest
 
 import codex_rpc
 from test_actions import FakeClient, load_actions
+from native_wire_contracts import (
+    assert_native_request_contract,
+    assert_native_response_contract,
+)
 
 
 class QueueClient(FakeClient):
@@ -17,9 +21,21 @@ class QueueClient(FakeClient):
         if method == "thread/queue/list":
             return {"data": [], "nextCursor": None}
         if method == "thread/queue/add":
-            return {"queuedSubmission": {"id": "queue-1"}}
+            return {
+                "queuedSubmission": {
+                    "id": "queue-1",
+                    "input": [{"type": "text", "text": "run this later"}],
+                    "clientUserMessageId": "message-1",
+                }
+            }
         if method == "thread/queue/update":
-            return {"queuedSubmission": {"id": params["queuedSubmissionId"]}}
+            return {
+                "queuedSubmission": {
+                    "id": params["queuedSubmissionId"],
+                    "input": [{"type": "text", "text": "updated text"}],
+                    "clientUserMessageId": "message-1",
+                }
+            }
         if method == "thread/queue/delete":
             return {"deleted": True}
         if method in {"thread/queue/reorder"}:
@@ -137,6 +153,30 @@ def test_queue_actions_map_native_fields_and_persist_acknowledged_receipts(
         "threadId": "thread-1",
         "queuedSubmissionId": "queue-1",
     }
+    for method, params in client.calls:
+        if method in {
+            "thread/queue/add",
+            "thread/queue/list",
+            "thread/queue/update",
+            "thread/queue/delete",
+            "thread/queue/reorder",
+            "thread/queue/start",
+        }:
+            assert_native_request_contract(method, params)
+    assert_native_response_contract("thread/queue/list", results[0])
+    assert_native_response_contract(
+        "thread/queue/add", {"queuedSubmission": results[1]["queuedSubmission"]}
+    )
+    assert_native_response_contract(
+        "thread/queue/update", {"queuedSubmission": results[2]["queuedSubmission"]}
+    )
+    assert_native_response_contract(
+        "thread/queue/delete", {"deleted": results[3]["deleted"]}
+    )
+    assert_native_response_contract("thread/queue/reorder", {})
+    assert_native_response_contract(
+        "thread/queue/start", {"turn": {"id": "turn-queue"}}
+    )
 
 
 def test_queue_mutations_reject_cwd_mismatch_before_native_queue_method(

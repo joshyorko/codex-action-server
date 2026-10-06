@@ -304,6 +304,17 @@ class ThreadRevertRequest(ThreadMutationRequest):
     before_turn_id: str = Field(min_length=1, max_length=256)
 
 
+class ThreadSectionMoveRequest(ThreadMutationRequest):
+    section_id: str | None
+    before_thread_id: str | None = Field(default=None, min_length=1, max_length=256)
+
+    @model_validator(mode="after")
+    def require_destination_for_anchor(self):
+        if self.section_id is None and self.before_thread_id is not None:
+            raise ValueError("before_thread_id requires a destination section")
+        return self
+
+
 class ThreadSectionListRequest(StrictModel):
     target: TargetName
     limit: int | None = Field(default=None, ge=1, le=100)
@@ -442,6 +453,20 @@ class AppsListRequest(StrictModel):
     target: TargetName
     limit: int = Field(default=50, ge=1, le=100)
     cursor: str | None = Field(default=None, min_length=1)
+    thread_id: str | None = None
+    cwd: str | None = None
+
+    @model_validator(mode="after")
+    def require_exact_thread_scope(self):
+        if (self.thread_id is None) != (self.cwd is None):
+            raise ValueError("thread_id and cwd must be supplied together")
+        return self
+
+
+class AppReadRequest(StrictModel):
+    target: TargetName
+    app_id: str = Field(min_length=1, max_length=256)
+    include_tools: bool = False
     thread_id: str | None = None
     cwd: str | None = None
 
@@ -695,6 +720,25 @@ def _bounded_native_result(result: dict[str, Any], maximum_bytes: int = 1_048_57
     if len(encoded) > maximum_bytes:
         raise RpcError("Native result exceeds the 1 MiB action limit")
     return result
+
+
+def _validate_app_read_response(result: Any, requested_app_id: str) -> None:
+    if not isinstance(result, dict):
+        raise RpcError("Native app/read response is not an object")
+    apps = result.get("apps")
+    missing = result.get("missingAppIds")
+    if not isinstance(apps, list) or not isinstance(missing, list):
+        raise RpcError("Native app/read response is missing its apps or missingAppIds")
+    returned_ids = [app.get("id") if isinstance(app, dict) else None for app in apps]
+    if (
+        len(apps) > 1
+        or returned_ids not in ([requested_app_id], [])
+        or missing not in ([requested_app_id], [])
+        or bool(apps) == bool(missing)
+    ):
+        raise RpcError("Native app/read response identity mismatch")
+    if apps and not isinstance(apps[0].get("name"), str):
+        raise RpcError("Native app/read metadata is missing its name")
 
 
 def _effective_configuration(result: dict[str, Any]) -> EffectiveConfiguration | None:
@@ -1343,6 +1387,38 @@ def list_apps(payload: AppsListRequest) -> Response[RpcEnvelope]:
 
 
 @action(is_consequential=False)
+def read_app(payload: AppReadRequest) -> Response[RpcEnvelope]:
+    """Read bounded native metadata for one exact app identifier.
+
+    Args:
+        payload: Target, exact app ID, optional tool summaries, and optional thread/CWD.
+    """
+    app_id = _action_id(payload.app_id, "app_id")
+    params: dict[str, Any] = {"appIds": [app_id]}
+    if payload.include_tools:
+        params["includeTools"] = True
+    if payload.thread_id is not None:
+        thread_id = _action_id(payload.thread_id, "thread_id")
+        cwd = _action_cwd(payload.cwd)
+        params["threadId"] = thread_id
+
+        def invoke(client):
+            _read_guarded_thread(client, thread_id, cwd)
+            result = client.request("app/read", params)
+            _validate_app_read_response(result, app_id)
+            return _bounded_native_result(result)
+
+    else:
+
+        def invoke(client):
+            result = client.request("app/read", params)
+            _validate_app_read_response(result, app_id)
+            return _bounded_native_result(result)
+
+    return _run("read_app", payload.target, invoke)
+
+
+@action(is_consequential=False)
 def read_mcp_resource(payload: McpResourceReadRequest) -> Response[RpcEnvelope]:
     """Read one named native MCP resource with exact thread/CWD scope.
 
@@ -1891,6 +1967,61 @@ def delete_thread_section(
         return result
 
     return _dispatch_run("delete_thread_section", payload, invoke)
+
+
+@action(is_consequential=True)
+def move_thread_to_section(
+    payload: ThreadSectionMoveRequest,
+) -> Response[RpcEnvelope]:
+    """Move one exact thread into a section or remove it from its section.
+
+    Args:
+        payload: Exact thread/CWD, destination section, optional insertion anchor, and receipt ID.
+    """
+    thread_id = _action_id(payload.thread_id, "thread_id")
+    cwd = _action_cwd(payload.cwd)
+    section_id = (
+        _action_id(payload.section_id, "section_id")
+        if payload.section_id is not None
+        else None
+    )
+    before_thread_id = (
+        _action_id(payload.before_thread_id, "before_thread_id")
+        if payload.before_thread_id is not None
+        else None
+    )
+    if before_thread_id == thread_id:
+        raise ActionError("before_thread_id must differ from thread_id")
+    params: dict[str, Any] = {"threadId": thread_id, "sectionId": section_id}
+    if before_thread_id is not None:
+        params["beforeThreadId"] = before_thread_id
+
+    def invoke(client, receipt):
+        _read_guarded_thread(client, thread_id, cwd)
+        if before_thread_id is not None:
+            _read_guarded_thread(client, before_thread_id, cwd)
+        if section_id is not None:
+            sections = client.request("threadSection/list", {"limit": 100})
+            page = sections.get("data") if isinstance(sections, dict) else None
+            if not isinstance(page, list):
+                raise RpcError("Native section list is missing its data page")
+            if not any(
+                isinstance(section, dict) and section.get("id") == section_id
+                for section in page
+            ):
+                if sections.get("nextCursor") is not None:
+                    raise RpcError(
+                        "Native destination section was not found in the bounded first page"
+                    )
+                raise ActionError("Destination section does not exist on this target")
+        result = client.request("thread/section/move", params)
+        if not isinstance(result, dict):
+            raise RpcError("Native section move response is not an object")
+        _bounded_native_result(result)
+        receipt.update(state="accepted", thread_id=thread_id)
+        return result
+
+    return _dispatch_run("move_thread_to_section", payload, invoke)
 
 
 @action(is_consequential=False)

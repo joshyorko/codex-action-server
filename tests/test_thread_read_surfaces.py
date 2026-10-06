@@ -7,6 +7,10 @@ import pytest
 
 import codex_rpc
 from test_actions import FakeClient, load_actions
+from native_wire_contracts import (
+    assert_native_request_contract,
+    assert_native_response_contract,
+)
 
 
 class ThreadReadClient(FakeClient):
@@ -31,11 +35,15 @@ class ThreadReadClient(FakeClient):
                 "nextCursor": "next",
                 "backwardsCursor": None,
             }
-        if method in {
-            "thread/search",
-            "thread/searchOccurrences",
-            "thread/timeline/list",
-        }:
+        if method == "thread/searchOccurrences":
+            return {"data": [], "nextCursor": None}
+        if method == "thread/timeline/list":
+            return {
+                "data": [],
+                "nextCursor": None,
+                "activeRealtimeSessionAtPageStart": None,
+            }
+        if method == "thread/search":
             return {"data": [], "nextCursor": None, "backwardsCursor": None}
         raise AssertionError(method)
 
@@ -63,7 +71,7 @@ def test_bounded_read_actions_map_exact_native_fields():
                 archived=False,
             )
         )
-        module.search_thread_occurrences(
+        occurrences = module.search_thread_occurrences(
             module.ThreadSearchOccurrencesRequest(
                 target="local",
                 cwd="/trusted",
@@ -73,7 +81,7 @@ def test_bounded_read_actions_map_exact_native_fields():
                 cursor="occurrence-next",
             )
         )
-        module.list_thread_timeline(
+        timeline = module.list_thread_timeline(
             module.ThreadTimelineListRequest(
                 target="local",
                 cwd="/trusted",
@@ -124,6 +132,18 @@ def test_bounded_read_actions_map_exact_native_fields():
         }
     ]
     assert search_result.result.receipts == []
+    for method, params in client.calls:
+        if method in {
+            "thread/search",
+            "thread/searchOccurrences",
+            "thread/timeline/list",
+        }:
+            assert_native_request_contract(method, params)
+    assert_native_response_contract("thread/search", search_result.result.result)
+    assert_native_response_contract(
+        "thread/searchOccurrences", occurrences.result.result
+    )
+    assert_native_response_contract("thread/timeline/list", timeline.result.result)
 
 
 def test_timeline_rejects_thread_cwd_mismatch_before_native_timeline_request():

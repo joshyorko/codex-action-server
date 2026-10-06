@@ -6,7 +6,12 @@ from pathlib import Path
 
 import pytest
 
-from action_catalog_contract import EXPECTED_ACTION_NAMES
+from action_catalog_contract import (
+    ACTION_NAMES_BY_PROFILE,
+    EXPECTED_ACTION_NAMES,
+    IMPLEMENTED_PROFILE,
+    action_names_for_profile,
+)
 
 
 ROOT = Path(__file__).parents[1]
@@ -47,7 +52,7 @@ class FakeResponse:
 
 class FakeOpener:
     def __init__(self, names):
-        self.names = names
+        self.names = list(names)
         self.methods = []
 
     def open(self, request, timeout):
@@ -95,12 +100,35 @@ def test_health_probe_accepts_exact_current_tool_catalog(monkeypatch, capsys):
         "tools/list",
         "DELETE",
     ]
-    assert f"{len(EXPECTED_ACTION_NAMES)} tools" in capsys.readouterr().out
+    assert "operator profile" in capsys.readouterr().out
+
+
+def test_action_catalog_contract_only_declares_implemented_profiles():
+    assert set(ACTION_NAMES_BY_PROFILE) == {"operator"}
+    assert action_names_for_profile(IMPLEMENTED_PROFILE) == EXPECTED_ACTION_NAMES
+    with pytest.raises(ValueError, match="Unsupported action exposure profile"):
+        action_names_for_profile("observe")
 
 
 def test_health_probe_rejects_stale_tool_catalog(monkeypatch):
     health = load_health()
     opener = FakeOpener(set(sorted(EXPECTED_ACTION_NAMES)[:23]))
+    monkeypatch.setenv("CODEX_ACTION_BRIDGE_GATEWAY", "172.30.186.1")
+    monkeypatch.setattr(health, "build_opener", lambda *_: opener)
+
+    with pytest.raises(ValueError, match="unexpected_catalog"):
+        health.main()
+
+    assert opener.methods[-1] == "DELETE"
+
+
+def test_health_probe_rejects_unknown_name_even_when_catalog_size_matches(
+    monkeypatch,
+):
+    health = load_health()
+    names = sorted(EXPECTED_ACTION_NAMES)
+    names[-1] = "unknown_action"
+    opener = FakeOpener(names)
     monkeypatch.setenv("CODEX_ACTION_BRIDGE_GATEWAY", "172.30.186.1")
     monkeypatch.setattr(health, "build_opener", lambda *_: opener)
 

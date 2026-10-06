@@ -3,11 +3,18 @@
 
 import json
 import os
+from pathlib import Path
 import sys
 from urllib.error import HTTPError
 from urllib.request import build_opener, ProxyHandler, Request
 
-EXPECTED_TOOL_COUNT = 61
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
+from action_catalog_contract import (
+    IMPLEMENTED_PROFILE,
+    action_names_for_profile,
+)
+
+EXPECTED_TOOL_NAMES = action_names_for_profile(IMPLEMENTED_PROFILE)
 
 
 def main():
@@ -68,14 +75,24 @@ def main():
         headers["MCP-Protocol-Version"] = result["protocolVersion"]
         request({"jsonrpc": "2.0", "method": "notifications/initialized"})
         result = request({"jsonrpc": "2.0", "id": 2, "method": "tools/list"})
-        names = {tool["name"] for tool in result["tools"]}
+        tools = result.get("tools") if isinstance(result, dict) else None
+        if not isinstance(tools, list) or any(
+            not isinstance(tool, dict) or not isinstance(tool.get("name"), str)
+            for tool in tools
+        ):
+            raise ValueError("unexpected_catalog")
+        names = {tool["name"] for tool in tools}
         required = {
             "list_targets",
             "inspect_target",
             "read_dispatch_receipt",
             "create_thread_and_start_turn",
         }
-        if len(names) != EXPECTED_TOOL_COUNT or not required <= names:
+        if (
+            len(tools) != len(EXPECTED_TOOL_NAMES)
+            or names != EXPECTED_TOOL_NAMES
+            or not required <= names
+        ):
             raise ValueError("unexpected_catalog")
     finally:
         if "Mcp-Session-Id" in headers:
@@ -87,7 +104,7 @@ def main():
             except HTTPError as error:
                 if error.code != 405:
                     raise
-    print(f"MCP catalog ready: {EXPECTED_TOOL_COUNT} tools")
+    print(f"MCP catalog ready: {IMPLEMENTED_PROFILE} profile")
 
 
 if __name__ == "__main__":

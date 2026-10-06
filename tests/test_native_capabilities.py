@@ -86,8 +86,10 @@ def test_pinned_schema_manifest_is_completely_classified():
     assert len(default | experimental_only) == 167
     assert len(experimental_only) == 63
     assert default <= classified
-    assert set(experimental) == experimental_only
-    assert set(exposed_experimental) == experimental_only & codex_rpc.METHODS
+    assert set(experimental) == experimental_only | {"app/read"}
+    assert set(exposed_experimental) == (experimental_only & codex_rpc.METHODS) | {
+        "app/read"
+    }
     assert codex_rpc.EXPERIMENTAL_METHODS <= set(exposed_experimental)
 
 
