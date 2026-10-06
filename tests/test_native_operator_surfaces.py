@@ -67,9 +67,7 @@ def test_reads_are_target_and_cwd_scoped_with_exact_native_params():
         module.list_skills(module.CwdInventoryRequest(target="local", cwd="/trusted"))
         module.list_hooks(module.CwdInventoryRequest(target="local", cwd="/trusted"))
         module.list_plugins(module.CwdInventoryRequest(target="local", cwd="/trusted"))
-        module.read_plugin(
-            module.PluginReadRequest(target="local", plugin_name="docs")
-        )
+        module.read_plugin(module.PluginReadRequest(target="local", plugin_name="docs"))
         module.list_apps(
             module.AppsListRequest(
                 target="local",

@@ -17,9 +17,7 @@ class InjectionClient(FakeClient):
         raise AssertionError(method)
 
 
-def test_item_injection_maps_only_the_explicit_text_item_shape(
-    tmp_path, monkeypatch
-):
+def test_item_injection_maps_only_the_explicit_text_item_shape(tmp_path, monkeypatch):
     monkeypatch.setenv("CODEX_ACTION_RECEIPTS", str(tmp_path))
     module = load_actions()
     client = InjectionClient(None)
@@ -81,9 +79,8 @@ def test_item_injection_rejects_unknown_items_and_oversized_text():
                 {
                     "type": "message",
                     "role": "user",
-                    "content": [
-                        {"type": "input_text", "text": "x" * 16_385}
-                    ],
+                    "content": [{"type": "input_text", "text": "x" * 4096}],
                 }
+                for _ in range(5)
             ],
         )
