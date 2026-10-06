@@ -94,6 +94,23 @@ def test_pinned_schema_manifest_is_completely_classified():
     assert codex_rpc.EXPERIMENTAL_METHODS <= set(exposed_experimental)
 
 
+def test_internal_message_board_names_are_not_public_app_server_methods():
+    inventory_methods = set(SCHEMA_MANIFEST["default_client_requests"]) | set(
+        SCHEMA_MANIFEST["experimental_only_client_requests"]
+    )
+    exposed_methods = set(codex_rpc.METHODS)
+    internal_only_prefixes = (
+        "agent_message_board/",
+        "multi_agent/",
+        "multi_agent_v2/",
+    )
+
+    assert not any(
+        method.startswith(internal_only_prefixes)
+        for method in inventory_methods | exposed_methods
+    )
+
+
 def test_exposed_native_methods_require_explicit_classification():
     assert not OBSERVE_METHODS & OPERATOR_CONTROL_METHODS
     assert OBSERVE_METHODS | OPERATOR_CONTROL_METHODS == codex_rpc.METHODS
@@ -121,6 +138,36 @@ def test_default_union_app_read_is_version_gated_by_schema_annotation():
         "missingAppIds": ["docs"],
     }
     client.ws.send.assert_called_once()
+
+
+def test_every_experimental_only_exposed_method_is_version_gated_before_send():
+    experimental_only = set(SCHEMA_MANIFEST["experimental_only_client_requests"])
+    exposed = OBSERVE_METHODS | OPERATOR_CONTROL_METHODS
+    expected = (experimental_only & exposed) | {"app/read"}
+
+    assert codex_rpc.EXPERIMENTAL_METHODS == expected
+    samples = {
+        "server/diagnostics": {},
+        "thread/settings/update": {"threadId": "thread-1", "effort": "high"},
+        "turn/settings/update": {
+            "threadId": "thread-1",
+            "turnId": "turn-1",
+            "effort": "high",
+        },
+    }
+    for method, params in samples.items():
+        client = codex_rpc.Client(codex_rpc.Target("local", socket_path="fixture"))
+        client.ws = Mock()
+        client.metadata = {"userAgent": "codex-cli 0.159.2"}
+
+        with pytest.raises(codex_rpc.RpcError, match="pinned experimental"):
+            client.request(method, params)
+
+        client.ws.send.assert_not_called()
+        client.metadata = {"userAgent": codex_rpc.EXPERIMENTAL_NATIVE_USER_AGENT}
+        client.ws.recv.return_value = json.dumps({"id": 1, "result": {}})
+        assert client.request(method, params) == {}
+        client.ws.send.assert_called_once()
 
 
 def test_capability_action_reports_runtime_version_and_profile():

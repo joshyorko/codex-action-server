@@ -87,8 +87,10 @@ METHODS = {
 
 EXPERIMENTAL_METHODS = {
     "app/read",
+    "server/diagnostics",
     "thread/search",
     "thread/searchOccurrences",
+    "thread/settings/update",
     "thread/timeline/list",
     "thread/queue/add",
     "thread/queue/list",
@@ -98,6 +100,7 @@ EXPERIMENTAL_METHODS = {
     "thread/queue/start",
     "thread/backgroundTerminals/list",
     "thread/backgroundTerminals/terminate",
+    "turn/settings/update",
 }
 EXPERIMENTAL_NATIVE_USER_AGENT = "codex-cli 0.160.1"
 

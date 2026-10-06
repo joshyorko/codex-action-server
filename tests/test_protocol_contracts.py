@@ -10,6 +10,8 @@ import types
 import unittest
 from unittest.mock import patch
 
+from native_wire_contracts import assert_native_request_contract
+
 SRC = Path(__file__).resolve().parents[1] / "src"
 FIXTURE = (
     Path(__file__).resolve().parent
@@ -54,6 +56,7 @@ class RecordingClient:
         self.workstreams.append((cwd, thread_id, turn_id))
 
     def request(self, method, params):
+        assert_native_request_contract(method, params)
         self.calls.append((method, params))
         if method == "thread/read":
             return {

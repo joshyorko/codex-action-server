@@ -184,3 +184,34 @@ def test_experimental_search_fails_closed_unless_exact_schema_version_is_adverti
     assert client.request("thread/search", {"searchTerm": "needle", "limit": 10}) == {
         "data": []
     }
+
+
+def test_expired_item_cursor_fails_closed_without_resume_or_turn_replay():
+    module = load_actions()
+    client = ThreadReadClient(None)
+
+    def expire_cursor(method, params):
+        client.calls.append((method, params))
+        if method == "thread/read":
+            return {"thread": {"id": params["threadId"], "cwd": "/trusted"}}
+        if method == "thread/items/list":
+            raise codex_rpc.RpcError("native cursor expired")
+        raise AssertionError(method)
+
+    client.request = expire_cursor
+    with patch.object(module, "Client", return_value=client):
+        with pytest.raises(module.ActionError, match="native cursor expired"):
+            module.list_thread_items(
+                module.ThreadItemsListRequest(
+                    target="local",
+                    cwd="/trusted",
+                    thread_id="thread-1",
+                    turn_id="turn-1",
+                    cursor="expired-cursor-from-before-restart",
+                )
+            )
+
+    assert [method for method, _ in client.calls] == [
+        "thread/read",
+        "thread/items/list",
+    ]

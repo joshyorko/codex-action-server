@@ -7,14 +7,25 @@ The inventory is based on Codex `rust-v0.160.1`
 (`d27764b82f7118f674371e6d6e76271d9d606edb`); the generated-schema baseline is
 104 default client requests and 167 with experimental requests (63 additional).
 
-The repo's checked-in native wire-contract fixture still comes from Codex
-`0.153.4`. The 0.160.1 catalog is protocol-source inventory, not proof of a
-live 0.160.1 acceptance run. No live daemon, credentials, or deployment are
-changed by this action. The default and experimental-only `ClientRequest`
-method lists are captured in
+The legacy control-contract fixture remains pinned to Codex `0.153.4` for the
+original narrow surface. The additional `codex_0.160.1_operator_rpc_contracts.json`
+fixture records request/response contracts for every method currently exposed
+by CAS, using the 0.160.1 protocol source and generated schemas. The two
+settings-update entries are explicitly marked as CAS-safe request subsets and
+do not claim full native parameter parity. Neither fixture is proof of a live
+0.160.1 acceptance run. No live daemon, credentials, or deployment are changed
+by this action. The default and experimental-only
+`ClientRequest` method lists are captured in
 `tests/fixtures/protocol/codex_0.160.1_client_requests.json` from the pinned
 `codex app-server generate-json-schema` output and checked for classification
 completeness.
+
+## Message-board boundary
+
+Neither the pinned default nor experimental `ClientRequest` inventory contains
+`agent_message_board/*`, `multi_agent/*`, or `multi_agent_v2/*`. Internal
+message-board or multi-agent tool names are not documented native RPCs, so CAS
+does not invent or expose a message-board API or an agent-mediated substitute.
 
 ## Exposure
 
@@ -43,18 +54,20 @@ mappings, exact identity checks, and pinned 0.160.1 request/response fixtures.
 `codex-cli 0.160.1` user agent before dispatching it.
 
 The checked-in 0.160.1 request manifest proves method inventory and
-classification completeness; the separate typed RPC contract fixture now
-records request and response fields for section movement, app reads, queue,
-search/occurrence, timeline, and background-terminal methods. Those fixtures
-and local fake-client tests do not establish native daemon acceptance. Do not
-treat the action catalog or this PR as full required-tranche parity until
-pinned-version acceptance is demonstrated.
+classification completeness. The separate typed RPC contract fixture records
+request/response fields for the currently exposed surface, including lifecycle,
+reads, inventory, settings, review, attachments, MCP, queue, search/timeline,
+and background-terminal methods. The settings-update contracts cover only the
+model/effort fields CAS currently emits. Local fixture tests do not establish
+native daemon acceptance. Do not treat the action catalog or this PR as full
+required-tranche parity until pinned-version acceptance is demonstrated.
 
 OBSERVE and OPERATOR_CONTROL list the native methods currently exposed by the
 strict RPC allowlist. EXPERIMENTAL distinguishes methods requiring experimental
-native support; only explicitly mapped methods are exposed. Queue, search/timeline,
-and background-terminal methods require the exact `codex-cli 0.160.1` user agent.
-Queue inputs are restricted to bounded text
+native support; only explicitly mapped methods are exposed. All exposed
+experimental-only methods, plus `app/read` whose payload schemas are marked
+experimental despite its presence in the default request union, require the
+exact `codex-cli 0.160.1` user agent. Queue inputs are restricted to bounded text
 items and mutations require receipt keys. Native search has no CWD parameter,
 so CAS requires an exact CWD and filters every result before returning it; raw
 native search receipts are not included in that response. ADMIN inventories host,
@@ -84,13 +97,15 @@ exposure.
 Native approval, elicitation, user-input, and `item/tool/call` callbacks are
 server-initiated JSON-RPC requests on the originating WebSocket. The pinned
 `rust-v0.160.1` app-server protocol defines request IDs and method-specific
-responses, but no callback-resume or delayed-response RPC. In this checkout,
-`_run` scopes one `Client` to an action, `Client.receive` can only consume a
-callback while that request is in flight, and `Client.__exit__` closes the
-WebSocket. The client sends an explicit error for unsupported callback methods
-and never auto-approves them. The fixed approval bridge is limited to its
-same-connection in-action workflow; it is not a durable general callback
-broker.
+responses, but no callback-resume or delayed-response RPC. In the Actions
+Runtime/MCP path, `_run` scopes one `Client` to an action, `Client.receive` can
+only consume a callback while that request is in flight, and `Client.__exit__`
+closes the WebSocket. The client sends an explicit error for unsupported
+callback methods and never auto-approves them. An opt-in
+`codex_rpc.py --approval-bridge` CLI flow can handle one command approval while
+its `turn/start` and wait stay on the same native connection; that separate
+CLI workflow is not exposed through MCP and does not retain a connection for a
+later action. It is not a durable general callback broker.
 
 There is no connection handle or protocol request that lets a later action
 deliver a response to a request on a closed WebSocket. Safely supporting this
@@ -116,14 +131,52 @@ continuation pointers. Command output and raw error messages are never included.
 
 The encoded snapshot is limited to 8 KiB. A repeated revision returns a smaller
 unchanged response that retains current status, wait flags, and turn error.
-Unknown native status/flags remain marked unknown; a failed or mismatched native
-read fails closed and cannot become an idle snapshot. Snapshot envelopes omit
+Unknown native thread/turn status and flags remain marked unknown; a failed or
+mismatched native read fails closed and cannot become an idle snapshot. Every
+snapshot re-reads native state, so completion that occurs outside CAS and
+wrapper restart do not depend on an old local cursor; native cursor expiry on
+an explicit page remains an error and is never retried as a turn mutation.
+Snapshot envelopes omit
 duplicated RPC receipts and event payloads. Existing raw page/read tools remain
 available for deliberate deeper inspection. No persistent state database,
 summarizer, thread creation, resume, or mutation is added.
 
+## Read-only live acceptance packet (prepared, not run)
+
+No live Dakota acceptance was run for this change. Before any deployment claim,
+an operator may run this packet against the existing Dakota target and its
+already-running Codex `0.160.1` app-server. It does not start a daemon, restart
+CAS, or alter the tunnel.
+
+1. Call `list_native_capabilities` for the existing Dakota target. Confirm the
+   returned native version is exactly `codex-cli 0.160.1`, the CAS contract
+   version is the expected one, the exposure profile matches operator-owned
+   configuration, and `admin_enabled` is false. Stop on a mismatch.
+2. Call `inspect_target` and confirm the selected target is already running.
+   Do not auto-start a daemon or change target configuration.
+3. Use an existing, operator-authorized thread ID and its exact absolute CWD.
+   Call `read_thread` with `include_turns=false`, then `get_thread_snapshot`
+   using the same target/thread/CWD. Confirm returned identity matches exactly;
+   the snapshot should identify native provenance and bounded status, not
+   duplicate the transcript.
+4. Confirm these calls create no dispatch receipts and do not issue
+   `thread/start`, `thread/resume`, `turn/start`, settings, queue, attachment,
+   review, terminal, filesystem, command, or callback-response mutations.
+   Capture only sanitized acceptance evidence; do not copy prompts, secrets,
+   or bulk output into logs.
+
+Stop without retrying a mutation if the target is unavailable, the native
+version differs, the thread/CWD identity does not match, or the projection is
+ambiguous. This packet is a proposed verification sequence only; its completion
+and results must be recorded separately before a live acceptance claim.
+
 ## Rollback
 
-Rollback is to the previously deployed CAS image/catalog. This change does not
-alter target configuration, native Codex, Executor, or tunnel state. Do not
+Rollback is to the previously deployed immutable CAS image and captured
+Executor catalog. This source checkout does not identify the live image digest,
+catalog fingerprint, or deployment command, and deployment inspection is out
+of scope. Before any authorized refresh, the operator must record those exact
+values and the corresponding rollback command from the live deployment source;
+do not infer them from a branch name or a mutable image tag. This change does
+not alter target configuration, native Codex, Executor, or tunnel state. Do not
 claim live acceptance based on fixture tests alone.

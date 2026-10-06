@@ -809,6 +809,19 @@ def _snapshot_error_code(error: Any) -> str | None:
     return "unclassified" if isinstance(error.get("message"), str) else None
 
 
+def _snapshot_unknown_state_digest(value: Any) -> str:
+    digest = hashlib.sha256(b"codex-action-server.snapshot-unknown-state.v1\0")
+    encoder = json.JSONEncoder(
+        ensure_ascii=True,
+        sort_keys=True,
+        separators=(",", ":"),
+        allow_nan=False,
+    )
+    for chunk in encoder.iterencode(value):
+        digest.update(chunk.encode("ascii"))
+    return digest.hexdigest()
+
+
 def _user_message_excerpt(content: list[Any]) -> tuple[str, bool]:
     excerpts = []
     remaining = SNAPSHOT_MESSAGE_MAX_BYTES
@@ -894,6 +907,11 @@ def _project_thread_snapshot(
     active_flags_missing = known_status == "active" and (
         not isinstance(native_status, dict) or "activeFlags" not in native_status
     )
+    active_flags_invalid = (
+        isinstance(native_status, dict)
+        and "activeFlags" in native_status
+        and not isinstance(flags, list)
+    )
     active_flags = (
         sorted(
             flag for flag in flags if isinstance(flag, str) and flag in _ACTIVE_FLAGS
@@ -901,27 +919,60 @@ def _project_thread_snapshot(
         if isinstance(flags, list)
         else []
     )
-    unknown_active_flags = active_flags_missing or (
-        isinstance(flags, list)
-        and any(
-            not isinstance(flag, str) or flag not in _ACTIVE_FLAGS for flag in flags
+    unknown_flags = (
+        [
+            flag
+            for flag in flags
+            if not isinstance(flag, str) or flag not in _ACTIVE_FLAGS
+        ]
+        if isinstance(flags, list)
+        else flags
+    )
+    unknown_active_flags = (
+        active_flags_missing
+        or active_flags_invalid
+        or (
+            isinstance(flags, list)
+            and any(
+                not isinstance(flag, str) or flag not in _ACTIVE_FLAGS for flag in flags
+            )
         )
     )
     turn_id = turn.get("id") if isinstance(turn, dict) else None
     turn_status = turn.get("status") if isinstance(turn, dict) else None
-    if isinstance(turn_id, str) and (
+    turn_status_unknown = isinstance(turn_id, str) and (
         not isinstance(turn_status, str) or turn_status not in _TURN_STATUS_TYPES
-    ):
-        raise RpcError("Native snapshot turn status is invalid")
+    )
     projected_turn = (
         {
-            "id": turn_id,
-            "status": turn_status,
-            "error_code": _snapshot_error_code(turn.get("error")),
+            **{
+                "id": turn_id,
+                "status": "unknown" if turn_status_unknown else turn_status,
+                "error_code": _snapshot_error_code(turn.get("error")),
+            },
+            **({"native_status_unknown": True} if turn_status_unknown else {}),
         }
         if isinstance(turn, dict)
         else None
     )
+    unknown_native_state = {}
+    if known_status == "unknown":
+        unknown_native_state["thread_status"] = {
+            "present": "status" in thread,
+            "type_present": isinstance(native_status, dict) and "type" in native_status,
+            "value": status_type if isinstance(native_status, dict) else native_status,
+        }
+    if unknown_active_flags:
+        unknown_native_state["active_flags"] = {
+            "present": isinstance(native_status, dict)
+            and "activeFlags" in native_status,
+            "value": unknown_flags,
+        }
+    if turn_status_unknown:
+        unknown_native_state["turn_status"] = {
+            "present": isinstance(turn, dict) and "status" in turn,
+            "value": turn_status,
+        }
     cursor = (
         item_cursor
         if isinstance(item_cursor, str) and len(item_cursor) <= 512
@@ -952,6 +1003,9 @@ def _project_thread_snapshot(
         "latest_item": _snapshot_item(latest_item, turn_id)
         if isinstance(turn_id, str)
         else None,
+        "_unknown_state_digest": _snapshot_unknown_state_digest(unknown_native_state)
+        if unknown_native_state
+        else None,
         "continuation": {
             "turn_id": turn_id if isinstance(turn_id, str) else None,
             "item_cursor": cursor,
@@ -962,9 +1016,16 @@ def _project_thread_snapshot(
 
 
 def _snapshot_response(projected: dict[str, Any], observed_at: str) -> dict[str, Any]:
+    unknown_state_digest = projected.pop("_unknown_state_digest", None)
     revision = hashlib.sha256(
         json.dumps(
-            projected, ensure_ascii=False, sort_keys=True, separators=(",", ":")
+            {
+                "projection": projected,
+                "unknown_state_digest": unknown_state_digest,
+            },
+            ensure_ascii=False,
+            sort_keys=True,
+            separators=(",", ":"),
         ).encode("utf-8")
     ).hexdigest()
     result = {

@@ -95,6 +95,7 @@ def test_effort_update_preserves_observed_model_without_stale_effort(
     module = load_actions()
     client = codex_rpc.Client(codex_rpc.Target("local", socket_path="fixture"))
     client.ws = Mock()
+    client.metadata = {"userAgent": "codex-cli 0.160.1"}
     calls, pending = [], []
 
     def send(raw):

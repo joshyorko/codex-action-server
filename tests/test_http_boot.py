@@ -26,6 +26,19 @@ def test_standalone_http_boot_catalog_and_safe_diagnostics(tmp_path, profile):
     from mcp.shared.exceptions import MCPError
 
     package = Path(__file__).parents[1]
+    native = None
+    thread_id = "thread-1"
+    cwd = "/work"
+    socket_path = tmp_path / "does-not-exist.sock"
+    if profile == "observe":
+        from test_action_server_validation import NativeFixture, _result_data
+
+        worktree = tmp_path / "worktree"
+        codex_home = tmp_path / "codex-home"
+        worktree.mkdir()
+        codex_home.mkdir()
+        native = NativeFixture(tmp_path / "native.sock", worktree, codex_home)
+        thread_id, cwd, socket_path = native.thread_id, native.cwd, native.socket_path
     with socket.socket() as s:
         s.bind(("127.0.0.1", 0))
         port = s.getsockname()[1]
@@ -36,7 +49,7 @@ def test_standalone_http_boot_catalog_and_safe_diagnostics(tmp_path, profile):
                 "targets": {
                     "local": {
                         "transport": "local",
-                        "socket_path": str(tmp_path / "does-not-exist.sock"),
+                        "socket_path": str(socket_path),
                     }
                 }
             }
@@ -102,8 +115,8 @@ def test_standalone_http_boot_catalog_and_safe_diagnostics(tmp_path, profile):
                                     {
                                         "payload": {
                                             "target": "local",
-                                            "cwd": "/work",
-                                            "thread_id": "thread-1",
+                                            "cwd": cwd,
+                                            "thread_id": thread_id,
                                             "text": "must not reach native Codex",
                                             "profile": "operator",
                                         }
@@ -145,10 +158,32 @@ def test_standalone_http_boot_catalog_and_safe_diagnostics(tmp_path, profile):
                         )
                         assert r.structured_content["result"]["state"] == "not_found"
                         if profile == "observe":
+                            read = _result_data(
+                                await session.call_tool(
+                                    "read_thread",
+                                    {
+                                        "payload": {
+                                            "target": "local",
+                                            "cwd": cwd,
+                                            "thread_id": thread_id,
+                                            "include_turns": False,
+                                        }
+                                    },
+                                )
+                            )
+                            assert read["result"]["thread"]["id"] == thread_id
+                            assert read["result"]["thread"]["cwd"] == cwd
                             direct_read = await http.post(
                                 f"http://127.0.0.1:{port}/api/actions/"
-                                "codex-action-server/list-targets/run",
-                                json={},
+                                "codex-action-server/read-thread/run",
+                                json={
+                                    "payload": {
+                                        "target": "local",
+                                        "cwd": cwd,
+                                        "thread_id": thread_id,
+                                        "include_turns": False,
+                                    }
+                                },
                             )
                             assert direct_read.status_code == 200
                             direct_write = await http.post(
@@ -157,8 +192,8 @@ def test_standalone_http_boot_catalog_and_safe_diagnostics(tmp_path, profile):
                                 json={
                                     "payload": {
                                         "target": "local",
-                                        "cwd": "/work",
-                                        "thread_id": "thread-1",
+                                        "cwd": cwd,
+                                        "thread_id": thread_id,
                                         "text": "must not reach native Codex",
                                         "profile": "operator",
                                     }
@@ -174,3 +209,17 @@ def test_standalone_http_boot_catalog_and_safe_diagnostics(tmp_path, profile):
         except subprocess.TimeoutExpired:
             proc.kill()
             proc.wait(timeout=5)
+        if native is not None:
+            native.close()
+
+    if native is not None:
+        assert [call.get("method") for call in native.calls].count("thread/read") == 2
+        assert not {call.get("method") for call in native.calls}.intersection(
+            {
+                "thread/start",
+                "thread/resume",
+                "turn/start",
+                "turn/steer",
+                "turn/interrupt",
+            }
+        )

@@ -28,6 +28,7 @@ def _matches_type(value, expected):
         )
         or (kind == "array" and isinstance(value, list))
         or (kind == "object" and isinstance(value, dict))
+        or kind == "any"
         for kind in types
     )
 
@@ -42,6 +43,16 @@ def assert_contract_value(schema, value):
                 continue
             valid += 1
         assert valid == 1
+        return
+    if "anyOf" in schema:
+        valid = 0
+        for variant in schema["anyOf"]:
+            try:
+                assert_contract_value(variant, value)
+            except AssertionError:
+                continue
+            valid += 1
+        assert valid >= 1
         return
     if "type" in schema:
         assert _matches_type(value, schema["type"])
@@ -67,7 +78,15 @@ def assert_contract_value(schema, value):
 
 
 def assert_native_request_contract(method, params):
-    assert_contract_value(CONTRACTS[method]["params"], params)
+    contract = CONTRACTS[method]
+    if contract["native_request_contract_scope"] == "cas-safe-subset":
+        assert isinstance(params, dict)
+        unexpected = set(params) - set(contract["params"].get("properties", {}))
+        assert not unexpected, (
+            f"{method} emitted native fields outside its CAS-safe subset: "
+            f"{sorted(unexpected)}"
+        )
+    assert_contract_value(contract["params"], params)
 
 
 def assert_native_response_contract(method, response):

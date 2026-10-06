@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 import importlib
+from functools import wraps
 from pathlib import Path
 import sys
 import types
 import unittest
 from unittest.mock import patch
+
+from native_wire_contracts import assert_native_request_contract
 
 SRC = Path(__file__).resolve().parents[1] / "src"
 sys.path.insert(0, str(SRC))
@@ -40,6 +43,19 @@ def load_actions():
 
 
 class FakeClient:
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+        request = cls.__dict__.get("request")
+        if request is None:
+            return
+
+        @wraps(request)
+        def validate_request(self, method, params):
+            assert_native_request_contract(method, params)
+            return request(self, method, params)
+
+        cls.request = validate_request
+
     def __init__(self, _target):
         self.calls = []
         self.events = []
@@ -67,6 +83,7 @@ class FakeClient:
         self.workstreams.append((cwd, thread_id, turn_id))
 
     def request(self, method, params):
+        assert_native_request_contract(method, params)
         self.calls.append((method, params))
         if method == "thread/read":
             return {"thread": {"id": params["threadId"], "cwd": "/trusted"}}

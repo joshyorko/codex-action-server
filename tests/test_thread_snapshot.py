@@ -5,12 +5,24 @@ from unittest.mock import patch
 
 import pytest
 from test_actions import load_actions
+from native_wire_contracts import assert_native_request_contract
 
 import codex_rpc
 
 
 class SnapshotClient:
-    def __init__(self, _target=None, *, status=None, cwd="/work", text="latest "):
+    def __init__(
+        self,
+        _target=None,
+        *,
+        status=None,
+        cwd="/work",
+        text="latest ",
+        turn_status="failed",
+        item_status=None,
+        item_phase="final",
+        item_cursor="next-item",
+    ):
         self.calls = []
         self.events = [{"method": "large-native-event", "payload": "x" * 100_000}]
         self.receipts = [{"result": "x" * 100_000}]
@@ -21,6 +33,10 @@ class SnapshotClient:
         }
         self.cwd = cwd
         self.text = text
+        self.turn_status = turn_status
+        self.item_status = item_status
+        self.item_phase = item_phase
+        self.item_cursor = item_cursor
 
     def __enter__(self):
         return self
@@ -32,6 +48,7 @@ class SnapshotClient:
         return {"target": "local", "codexBin": "codex", "server": "fixture"}
 
     def request(self, method, params):
+        assert_native_request_contract(method, params)
         self.calls.append((method, params))
         if method == "thread/read":
             return {
@@ -48,7 +65,7 @@ class SnapshotClient:
                 "data": [
                     {
                         "id": "turn-1",
-                        "status": "failed",
+                        "status": self.turn_status,
                         "items": [],
                         "itemsView": "notLoaded",
                         "error": {
@@ -66,12 +83,13 @@ class SnapshotClient:
                         "item": {
                             "id": "item-1",
                             "type": "agentMessage",
-                            "phase": "final",
+                            "phase": self.item_phase,
+                            "status": self.item_status,
                             "text": self.text,
                         },
                     }
                 ],
-                "nextCursor": "next-item",
+                "nextCursor": self.item_cursor,
             }
         raise AssertionError(method)
 
@@ -249,3 +267,110 @@ def test_snapshot_unavailability_never_becomes_idle():
                 target="local", cwd="/work", thread_id="thread-1"
             )
         )
+
+
+def test_snapshot_projects_future_native_turn_status_as_unknown():
+    response, _ = run_snapshot(SnapshotClient(turn_status="waitingForExternalTask"))
+
+    assert response.result.result["latest_turn"] == {
+        "id": "turn-1",
+        "status": "unknown",
+        "native_status_unknown": True,
+        "error_code": "rateLimitExceeded",
+    }
+
+
+@pytest.mark.parametrize(
+    ("first_client", "second_client", "raw_values"),
+    [
+        (
+            SnapshotClient(
+                status={"type": "futureThreadA", "activeFlags": []},
+                turn_status="completed",
+            ),
+            SnapshotClient(
+                status={"type": "futureThreadB", "activeFlags": []},
+                turn_status="completed",
+            ),
+            ("futureThreadA", "futureThreadB"),
+        ),
+        (
+            SnapshotClient(turn_status="futureTurnA"),
+            SnapshotClient(turn_status="futureTurnB"),
+            ("futureTurnA", "futureTurnB"),
+        ),
+        (
+            SnapshotClient(status={"type": "active", "activeFlags": ["futureFlagA"]}),
+            SnapshotClient(status={"type": "active", "activeFlags": ["futureFlagB"]}),
+            ("futureFlagA", "futureFlagB"),
+        ),
+    ],
+)
+def test_unknown_native_state_change_invalidates_revision_without_disclosure(
+    first_client, second_client, raw_values
+):
+    first, _ = run_snapshot(first_client)
+    second, _ = run_snapshot(
+        second_client,
+        load_actions().ThreadSnapshotRequest(
+            target="local",
+            cwd="/work",
+            thread_id="thread-1",
+            revision=first.result.result["revision"],
+        ),
+    )
+    encoded = json.dumps(second.model_dump(mode="json"), ensure_ascii=True)
+
+    assert second.result.result["changed"] is True
+    assert second.result.result["revision"] != first.result.result["revision"]
+    assert all(raw_value not in encoded for raw_value in raw_values)
+
+
+def test_snapshot_preserves_interrupted_turn_tail_without_reporting_completion():
+    response, _ = run_snapshot(
+        SnapshotClient(
+            turn_status="interrupted",
+            item_status="inProgress",
+            item_phase="commentary",
+            text="partial output",
+        )
+    )
+    snapshot = response.result.result
+
+    assert snapshot["latest_turn"]["status"] == "interrupted"
+    assert snapshot["latest_item"]["status"] == "inProgress"
+    assert snapshot["latest_item"]["phase"] == "commentary"
+    assert snapshot["latest_item"]["text"] == "partial output"
+
+
+def test_snapshot_after_wrapper_restart_uses_native_completion_not_expired_cursor():
+    first, _ = run_snapshot(
+        SnapshotClient(turn_status="inProgress", item_cursor="cursor-from-old-wrapper")
+    )
+    second_client = SnapshotClient(
+        status={"type": "idle", "activeFlags": []},
+        turn_status="completed",
+        item_status="completed",
+        item_cursor="fresh-cursor",
+    )
+    restarted, client = run_snapshot(
+        second_client,
+        load_actions().ThreadSnapshotRequest(
+            target="local",
+            cwd="/work",
+            thread_id="thread-1",
+            revision=first.result.result["revision"],
+        ),
+    )
+    snapshot = restarted.result.result
+
+    assert snapshot["changed"] is True
+    assert snapshot["thread_status"] == "idle"
+    assert snapshot["latest_turn"]["status"] == "completed"
+    assert snapshot["continuation"]["item_cursor"] == "fresh-cursor"
+    assert [method for method, _ in client.calls] == [
+        "thread/read",
+        "thread/turns/list",
+        "thread/items/list",
+    ]
+    assert all("cursor" not in params for method, params in client.calls)

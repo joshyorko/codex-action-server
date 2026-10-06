@@ -41,6 +41,34 @@ if action_names_for_profile() == action_names_for_profile("observe"):
             assert "unavailable" in str(error)
         else:
             raise AssertionError(f"direct invocation escaped the observe profile: {name}")
+    from unittest.mock import patch
+    class SyntheticNativeClient:
+        def __init__(self):
+            self.calls = []
+            self.events = []
+            self.receipts = []
+        def __enter__(self):
+            return self
+        def __exit__(self, *_args):
+            return False
+        def provenance(self):
+            return {"target": "local", "codexBin": "codex", "server": "fixture"}
+        def request(self, method, params):
+            self.calls.append((method, params))
+            if method != "thread/read":
+                raise AssertionError(f"observe profile attempted native write: {method}")
+            return {"thread": {"id": params["threadId"], "cwd": "/work"}}
+    native = SyntheticNativeClient()
+    with patch.object(codex_actions, "Client", return_value=native), patch.object(
+        codex_actions, "resolve_target", return_value="local"
+    ):
+        result = codex_actions.read_thread(
+            codex_actions.ThreadReadRequest(
+                target="local", cwd="/work", thread_id="thread-1"
+            )
+        )
+    assert result.result.result["thread"] == {"id": "thread-1", "cwd": "/work"}
+    assert native.calls == [("thread/read", {"threadId": "thread-1", "includeTurns": False})]
 """
     return subprocess.run(
         [sys.executable, "-c", code],
