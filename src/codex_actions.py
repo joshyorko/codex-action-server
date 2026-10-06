@@ -6,6 +6,9 @@ this package does not start an MCP server or expose a shell command action.
 
 from __future__ import annotations
 
+from functools import wraps
+from datetime import datetime, timezone
+import hashlib
 from typing import Annotated, Any, Literal
 from contextlib import nullcontext
 import json
@@ -16,8 +19,9 @@ from websockets.exceptions import ConnectionClosed
 import dispatch_receipts
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
-from actions import ActionError, Response, action
+from actions import ActionError, Response, action as _runtime_action
 
+from action_catalog_contract import ACTION_NAMES_BY_PROFILE, action_names_for_profile
 from boundary import configurations, resolve_target, validate_cwd, validate_identifier
 from codex_rpc import Client, RpcError
 from native_capabilities import inventory as native_capability_inventory
@@ -42,6 +46,28 @@ ThreadGoalStatus = Literal[
     "active", "paused", "blocked", "usageLimited", "budgetLimited", "complete"
 ]
 
+_ALL_ACTION_NAMES = ACTION_NAMES_BY_PROFILE["operator"]
+_PROFILE_ACTION_NAMES = action_names_for_profile()
+
+
+def action(*, is_consequential: bool):
+    def decorate(function):
+        name = function.__name__
+        if name not in _ALL_ACTION_NAMES:
+            raise ValueError(f"Action {name!r} is missing from the catalog contract")
+        if name in _PROFILE_ACTION_NAMES:
+            return _runtime_action(is_consequential=is_consequential)(function)
+
+        @wraps(function)
+        def denied(*_args, **_kwargs):
+            raise ActionError(
+                f"Action {name!r} is unavailable in the configured profile"
+            )
+
+        return denied
+
+    return decorate
+
 
 class StrictModel(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -65,6 +91,13 @@ class ThreadReadRequest(StrictModel):
     cwd: str
     thread_id: str
     include_turns: bool = False
+
+
+class ThreadSnapshotRequest(StrictModel):
+    target: TargetName = Field(min_length=1, max_length=128)
+    cwd: str = Field(min_length=1, max_length=512)
+    thread_id: str = Field(min_length=1, max_length=512)
+    revision: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
 
 
 class ThreadSettingsFields(StrictModel):
@@ -722,6 +755,237 @@ def _bounded_native_result(result: dict[str, Any], maximum_bytes: int = 1_048_57
     return result
 
 
+SNAPSHOT_MAX_BYTES = 8192
+SNAPSHOT_MESSAGE_MAX_BYTES = 512
+_THREAD_STATUS_TYPES = {"active", "idle", "notLoaded", "systemError"}
+_TURN_STATUS_TYPES = {"completed", "failed", "inProgress", "interrupted"}
+_ACTIVE_FLAGS = {"waitingOnApproval", "waitingOnUserInput"}
+_ERROR_CODES = {
+    "activeTurnNotSteerable",
+    "badRequest",
+    "contextWindowExceeded",
+    "cyberPolicy",
+    "flexUnavailable",
+    "internalServerError",
+    "misalignmentPolicyViolation",
+    "other",
+    "rateLimitExceeded",
+    "sandboxError",
+    "serverOverloaded",
+    "sessionBudgetExceeded",
+    "threadRollbackFailed",
+    "tooManyDenials",
+    "unauthorized",
+    "usageLimitExceeded",
+}
+
+
+def _utf8_truncate(value: str, maximum_bytes: int) -> tuple[str, bool]:
+    if maximum_bytes < len("…".encode("utf-8")):
+        return "", bool(value)
+    size = 0
+    result = []
+    for character in value:
+        width = len(character.encode("utf-8"))
+        if size + width > maximum_bytes:
+            while result and size + len("…".encode("utf-8")) > maximum_bytes:
+                size -= len(result.pop().encode("utf-8"))
+            if size + len("…".encode("utf-8")) > maximum_bytes:
+                return "", True
+            return "".join(result) + "…", True
+        result.append(character)
+        size += width
+    return "".join(result), False
+
+
+def _snapshot_error_code(error: Any) -> str | None:
+    if not isinstance(error, dict):
+        return None
+    code = error.get("codexErrorInfo")
+    if isinstance(code, dict) and len(code) == 1:
+        code = next(iter(code))
+    if isinstance(code, str) and code in _ERROR_CODES:
+        return code
+    return "unclassified" if isinstance(error.get("message"), str) else None
+
+
+def _user_message_excerpt(content: list[Any]) -> tuple[str, bool]:
+    excerpts = []
+    remaining = SNAPSHOT_MESSAGE_MAX_BYTES
+    truncated = False
+    for part in content:
+        if (
+            not isinstance(part, dict)
+            or part.get("type") != "text"
+            or not isinstance(part.get("text"), str)
+        ):
+            continue
+        prefix = "\n" if excerpts else ""
+        remaining -= len(prefix.encode("utf-8"))
+        if remaining <= 0:
+            truncated = True
+            break
+        text, text_truncated = _utf8_truncate(part["text"], remaining)
+        excerpts.append(prefix + text)
+        remaining -= len(text.encode("utf-8"))
+        if text_truncated:
+            truncated = True
+            break
+    return "".join(excerpts), truncated
+
+
+def _snapshot_item(item_entry: Any, turn_id: str) -> dict[str, Any] | None:
+    if item_entry is None:
+        return None
+    if (
+        not isinstance(item_entry, dict)
+        or item_entry.get("turnId") != turn_id
+        or not isinstance(item_entry.get("item"), dict)
+    ):
+        raise RpcError("Native snapshot item identity mismatch")
+    item = item_entry["item"]
+    kind = item.get("type")
+    if not isinstance(kind, str) or len(kind) > 64:
+        raise RpcError("Native snapshot item type is invalid")
+    item_id = item.get("id")
+    if not isinstance(item_id, str) or not item_id or len(item_id) > 512:
+        raise RpcError("Native snapshot item identity is invalid")
+    status = item.get("status")
+    projected_status = status if isinstance(status, str) and len(status) <= 64 else None
+    phase = item.get("phase")
+    projected_phase = phase if isinstance(phase, str) and len(phase) <= 64 else None
+    text = None
+    truncated = False
+    if kind == "agentMessage" and isinstance(item.get("text"), str):
+        text = item["text"]
+    elif kind == "userMessage" and isinstance(item.get("content"), list):
+        text, truncated = _user_message_excerpt(item["content"])
+    if text is not None and kind == "agentMessage":
+        text, truncated = _utf8_truncate(text, SNAPSHOT_MESSAGE_MAX_BYTES)
+    return {
+        "id": item_id,
+        "kind": kind,
+        "phase": projected_phase,
+        "status": projected_status,
+        "text": text,
+        "text_truncated": truncated,
+    }
+
+
+def _project_thread_snapshot(
+    target: str,
+    cwd: str,
+    thread_id: str,
+    thread: dict[str, Any],
+    turn: dict[str, Any] | None,
+    latest_item: Any,
+    item_cursor: Any,
+) -> dict[str, Any]:
+    native_status = thread.get("status")
+    status_type = native_status.get("type") if isinstance(native_status, dict) else None
+    known_status = (
+        status_type
+        if isinstance(status_type, str) and status_type in _THREAD_STATUS_TYPES
+        else "unknown"
+    )
+    flags = (
+        native_status.get("activeFlags", []) if isinstance(native_status, dict) else []
+    )
+    active_flags_missing = known_status == "active" and (
+        not isinstance(native_status, dict) or "activeFlags" not in native_status
+    )
+    active_flags = (
+        sorted(
+            flag for flag in flags if isinstance(flag, str) and flag in _ACTIVE_FLAGS
+        )
+        if isinstance(flags, list)
+        else []
+    )
+    unknown_active_flags = active_flags_missing or (
+        isinstance(flags, list)
+        and any(
+            not isinstance(flag, str) or flag not in _ACTIVE_FLAGS for flag in flags
+        )
+    )
+    turn_id = turn.get("id") if isinstance(turn, dict) else None
+    turn_status = turn.get("status") if isinstance(turn, dict) else None
+    if isinstance(turn_id, str) and (
+        not isinstance(turn_status, str) or turn_status not in _TURN_STATUS_TYPES
+    ):
+        raise RpcError("Native snapshot turn status is invalid")
+    projected_turn = (
+        {
+            "id": turn_id,
+            "status": turn_status,
+            "error_code": _snapshot_error_code(turn.get("error")),
+        }
+        if isinstance(turn, dict)
+        else None
+    )
+    cursor = (
+        item_cursor
+        if isinstance(item_cursor, str) and len(item_cursor) <= 512
+        else None
+    )
+    cursor_digest = None
+    if isinstance(item_cursor, str) and cursor is None:
+        digest = hashlib.sha256()
+        for offset in range(0, len(item_cursor), 1024):
+            digest.update(item_cursor[offset : offset + 1024].encode("utf-8"))
+        cursor_digest = digest.hexdigest()
+    updated_at = thread.get("updatedAt")
+    return {
+        "target": target,
+        "cwd": cwd,
+        "thread_id": thread_id,
+        "source": "native-app-server",
+        "thread_status": known_status,
+        "active_flags": active_flags,
+        "unknown_active_flags": unknown_active_flags,
+        "native_updated_at": updated_at
+        if isinstance(updated_at, int) and not isinstance(updated_at, bool)
+        else None,
+        "native_updated_at_unknown": not (
+            isinstance(updated_at, int) and not isinstance(updated_at, bool)
+        ),
+        "latest_turn": projected_turn,
+        "latest_item": _snapshot_item(latest_item, turn_id)
+        if isinstance(turn_id, str)
+        else None,
+        "continuation": {
+            "turn_id": turn_id if isinstance(turn_id, str) else None,
+            "item_cursor": cursor,
+            "item_cursor_omitted": item_cursor is not None and cursor is None,
+            "item_cursor_digest": cursor_digest,
+        },
+    }
+
+
+def _snapshot_response(projected: dict[str, Any], observed_at: str) -> dict[str, Any]:
+    revision = hashlib.sha256(
+        json.dumps(
+            projected, ensure_ascii=False, sort_keys=True, separators=(",", ":")
+        ).encode("utf-8")
+    ).hexdigest()
+    result = {
+        **projected,
+        "observed_at": observed_at,
+        "revision": revision,
+        "changed": True,
+        "native_state_authoritative": True,
+    }
+    if (
+        len(
+            json.dumps(result, ensure_ascii=False, separators=(",", ":")).encode(
+                "utf-8"
+            )
+        )
+        > SNAPSHOT_MAX_BYTES
+    ):
+        raise RpcError("Native supervisory snapshot exceeds its byte limit")
+    return result
+
+
 def _validate_app_read_response(result: Any, requested_app_id: str) -> None:
     if not isinstance(result, dict):
         raise RpcError("Native app/read response is not an object")
@@ -789,6 +1053,7 @@ def _envelope(
     result: dict[str, Any],
     *,
     include_receipts: bool = True,
+    include_events: bool = True,
 ) -> RpcEnvelope:
     provenance = client.provenance()
     return RpcEnvelope(
@@ -803,7 +1068,7 @@ def _envelope(
         result=result,
         effective_configuration=_effective_configuration(result),
         receipts=client.receipts if include_receipts else [],
-        events=client.events,
+        events=client.events if include_events else [],
     )
 
 
@@ -813,19 +1078,31 @@ def _run(
     callback,
     *,
     include_receipts: bool = True,
+    include_events: bool = True,
+    maximum_response_bytes: int | None = None,
 ) -> Response[RpcEnvelope]:
     try:
         target = resolve_target(target_name)
         with Client(target) as client:
             result = callback(client)
-            return Response(
+            response = Response(
                 result=_envelope(
                     operation,
                     client,
                     result,
                     include_receipts=include_receipts,
+                    include_events=include_events,
                 )
             )
+            if maximum_response_bytes is not None:
+                encoded = json.dumps(
+                    response.model_dump(mode="json"),
+                    ensure_ascii=False,
+                    separators=(",", ":"),
+                ).encode("utf-8")
+                if len(encoded) > maximum_response_bytes:
+                    raise RpcError("Native supervisory snapshot exceeds its byte limit")
+            return response
     except ActionError:
         raise
     except (
@@ -2094,6 +2371,115 @@ def read_thread(payload: ThreadReadRequest) -> Response[RpcEnvelope]:
         return result
 
     return _run("thread/read", payload.target, invoke)
+
+
+@action(is_consequential=False)
+def get_thread_snapshot(payload: ThreadSnapshotRequest) -> Response[RpcEnvelope]:
+    """Return a byte-bounded native status projection for an exact thread/worktree.
+
+    Args:
+        payload: Target, exact CWD/thread identity, and optional prior revision.
+    """
+    cwd = _action_cwd(payload.cwd)
+    thread_id = _action_id(payload.thread_id, "thread_id")
+
+    def invoke(client):
+        response = client.request(
+            "thread/read", {"threadId": thread_id, "includeTurns": False}
+        )
+        thread = response.get("thread") if isinstance(response, dict) else None
+        if (
+            not isinstance(thread, dict)
+            or thread.get("id") != thread_id
+            or thread.get("cwd") != cwd
+            or not isinstance(thread.get("turns"), list)
+            or thread["turns"]
+        ):
+            raise RpcError("Native snapshot thread/CWD identity mismatch")
+
+        turns_response = client.request(
+            "thread/turns/list",
+            {
+                "threadId": thread_id,
+                "limit": 1,
+                "sortDirection": "desc",
+                "itemsView": "notLoaded",
+            },
+        )
+        turns = turns_response.get("data") if isinstance(turns_response, dict) else None
+        if not isinstance(turns, list) or len(turns) > 1:
+            raise RpcError("Native snapshot turn page is invalid")
+        turn = turns[0] if turns else None
+        if turn is not None and (
+            not isinstance(turn, dict)
+            or not isinstance(turn.get("id"), str)
+            or not turn["id"]
+            or len(turn["id"]) > 512
+            or turn.get("items") != []
+            or turn.get("itemsView") != "notLoaded"
+        ):
+            raise RpcError("Native snapshot turn identity is invalid")
+
+        latest_item = None
+        item_cursor = None
+        if turn is not None:
+            items_response = client.request(
+                "thread/items/list",
+                {
+                    "threadId": thread_id,
+                    "turnId": turn["id"],
+                    "limit": 1,
+                    "sortDirection": "desc",
+                },
+            )
+            items = (
+                items_response.get("data") if isinstance(items_response, dict) else None
+            )
+            item_cursor = (
+                items_response.get("nextCursor")
+                if isinstance(items_response, dict)
+                else None
+            )
+            if (
+                not isinstance(items, list)
+                or len(items) > 1
+                or (item_cursor is not None and not isinstance(item_cursor, str))
+            ):
+                raise RpcError("Native snapshot item page is invalid")
+            latest_item = items[0] if items else None
+
+        projected = _project_thread_snapshot(
+            payload.target, cwd, thread_id, thread, turn, latest_item, item_cursor
+        )
+        observed_at = (
+            datetime.now(timezone.utc)
+            .isoformat(timespec="milliseconds")
+            .replace("+00:00", "Z")
+        )
+        snapshot = _snapshot_response(projected, observed_at)
+        if payload.revision == snapshot["revision"]:
+            snapshot = {
+                "target": payload.target,
+                "cwd": cwd,
+                "thread_id": thread_id,
+                "observed_at": observed_at,
+                "revision": snapshot["revision"],
+                "changed": False,
+                "native_state_authoritative": True,
+                "thread_status": snapshot["thread_status"],
+                "active_flags": snapshot["active_flags"],
+                "latest_turn": snapshot["latest_turn"],
+            }
+        return snapshot
+
+    return _run(
+        "get_thread_snapshot",
+        payload.target,
+        invoke,
+        include_receipts=False,
+        include_events=False,
+        maximum_response_bytes=SNAPSHOT_MAX_BYTES,
+    )
 
 
 @action(is_consequential=True)

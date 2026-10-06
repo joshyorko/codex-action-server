@@ -86,7 +86,7 @@ def main():
             "list_targets",
             "inspect_target",
             "read_dispatch_receipt",
-            "create_thread_and_start_turn",
+            "get_thread_snapshot",
         }
         if (
             len(tools) != len(EXPECTED_TOOL_NAMES)

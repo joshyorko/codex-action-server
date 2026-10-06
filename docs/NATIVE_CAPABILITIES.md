@@ -18,11 +18,19 @@ completeness.
 
 ## Exposure
 
-The current server profile is `operator`; ADMIN is disabled. The caller cannot
-select a profile. There is no CAS ADMIN action or caller-controlled elevation
-flag. The operator-selected observe-only profile work from issue #3 is not in
-this checkout, so this catalog deliberately does not invent a second profile
-mechanism.
+The default server profile is `operator`; ADMIN is disabled. An operator may
+select `observe` with the process environment setting
+`CODEX_ACTION_PROFILE=observe`. The setting is read at process import/startup,
+is never an action argument, and takes effect only after a process restart.
+Unknown values fail startup. Observe registration contains only the explicit
+read-action set. Excluded actions are not registered with the Actions Runtime,
+so MCP and direct HTTP action routes are both absent; direct Python entrypoint
+calls fail closed as well. `list_native_capabilities` reports the configured
+profile and its actual exposed native methods. A profile change requires a full
+Action Server/process restart and catalog refresh; it does not change an
+in-flight process. This is a server-wide trusted-reader boundary, not per-client
+or per-repository isolation. No caller-selectable elevation or ADMIN action
+exists.
 
 ## Required tranche status: incomplete
 
@@ -74,26 +82,45 @@ exposure.
 ## Callback blocker
 
 Native approval, elicitation, user-input, and `item/tool/call` callbacks are
-connection-scoped server-to-client JSON-RPC requests. CAS currently opens a
-native WebSocket for an action and closes it when that action returns. Its
-existing callback path only handles a fixed, in-action callback; it cannot
-persist and resume an arbitrary native callback connection after the caller's
-action ends. Therefore there is no pending-request bridge, durable response
-fence, restart reconciliation, or exactly-once response guarantee. The RPC
-client rejects unsupported callbacks and never approves them automatically.
+server-initiated JSON-RPC requests on the originating WebSocket. The pinned
+`rust-v0.160.1` app-server protocol defines request IDs and method-specific
+responses, but no callback-resume or delayed-response RPC. In this checkout,
+`_run` scopes one `Client` to an action, `Client.receive` can only consume a
+callback while that request is in flight, and `Client.__exit__` closes the
+WebSocket. The client sends an explicit error for unsupported callback methods
+and never auto-approves them. The fixed approval bridge is limited to its
+same-connection in-action workflow; it is not a durable general callback
+broker.
 
-Implementing this safely requires a separate callback-lifecycle design and an
-end-to-end fixture that proves retained/resumable connection semantics. Until
-then callback methods remain unsupported; an agent-mediated workaround is not
+There is no connection handle or protocol request that lets a later action
+deliver a response to a request on a closed WebSocket. Safely supporting this
+requires a process-owned retained-connection service, minimal fenced receipts,
+restart/expiry reconciliation, and an end-to-end native fixture proving
+same-connection response delivery; none exists here. This warrants a focused
+follow-on, “Retain and fence native app-server callback connections,” covering
+connection ownership, exact thread/turn/request identity, one-shot responses,
+duplicate/conflicting replies, cancellation, timeout, restart/loss
+reconciliation, and native fixture proof. Until that lifecycle is designed and
+proven, callbacks remain unsupported and an agent-mediated workaround is not
 native parity.
 
 ## Supervisory snapshot boundary
 
-This checkout has no bounded supervisory snapshot action from issue #2. Existing
-turn/item pagination remains available, but is not represented as an integrated
-snapshot projection. This capability catalog adds no state database,
-summarizer, or transcript-download path. Snapshot integration remains a separate
-gate.
+`get_thread_snapshot` is an additive, read-only projection for one exact
+target/CWD/thread. It reads the native thread status without turns, requests at
+most one newest turn with `itemsView=notLoaded`, and then at most one newest
+thread item. It returns native status/active flags, latest turn status and a
+classified error code, latest item kind/phase and a UTF-8-safe excerpt capped at
+512 bytes, observation time, a target/thread/CWD-scoped revision, and native
+continuation pointers. Command output and raw error messages are never included.
+
+The encoded snapshot is limited to 8 KiB. A repeated revision returns a smaller
+unchanged response that retains current status, wait flags, and turn error.
+Unknown native status/flags remain marked unknown; a failed or mismatched native
+read fails closed and cannot become an idle snapshot. Snapshot envelopes omit
+duplicated RPC receipts and event payloads. Existing raw page/read tools remain
+available for deliberate deeper inspection. No persistent state database,
+summarizer, thread creation, resume, or mutation is added.
 
 ## Rollback
 

@@ -21,6 +21,7 @@ READ_ONLY_TOOLS = frozenset(
         "list_thread_turns",
         "list_thread_items",
         "list_thread_sections",
+        "get_thread_snapshot",
         "search_threads",
         "search_thread_occurrences",
         "list_thread_timeline",

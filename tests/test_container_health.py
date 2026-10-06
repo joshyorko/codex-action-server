@@ -2,6 +2,7 @@
 
 import json
 import importlib.util
+import ast
 from pathlib import Path
 
 import pytest
@@ -103,11 +104,55 @@ def test_health_probe_accepts_exact_current_tool_catalog(monkeypatch, capsys):
     assert "operator profile" in capsys.readouterr().out
 
 
+def test_health_probe_accepts_exact_observe_catalog(monkeypatch, capsys):
+    health = load_health()
+    observe_names = action_names_for_profile("observe")
+    opener = FakeOpener(observe_names)
+    monkeypatch.setenv("CODEX_ACTION_BRIDGE_GATEWAY", "172.30.186.1")
+    monkeypatch.setattr(health, "IMPLEMENTED_PROFILE", "observe")
+    monkeypatch.setattr(health, "EXPECTED_TOOL_NAMES", observe_names)
+    monkeypatch.setattr(health, "build_opener", lambda *_: opener)
+
+    health.main()
+
+    assert "observe profile" in capsys.readouterr().out
+    assert set(opener.names) == observe_names
+
+
 def test_action_catalog_contract_only_declares_implemented_profiles():
-    assert set(ACTION_NAMES_BY_PROFILE) == {"operator"}
+    assert set(ACTION_NAMES_BY_PROFILE) == {"operator", "observe"}
     assert action_names_for_profile(IMPLEMENTED_PROFILE) == EXPECTED_ACTION_NAMES
+    assert action_names_for_profile("observe") <= action_names_for_profile("operator")
     with pytest.raises(ValueError, match="Unsupported action exposure profile"):
-        action_names_for_profile("observe")
+        action_names_for_profile("unknown")
+
+
+def test_profile_catalogs_match_explicit_action_annotations():
+    tree = ast.parse((ROOT / "src/codex_actions.py").read_text())
+    all_actions = set()
+    observe_actions = set()
+    for node in tree.body:
+        if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            continue
+        action_decorators = [
+            decorator
+            for decorator in node.decorator_list
+            if isinstance(decorator, ast.Call)
+            and getattr(decorator.func, "id", None) == "action"
+        ]
+        if not action_decorators:
+            continue
+        all_actions.add(node.name)
+        consequential = next(
+            keyword.value
+            for keyword in action_decorators[0].keywords
+            if keyword.arg == "is_consequential"
+        )
+        if ast.literal_eval(consequential) is False:
+            observe_actions.add(node.name)
+
+    assert all_actions == set(action_names_for_profile("operator"))
+    assert observe_actions == set(action_names_for_profile("observe"))
 
 
 def test_health_probe_rejects_stale_tool_catalog(monkeypatch):

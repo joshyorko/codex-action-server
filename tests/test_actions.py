@@ -20,6 +20,14 @@ def load_actions():
         def __init__(self, result):
             self.result = result
 
+        def model_dump(self, mode="python"):
+            result = (
+                self.result.model_dump(mode=mode)
+                if hasattr(self.result, "model_dump")
+                else self.result
+            )
+            return {"result": result}
+
     def action(**_kwargs):
         return lambda function: function
 

@@ -11,17 +11,19 @@ import time
 
 import pytest
 
-from action_catalog_contract import EXPECTED_ACTION_NAMES
+from action_catalog_contract import action_names_for_profile
 from test_thread_discovery import assert_mcp_cwd_rejected
 
 
-def test_standalone_http_boot_catalog_and_safe_diagnostics(tmp_path):
+@pytest.mark.parametrize("profile", ["operator", "observe"])
+def test_standalone_http_boot_catalog_and_safe_diagnostics(tmp_path, profile):
     binary = shutil.which("action-server")
     if not binary:
         pytest.skip("Actions Runtime CLI not installed")
     import httpx
     from mcp import ClientSession
     from mcp.client.streamable_http import streamable_http_client
+    from mcp.shared.exceptions import MCPError
 
     package = Path(__file__).parents[1]
     with socket.socket() as s:
@@ -47,6 +49,7 @@ def test_standalone_http_boot_catalog_and_safe_diagnostics(tmp_path):
         "CODEX_HOME": str(tmp_path / "isolated-codex"),
         "CODEX_ACTION_DATA": str(tmp_path / "runtime"),
         "CODEX_ACTION_PORT": str(port),
+        "CODEX_ACTION_PROFILE": profile,
         "ACTION_SERVER_BIN": binary,
     }
     with (tmp_path / "server.log").open("w") as log:
@@ -80,15 +83,36 @@ def test_standalone_http_boot_catalog_and_safe_diagnostics(tmp_path):
                         await session.initialize()
                         catalog = await session.list_tools()
                         tools = {t.name: t for t in catalog.tools}
-                        assert set(tools) == EXPECTED_ACTION_NAMES
+                        assert set(tools) == action_names_for_profile(profile)
                         assert {
                             "list_targets",
                             "inspect_target",
                             "read_dispatch_receipt",
-                            "create_thread_and_start_turn",
+                            "get_thread_snapshot",
                         } <= tools.keys()
-                        schema = tools["create_thread_and_start_turn"].input_schema
-                        assert "request_id" in json.dumps(schema)
+                        if profile == "operator":
+                            assert "create_thread_and_start_turn" in tools
+                            schema = tools["create_thread_and_start_turn"].input_schema
+                            assert "request_id" in json.dumps(schema)
+                        else:
+                            assert "create_thread_and_start_turn" not in tools
+                            try:
+                                forbidden = await session.call_tool(
+                                    "start_turn",
+                                    {
+                                        "payload": {
+                                            "target": "local",
+                                            "cwd": "/work",
+                                            "thread_id": "thread-1",
+                                            "text": "must not reach native Codex",
+                                            "profile": "operator",
+                                        }
+                                    },
+                                )
+                            except MCPError:
+                                pass
+                            else:
+                                assert forbidden.is_error
                         discovery = tools["discover_threads"].input_schema[
                             "properties"
                         ]["payload"]
@@ -120,6 +144,27 @@ def test_standalone_http_boot_catalog_and_safe_diagnostics(tmp_path):
                             {"payload": {"request_id": "not-created"}},
                         )
                         assert r.structured_content["result"]["state"] == "not_found"
+                        if profile == "observe":
+                            direct_read = await http.post(
+                                f"http://127.0.0.1:{port}/api/actions/"
+                                "codex-action-server/list-targets/run",
+                                json={},
+                            )
+                            assert direct_read.status_code == 200
+                            direct_write = await http.post(
+                                f"http://127.0.0.1:{port}/api/actions/"
+                                "codex-action-server/start-turn/run",
+                                json={
+                                    "payload": {
+                                        "target": "local",
+                                        "cwd": "/work",
+                                        "thread_id": "thread-1",
+                                        "text": "must not reach native Codex",
+                                        "profile": "operator",
+                                    }
+                                },
+                            )
+                            assert direct_write.status_code == 404
 
         asyncio.run(exercise())
     finally:

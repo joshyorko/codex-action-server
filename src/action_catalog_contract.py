@@ -1,6 +1,8 @@
 """Exact MCP action catalog contract for implemented server profiles."""
 
-IMPLEMENTED_PROFILE = "operator"
+import os
+
+IMPLEMENTED_PROFILE = os.environ.get("CODEX_ACTION_PROFILE", "operator")
 
 ACTION_NAMES_BY_PROFILE = {
     "operator": frozenset(
@@ -36,6 +38,7 @@ ACTION_NAMES_BY_PROFILE = {
             "list_thread_items",
             "list_thread_queue",
             "list_thread_sections",
+            "get_thread_snapshot",
             "list_thread_timeline",
             "list_thread_turns",
             "move_thread_to_section",
@@ -69,11 +72,48 @@ ACTION_NAMES_BY_PROFILE = {
             "update_thread_settings",
             "update_turn_settings",
         }
-    )
+    ),
+    "observe": frozenset(
+        {
+            "discover_threads",
+            "get_thread_goal",
+            "inspect_target",
+            "list_apps",
+            "list_background_terminals",
+            "list_hooks",
+            "list_loaded_threads",
+            "list_mcp_server_status",
+            "list_models",
+            "list_native_capabilities",
+            "list_plugins",
+            "list_skills",
+            "list_targets",
+            "list_thread_attachments",
+            "list_thread_items",
+            "list_thread_queue",
+            "list_thread_sections",
+            "get_thread_snapshot",
+            "list_thread_timeline",
+            "list_thread_turns",
+            "read_account_rate_limits",
+            "read_account_usage",
+            "read_app",
+            "read_dispatch_receipt",
+            "read_mcp_resource",
+            "read_model_provider_capabilities",
+            "read_plugin",
+            "read_server_diagnostics",
+            "read_thread",
+            "search_thread_occurrences",
+            "search_threads",
+        }
+    ),
 }
 
 
-def action_names_for_profile(profile: str = IMPLEMENTED_PROFILE) -> frozenset[str]:
+def action_names_for_profile(profile: str | None = None) -> frozenset[str]:
+    if profile is None:
+        profile = IMPLEMENTED_PROFILE
     try:
         return ACTION_NAMES_BY_PROFILE[profile]
     except KeyError as error:
