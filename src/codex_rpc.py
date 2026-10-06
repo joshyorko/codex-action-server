@@ -44,6 +44,10 @@ METHODS = {
     "thread/read",
     "thread/revert",
     "thread/resume",
+    "thread/search",
+    "thread/searchOccurrences",
+    "thread/timeline/list",
+    "threadSection/list",
     "thread/settings/update",
     "thread/start",
     "thread/turns/list",
@@ -53,6 +57,13 @@ METHODS = {
     "turn/interrupt",
     "turn/settings/update",
 }
+
+EXPERIMENTAL_METHODS = {
+    "thread/search",
+    "thread/searchOccurrences",
+    "thread/timeline/list",
+}
+EXPERIMENTAL_NATIVE_USER_AGENT = "codex-cli 0.160.1"
 
 THREAD_ID_METHODS = {
     "thread/goal/clear",
@@ -68,7 +79,9 @@ THREAD_ID_METHODS = {
     "thread/name/set",
     "thread/revert",
     "thread/resume",
+    "thread/searchOccurrences",
     "thread/settings/update",
+    "thread/timeline/list",
     "thread/turns/list",
     "thread/unarchive",
     "turn/interrupt",
@@ -775,8 +788,13 @@ class Client:
 
     def request(self, method, params, timeout=None):
         if method not in METHODS | {"initialize"}:
-            raise ValueError(
-                "Method outside the bounded thread/turn surface: " + method
+            raise ValueError("Method outside the typed native surface: " + method)
+        if (
+            method in EXPERIMENTAL_METHODS
+            and self.metadata.get("userAgent") != EXPERIMENTAL_NATIVE_USER_AGENT
+        ):
+            raise RpcError(
+                method + " requires the pinned experimental Codex 0.160.1 schema"
             )
         self._validate_request(method, params)
         self.next_id += 1

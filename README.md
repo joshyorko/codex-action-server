@@ -66,6 +66,11 @@ inventory, and methods intentionally absent from the current operator profile;
 it does not grant methods merely because the daemon supports them. See
 [native capabilities](docs/NATIVE_CAPABILITIES.md).
 
+Additional typed native methods include thread fork/archive/unarchive/delete,
+name/metadata updates, revert/compact, section listing, CWD-filtered thread
+search, and bounded search-occurrence/timeline reads. Mutations require a
+request ID and verify exact thread/CWD identity before dispatch.
+
 The API accepts stable logical target strings; the runtime allowlist rejects any
 unconfigured name before connection. Thread mutations require exact cwd/thread
 and turn identity where relevant. Native protocol mapping remains explicit.

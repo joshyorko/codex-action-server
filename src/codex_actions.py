@@ -24,6 +24,19 @@ from native_capabilities import inventory as native_capability_inventory
 TargetName = str  # Runtime operator allowlist is authoritative, not baked-in hostnames.
 SortDirection = Literal["asc", "desc"]
 TurnItemsView = Literal["notLoaded", "summary", "full"]
+ThreadSearchSortKey = Literal["created_at", "updated_at", "recency_at"]
+ThreadSourceKind = Literal[
+    "cli",
+    "vscode",
+    "exec",
+    "appServer",
+    "subAgent",
+    "subAgentReview",
+    "subAgentCompact",
+    "subAgentThreadSpawn",
+    "subAgentOther",
+    "unknown",
+]
 ThreadGoalStatus = Literal[
     "active", "paused", "blocked", "usageLimited", "budgetLimited", "complete"
 ]
@@ -291,6 +304,41 @@ class ThreadRevertRequest(ThreadMutationRequest):
     before_turn_id: str = Field(min_length=1, max_length=256)
 
 
+class ThreadSectionListRequest(StrictModel):
+    target: TargetName
+    limit: int | None = Field(default=None, ge=1, le=100)
+    cursor: str | None = Field(default=None, min_length=1)
+
+
+class ThreadSearchRequest(StrictModel):
+    target: TargetName
+    cwd: str
+    search_term: str = Field(min_length=1, max_length=512)
+    limit: int = Field(default=25, ge=1, le=100)
+    cursor: str | None = Field(default=None, min_length=1)
+    sort_key: ThreadSearchSortKey | None = None
+    sort_direction: SortDirection | None = None
+    source_kinds: list[ThreadSourceKind] | None = Field(default=None, max_length=10)
+    archived: bool | None = None
+
+
+class ThreadSearchOccurrencesRequest(StrictModel):
+    target: TargetName
+    cwd: str
+    thread_id: str
+    search_term: str = Field(min_length=1, max_length=512)
+    limit: int = Field(default=25, ge=1, le=100)
+    cursor: str | None = Field(default=None, min_length=1)
+
+
+class ThreadTimelineListRequest(StrictModel):
+    target: TargetName
+    cwd: str
+    thread_id: str
+    limit: int = Field(default=25, ge=1, le=100)
+    cursor: str | None = Field(default=None, min_length=1)
+
+
 class ModelListRequest(StrictModel):
     target: TargetName = Field(
         description="Configured target name, never a shell command"
@@ -457,7 +505,13 @@ def _effective_configuration(result: dict[str, Any]) -> EffectiveConfiguration |
     )
 
 
-def _envelope(operation: str, client: Client, result: dict[str, Any]) -> RpcEnvelope:
+def _envelope(
+    operation: str,
+    client: Client,
+    result: dict[str, Any],
+    *,
+    include_receipts: bool = True,
+) -> RpcEnvelope:
     provenance = client.provenance()
     return RpcEnvelope(
         operation=operation,
@@ -470,17 +524,30 @@ def _envelope(operation: str, client: Client, result: dict[str, Any]) -> RpcEnve
         ),
         result=result,
         effective_configuration=_effective_configuration(result),
-        receipts=client.receipts,
+        receipts=client.receipts if include_receipts else [],
         events=client.events,
     )
 
 
-def _run(operation: str, target_name: str, callback) -> Response[RpcEnvelope]:
+def _run(
+    operation: str,
+    target_name: str,
+    callback,
+    *,
+    include_receipts: bool = True,
+) -> Response[RpcEnvelope]:
     try:
         target = resolve_target(target_name)
         with Client(target) as client:
             result = callback(client)
-            return Response(result=_envelope(operation, client, result))
+            return Response(
+                result=_envelope(
+                    operation,
+                    client,
+                    result,
+                    include_receipts=include_receipts,
+                )
+            )
     except ActionError:
         raise
     except (
@@ -833,6 +900,125 @@ def compact_thread(payload: ThreadMutationRequest) -> Response[RpcEnvelope]:
         payload: Exact target, cwd, thread ID, and required dispatch receipt key.
     """
     return _thread_control("compact_thread", payload, "thread/compact/start", {})
+
+
+@action(is_consequential=False)
+def list_thread_sections(payload: ThreadSectionListRequest) -> Response[RpcEnvelope]:
+    """List a bounded page of native thread sections for one configured target.
+
+    Args:
+        payload: Target and bounded pagination controls.
+    """
+    params = {}
+    if payload.limit is not None:
+        params["limit"] = payload.limit
+    if payload.cursor is not None:
+        params["cursor"] = payload.cursor
+    return _run(
+        "list_thread_sections",
+        payload.target,
+        lambda client: client.request("threadSection/list", params),
+    )
+
+
+@action(is_consequential=False)
+def search_threads(payload: ThreadSearchRequest) -> Response[RpcEnvelope]:
+    """Search a bounded page of threads on one target using the pinned experimental API.
+
+    Args:
+        payload: Target, non-empty search text, and bounded native search filters.
+    """
+    params: dict[str, Any] = {
+        "searchTerm": payload.search_term,
+        "limit": payload.limit,
+    }
+    for key, value in (
+        ("cursor", payload.cursor),
+        ("sortKey", payload.sort_key),
+        ("sortDirection", payload.sort_direction),
+        ("sourceKinds", payload.source_kinds),
+        ("archived", payload.archived),
+    ):
+        if value is not None:
+            params[key] = value
+
+    cwd = _action_cwd(payload.cwd)
+
+    def invoke(client):
+        result = client.request("thread/search", params)
+        page = result.get("data") if isinstance(result, dict) else None
+        if not isinstance(page, list):
+            raise RpcError("Native thread/search response is missing its data page")
+        selected = []
+        for entry in page:
+            thread = entry.get("thread") if isinstance(entry, dict) else None
+            if (
+                not isinstance(thread, dict)
+                or not isinstance(thread.get("id"), str)
+                or not thread["id"]
+                or not isinstance(thread.get("cwd"), str)
+            ):
+                raise RpcError("Native thread/search result is missing thread identity")
+            if thread["cwd"] == cwd:
+                selected.append(entry)
+        return {
+            "data": selected,
+            "nextCursor": result.get("nextCursor"),
+            "backwardsCursor": result.get("backwardsCursor"),
+        }
+
+    return _run(
+        "search_threads",
+        payload.target,
+        invoke,
+        include_receipts=False,
+    )
+
+
+@action(is_consequential=False)
+def search_thread_occurrences(
+    payload: ThreadSearchOccurrencesRequest,
+) -> Response[RpcEnvelope]:
+    """Find bounded visible-message matches within one exact thread.
+
+    Args:
+        payload: Exact target, cwd, thread ID, query, and pagination controls.
+    """
+    thread_id = _action_id(payload.thread_id, "thread_id")
+    cwd = _action_cwd(payload.cwd)
+    params = {
+        "threadId": thread_id,
+        "searchTerm": payload.search_term,
+        "limit": payload.limit,
+    }
+    if payload.cursor is not None:
+        params["cursor"] = payload.cursor
+
+    def invoke(client):
+        _read_guarded_thread(client, thread_id, cwd)
+        return client.request("thread/searchOccurrences", params)
+
+    return _run("search_thread_occurrences", payload.target, invoke)
+
+
+@action(is_consequential=False)
+def list_thread_timeline(payload: ThreadTimelineListRequest) -> Response[RpcEnvelope]:
+    """Read a bounded native timeline page for one exact thread.
+
+    Args:
+        payload: Exact target, cwd, thread ID, and pagination controls.
+    """
+    thread_id = _action_id(payload.thread_id, "thread_id")
+    cwd = _action_cwd(payload.cwd)
+    params = {"threadId": thread_id, "limit": payload.limit}
+    if payload.cursor is not None:
+        params["cursor"] = payload.cursor
+
+    def invoke(client):
+        _read_guarded_thread(client, thread_id, cwd)
+        return client.request("thread/timeline/list", params)
+
+    return _run("list_thread_timeline", payload.target, invoke)
 
 
 @action(is_consequential=False)

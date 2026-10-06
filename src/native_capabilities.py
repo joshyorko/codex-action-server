@@ -17,7 +17,11 @@ OBSERVE_METHODS = frozenset(
         "thread/list",
         "thread/loaded/list",
         "thread/read",
+        "thread/search",
+        "thread/searchOccurrences",
         "thread/turns/list",
+        "thread/timeline/list",
+        "threadSection/list",
     }
 )
 OPERATOR_CONTROL_METHODS = frozenset(METHODS) - OBSERVE_METHODS
@@ -30,6 +34,10 @@ CAS_ADDITIVE_METHODS = frozenset(
         "thread/metadata/update",
         "thread/name/set",
         "thread/revert",
+        "thread/search",
+        "thread/searchOccurrences",
+        "thread/timeline/list",
+        "threadSection/list",
         "thread/unarchive",
     }
 )
@@ -66,7 +74,10 @@ FAMILIES = (
         ],
         "exposed_methods": [
             "server/diagnostics",
+            "thread/search",
+            "thread/searchOccurrences",
             "thread/settings/update",
+            "thread/timeline/list",
             "turn/settings/update",
         ],
         "reason": "Experimental protocol methods require explicit CAS mappings; unexposed methods are never inferred from daemon support.",
