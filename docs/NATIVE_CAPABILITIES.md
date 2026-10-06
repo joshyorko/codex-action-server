@@ -24,6 +24,21 @@ flag. The operator-selected observe-only profile work from issue #3 is not in
 this checkout, so this catalog deliberately does not invent a second profile
 mechanism.
 
+## Required tranche status: incomplete
+
+The exposed action count is not evidence that the issue's required operator
+tranche is complete. `threadSection/list` and section create/update/delete are
+typed, but `thread/section/move` remains deferred. `app/list` is exposed, but
+`app/read` remains deferred. Both omissions lack reviewed typed mappings and
+pinned request/response contract fixtures.
+
+The checked-in 0.160.1 request manifest proves method inventory and
+classification completeness; it does not prove complete wire contracts.
+Queue, search/timeline, and background-terminal mappings still need pinned
+request/response fixtures and native acceptance before those parts of the
+required tranche can be called fully qualified. Do not treat the 61-action
+catalog or this PR as full required-tranche parity.
+
 OBSERVE and OPERATOR_CONTROL list the native methods currently exposed by the
 strict RPC allowlist. EXPERIMENTAL distinguishes methods requiring experimental
 native support; only explicitly mapped methods are exposed. Queue, search/timeline,
@@ -32,8 +47,8 @@ Queue inputs are restricted to bounded text
 items and mutations require receipt keys. Native search has no CWD parameter,
 so CAS requires an exact CWD and filters every result before returning it; raw
 native search receipts are not included in that response. ADMIN inventories host,
-credential, package, process, and configuration mutations but does not expose
-them.
+credential, package, process, and configuration mutation families as not exposed;
+that classification is not a complete inventory of native admin parity.
 
 The operator profile also exposes inline review; account rate-limit/usage reads;
 skills, hooks, plugins, and app inventories, plus named plugin detail reads;
@@ -44,9 +59,14 @@ actions. MCP tool and attachment payloads are limited to 16 KiB, and MCP
 resource/tool results to 1 MiB. Terminal termination requires the process ID
 to match a native terminal record for the exact thread and CWD.
 
-The `DEFERRED/UNSUPPORTED` list is intentionally not callable. It includes
-section movement, which still requires a reviewed typed mapping and protocol
-tests. No raw-RPC fallback exists.
+The `DEFERRED/UNSUPPORTED` list is intentionally not callable. In addition to
+section movement and `app/read`, it contains native operations without reviewed
+typed request/response contracts. No raw-RPC fallback exists.
+
+ADMIN remains disabled and unexposed. Its classification is a safety boundary,
+not completed admin parity; high-authority operations still require separately
+reviewed typed contracts and immutable/operator-owned enablement before any
+exposure.
 
 ## Callback blocker
 
