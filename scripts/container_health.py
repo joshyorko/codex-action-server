@@ -7,6 +7,8 @@ import sys
 from urllib.error import HTTPError
 from urllib.request import build_opener, ProxyHandler, Request
 
+EXPECTED_TOOL_COUNT = 61
+
 
 def main():
     url = (
@@ -73,7 +75,7 @@ def main():
             "read_dispatch_receipt",
             "create_thread_and_start_turn",
         }
-        if len(names) != 23 or not required <= names:
+        if len(names) != EXPECTED_TOOL_COUNT or not required <= names:
             raise ValueError("unexpected_catalog")
     finally:
         if "Mcp-Session-Id" in headers:
@@ -85,7 +87,7 @@ def main():
             except HTTPError as error:
                 if error.code != 405:
                     raise
-    print("MCP catalog ready: 23 tools")
+    print(f"MCP catalog ready: {EXPECTED_TOOL_COUNT} tools")
 
 
 if __name__ == "__main__":

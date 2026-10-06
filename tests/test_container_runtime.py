@@ -107,7 +107,7 @@ def test_health_catalog_contract_and_session_cleanup(tmp_path, sse, catalog_vali
                     "inspect_target",
                     "read_dispatch_receipt",
                     "create_thread_and_start_turn",
-                    *[f"other_{index}" for index in range(19)],
+                    *[f"other_{index}" for index in range(57)],
                 ]
                 if not catalog_valid:
                     names.pop()

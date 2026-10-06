@@ -11,6 +11,7 @@ import uuid
 
 import pytest
 
+from action_catalog_contract import EXPECTED_ACTION_NAMES
 from test_action_server_validation import NativeFixture
 from test_thread_discovery import assert_scoped_mcp_discovery
 
@@ -100,7 +101,9 @@ def test_production_image_mcp_native_socket_and_persistent_receipt(tmp_path):
                 async with ClientSession(read, write) as session:
                     await session.initialize()
                     catalog = await session.list_tools()
-                    assert len(catalog.tools) == 23
+                    assert {
+                        tool.name for tool in catalog.tools
+                    } == EXPECTED_ACTION_NAMES
                     policy = runpy.run_path(
                         str(
                             Path(__file__).parents[1]
@@ -121,16 +124,13 @@ def test_production_image_mcp_native_socket_and_persistent_receipt(tmp_path):
                     )
                     schema = await http.get(f"http://{gateway}:8088/openapi.json")
                     assert schema.status_code == 200
-                    assert (
-                        len(
-                            [
-                                path
-                                for path in schema.json()["paths"]
-                                if path.endswith("/run")
-                            ]
-                        )
-                        == 23
-                    )
+                    assert len(
+                        [
+                            path
+                            for path in schema.json()["paths"]
+                            if path.endswith("/run")
+                        ]
+                    ) == len(EXPECTED_ACTION_NAMES)
                     diagnostics = await session.call_tool(
                         "read_server_diagnostics", {"payload": {"target": "local"}}
                     )
