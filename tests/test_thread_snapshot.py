@@ -4,6 +4,7 @@ import json
 from unittest.mock import patch
 
 import pytest
+from native_test_helpers import native_server_user_agent
 from test_actions import load_actions
 from native_wire_contracts import assert_native_request_contract
 
@@ -26,7 +27,7 @@ class SnapshotClient:
         self.calls = []
         self.events = [{"method": "large-native-event", "payload": "x" * 100_000}]
         self.receipts = [{"result": "x" * 100_000}]
-        self.metadata = {"userAgent": "codex-cli 0.160.1"}
+        self.metadata = {"userAgent": native_server_user_agent("0.160.1")}
         self.status = status or {
             "type": "active",
             "activeFlags": ["waitingOnApproval", "waitingOnUserInput"],

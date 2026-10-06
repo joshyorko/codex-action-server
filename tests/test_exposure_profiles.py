@@ -25,7 +25,7 @@ with on_action_func_found.register(lambda func, options: registered.append(func.
 from action_catalog_contract import action_names_for_profile
 assert set(registered) == action_names_for_profile()
 from native_capabilities import inventory
-catalog = inventory("codex-cli 0.160.1")
+catalog = inventory("0.160.1")
 assert catalog["server_exposure_profile"] == os.environ["CODEX_ACTION_PROFILE"]
 if action_names_for_profile() == action_names_for_profile("observe"):
     assert catalog["server_exposure_profile"] == "observe"

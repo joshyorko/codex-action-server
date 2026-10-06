@@ -55,9 +55,12 @@ not enter the worker.
 - A running native daemon reached through the central logical-target resolver
   and the native `Client`, including a matching initialize `codexHome`
 - Successful read-only `thread/list` call
-- `server/diagnostics` is required and schema-checked when the native user agent
-  is exactly `codex-cli 0.160.1`; on other versions, the report records an
-  explicit skipped status, the observed user agent, and the pin-mismatch reason.
+- `server/diagnostics` is required and schema-checked when the native server
+  build version parsed from its `InitializeResponse.userAgent` is exactly
+  `0.160.1`. The parser reads the server-generated version slot before the
+  platform details, not the caller-controlled originator or clientInfo suffix.
+  For another or unrecognized build version, the report records an explicit
+  skipped status, observed user agent, parsed version if available, and reason.
   A skip is not recorded as a diagnostics pass
 - Stop/start preserves the same full container ID, Codex home, and config hash
 - Start does not rerun the create hook. The test replaces the setup script with
@@ -70,8 +73,8 @@ not enter the worker.
 - Scoped cleanup leaves no selected worker behind
 
 The report records the source SHA, image reference and ID, engine version,
-installed recipe tool versions, native user agent, diagnostics status, lifecycle
-identities, stage, and cleanup result. It stores counts rather than native
+installed recipe tool versions, native user agent and parsed server build
+version, diagnostics status, lifecycle identities, stage, and cleanup result. It stores counts rather than native
 thread or diagnostic content. If diagnostics is attempted for the exact pin and
 fails, the failure report preserves the user agent and sanitized failure class.
 

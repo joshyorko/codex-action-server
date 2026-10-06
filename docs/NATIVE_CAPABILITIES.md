@@ -50,8 +50,10 @@ tranche is complete. `thread/section/move` and `app/read` now have typed
 mappings, exact identity checks, and pinned 0.160.1 request/response fixtures.
 `app/read` is a read operation, but its pinned `AppsReadParams` and
 `AppsReadResponse` schemas explicitly mark it EXPERIMENTAL. Although
-`app/read` appears in the default `ClientRequest` union, CAS requires the exact
-`codex-cli 0.160.1` user agent before dispatching it.
+`app/read` appears in the default `ClientRequest` union, CAS requires native
+server build version exactly `0.160.1` before dispatching it. This version is
+parsed from the server-generated build slot in `InitializeResponse.userAgent`;
+the client-controlled originator and clientInfo suffix are not version evidence.
 
 The checked-in 0.160.1 request manifest proves method inventory and
 classification completeness. The separate typed RPC contract fixture records
@@ -66,8 +68,9 @@ OBSERVE and OPERATOR_CONTROL list the native methods currently exposed by the
 strict RPC allowlist. EXPERIMENTAL distinguishes methods requiring experimental
 native support; only explicitly mapped methods are exposed. All exposed
 experimental-only methods, plus `app/read` whose payload schemas are marked
-experimental despite its presence in the default request union, require the
-exact `codex-cli 0.160.1` user agent. Queue inputs are restricted to bounded text
+experimental despite its presence in the default request union, require native
+server build version exactly `0.160.1` parsed from `InitializeResponse.userAgent`.
+Queue inputs are restricted to bounded text
 items and mutations require receipt keys. Native search has no CWD parameter,
 so CAS requires an exact CWD and filters every result before returning it; raw
 native search receipts are not included in that response. ADMIN inventories host,
@@ -150,7 +153,7 @@ already-running Codex `0.160.1` app-server. It does not start a daemon, restart
 CAS, or alter the tunnel.
 
 1. Call `list_native_capabilities` for the existing Dakota target. Confirm the
-   returned native version is exactly `codex-cli 0.160.1`, the CAS contract
+   returned native build version is exactly `0.160.1`, the CAS contract
    version is the expected one, the exposure profile matches operator-owned
    configuration, and `admin_enabled` is false. Stop on a mismatch.
 2. Call `inspect_target` and confirm the selected target is already running.

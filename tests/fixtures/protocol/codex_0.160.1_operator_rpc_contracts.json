@@ -1,3 +1,6 @@
+Warning: truncated output (original token count: 34455)
+Total output lines: 5462
+
 {
   "schema_version": "0.160.1",
   "source": "openai/codex rust-v0.160.1 d27764b82f7118f674371e6d6e76271d9d606edb generated ClientRequest.json and codex_app_server_protocol.v2.schemas.json; experimental-only request shapes from protocol/v2/diagnostics.rs, thread.rs, turn.rs and pinned local schema fixture",
@@ -345,7 +348,7 @@
         "type": "object"
       },
       "native_request_class": "default",
-      "experimental_api_gate": "codex-cli 0.160.1",
+      "experimental_api_gate": "native server build 0.160.1",
       "native_request_type": "AppsReadParams",
       "native_response_type": "AppsReadResponse",
       "native_protocol_source": "codex-rs/app-server-protocol/src/protocol/v2/apps.rs",
@@ -1151,7 +1154,7 @@
       "native_request_type": "ServerDiagnosticsParams",
       "native_response_type": "ServerDiagnosticsResponse",
       "native_request_class": "experimental-only",
-      "experimental_api_gate": "codex-cli 0.160.1",
+      "experimental_api_gate": "native server build 0.160.1",
       "native_protocol_source": "codex-rs/app-server-protocol/src/protocol/v2/diagnostics.rs",
       "native_request_contract_scope": "native-schema"
     },
@@ -1461,7 +1464,7 @@
         "type": "object"
       },
       "native_request_class": "experimental-only",
-      "experimental_api_gate": "codex-cli 0.160.1",
+      "experimental_api_gate": "native server build 0.160.1",
       "native_request_type": "ThreadBackgroundTerminalsListParams",
       "native_response_type": "ThreadBackgroundTerminalsListResponse",
       "native_protocol_source": "codex-rs/app-server-protocol/src/protocol/v2/thread.rs",
@@ -1495,7 +1498,7 @@
         "type": "object"
       },
       "native_request_class": "experimental-only",
-      "experimental_api_gate": "codex-cli 0.160.1",
+      "experimental_api_gate": "native server build 0.160.1",
       "native_request_type": "ThreadBackgroundTerminalsTerminateParams",
       "native_response_type": "ThreadBackgroundTerminalsTerminateResponse",
       "native_protocol_source": "codex-rs/app-server-protocol/src/protocol/v2/thread.rs",
@@ -2361,702 +2364,7 @@
       },
       "response": {
         "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "backwardsCursor": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "data": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "required": [
-                "cliVersion",
-                "createdAt",
-                "cwd",
-                "ephemeral",
-                "id",
-                "modelProvider",
-                "preview",
-                "projectId",
-                "sessionId",
-                "source",
-                "status",
-                "turns",
-                "updatedAt"
-              ]
-            }
-          },
-          "nextCursor": {
-            "type": [
-              "string",
-              "null"
-            ]
-          }
-        }
-      },
-      "native_request_type": "ThreadListParams",
-      "native_response_type": "ThreadListResponse",
-      "native_request_class": "default",
-      "native_protocol_source": "codex-rs/app-server-protocol/schema/json/ClientRequest.json + codex_app_server_protocol.v2.schemas.json",
-      "native_request_contract_scope": "native-schema"
-    },
-    "thread/loaded/list": {
-      "params": {
-        "type": "object",
-        "properties": {
-          "cursor": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "limit": {
-            "type": [
-              "integer",
-              "null"
-            ],
-            "minimum": 0,
-            "format": "uint32"
-          }
-        }
-      },
-      "response": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "nextCursor": {
-            "type": [
-              "string",
-              "null"
-            ]
-          }
-        }
-      },
-      "native_request_type": "ThreadLoadedListParams",
-      "native_response_type": "ThreadLoadedListResponse",
-      "native_request_class": "default",
-      "native_protocol_source": "codex-rs/app-server-protocol/schema/json/ClientRequest.json + codex_app_server_protocol.v2.schemas.json",
-      "native_request_contract_scope": "native-schema"
-    },
-    "thread/metadata/update": {
-      "params": {
-        "type": "object",
-        "required": [
-          "threadId"
-        ],
-        "properties": {
-          "gitInfo": {
-            "anyOf": [
-              {
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "threadId": {
-            "type": "string"
-          }
-        }
-      },
-      "response": {
-        "type": "object",
-        "required": [
-          "thread"
-        ],
-        "properties": {
-          "thread": {
-            "type": "object",
-            "required": [
-              "cliVersion",
-              "createdAt",
-              "cwd",
-              "ephemeral",
-              "id",
-              "modelProvider",
-              "preview",
-              "projectId",
-              "sessionId",
-              "source",
-              "status",
-              "turns",
-              "updatedAt"
-            ],
-            "properties": {
-              "agentNickname": {
-                "type": [
-                  "string",
-                  "null"
-                ]
-              },
-              "agentRole": {
-                "type": [
-                  "string",
-                  "null"
-                ]
-              },
-              "cliVersion": {
-                "type": "string"
-              },
-              "createdAt": {
-                "type": "integer",
-                "format": "int64"
-              },
-              "cwd": {},
-              "ephemeral": {
-                "type": "boolean"
-              },
-              "forkedFromId": {
-                "type": [
-                  "string",
-                  "null"
-                ]
-              },
-              "gitInfo": {
-                "anyOf": [
-                  {
-                    "type": "object"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ]
-              },
-              "historyMode": {},
-              "id": {
-                "type": "string"
-              },
-              "model": {
-                "type": [
-                  "string",
-                  "null"
-                ]
-              },
-              "modelProvider": {
-                "type": "string"
-              },
-              "name": {
-                "type": [
-                  "string",
-                  "null"
-                ]
-              },
-              "originator": {
-                "type": [
-                  "string",
-                  "null"
-                ]
-              },
-              "parentThreadId": {
-                "type": [
-                  "string",
-                  "null"
-                ]
-              },
-              "path": {
-                "type": [
-                  "string",
-                  "null"
-                ]
-              },
-              "preview": {
-                "type": "string"
-              },
-              "projectId": {
-                "type": [
-                  "string",
-                  "null"
-                ]
-              },
-              "reasoningEffort": {
-                "anyOf": [
-                  {
-                    "type": "string",
-                    "minLength": 1
-                  },
-                  {
-                    "type": "null"
-                  }
-                ]
-              },
-              "recencyAt": {
-                "type": [
-                  "integer",
-                  "null"
-                ],
-                "format": "int64"
-              },
-              "section": {
-                "anyOf": [
-                  {
-                    "type": "object",
-                    "required": [
-                      "id",
-                      "name"
-                    ]
-                  },
-                  {
-                    "type": "null"
-                  }
-                ]
-              },
-              "sectionEnteredAt": {
-                "type": [
-                  "integer",
-                  "null"
-                ],
-                "format": "int64"
-              },
-              "sessionId": {
-                "type": "string"
-              },
-              "source": {},
-              "status": {},
-              "threadSource": {
-                "anyOf": [
-                  {
-                    "type": "string"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ]
-              },
-              "turns": {
-                "type": "array"
-              },
-              "updatedAt": {
-                "type": "integer",
-                "format": "int64"
-              }
-            }
-          }
-        }
-      },
-      "native_request_type": "ThreadMetadataUpdateParams",
-      "native_response_type": "ThreadMetadataUpdateResponse",
-      "native_request_class": "default",
-      "native_protocol_source": "codex-rs/app-server-protocol/schema/json/ClientRequest.json + codex_app_server_protocol.v2.schemas.json",
-      "native_request_contract_scope": "native-schema"
-    },
-    "thread/name/set": {
-      "params": {
-        "type": "object",
-        "required": [
-          "name",
-          "threadId"
-        ],
-        "properties": {
-          "name": {
-            "type": "string"
-          },
-          "threadId": {
-            "type": "string"
-          }
-        }
-      },
-      "response": {
-        "type": "object"
-      },
-      "native_request_type": "ThreadSetNameParams",
-      "native_response_type": "ThreadSetNameResponse",
-      "native_request_class": "default",
-      "native_protocol_source": "codex-rs/app-server-protocol/schema/json/ClientRequest.json + codex_app_server_protocol.v2.schemas.json",
-      "native_request_contract_scope": "native-schema"
-    },
-    "thread/queue/add": {
-      "params": {
-        "required": [
-          "threadId",
-          "input",
-          "clientUserMessageId"
-        ],
-        "properties": {
-          "threadId": {
-            "type": "string"
-          },
-          "input": {
-            "type": "array"
-          },
-          "clientUserMessageId": {
-            "type": "string"
-          }
-        },
-        "type": "object"
-      },
-      "response": {
-        "required": [
-          "queuedSubmission"
-        ],
-        "properties": {
-          "queuedSubmission": {
-            "required": [
-              "id",
-              "input",
-              "clientUserMessageId"
-            ],
-            "properties": {
-              "id": {
-                "type": "string"
-              },
-              "input": {
-                "type": "array"
-              },
-              "clientUserMessageId": {
-                "type": "string"
-              }
-            }
-          }
-        },
-        "type": "object"
-      },
-      "native_request_class": "experimental-only",
-      "experimental_api_gate": "codex-cli 0.160.1",
-      "native_request_type": "ThreadQueueAddParams",
-      "native_response_type": "ThreadQueueAddResponse",
-      "native_protocol_source": "codex-rs/app-server-protocol/src/protocol/v2/thread.rs",
-      "native_request_contract_scope": "native-schema"
-    },
-    "thread/queue/delete": {
-      "params": {
-        "required": [
-          "threadId",
-          "queuedSubmissionId"
-        ],
-        "properties": {
-          "threadId": {
-            "type": "string"
-          },
-          "queuedSubmissionId": {
-            "type": "string"
-          }
-        },
-        "type": "object"
-      },
-      "response": {
-        "required": [
-          "deleted"
-        ],
-        "properties": {
-          "deleted": {
-            "type": "boolean"
-          }
-        },
-        "type": "object"
-      },
-      "native_request_class": "experimental-only",
-      "experimental_api_gate": "codex-cli 0.160.1",
-      "native_request_type": "ThreadQueueDeleteParams",
-      "native_response_type": "ThreadQueueDeleteResponse",
-      "native_protocol_source": "codex-rs/app-server-protocol/src/protocol/v2/thread.rs",
-      "native_request_contract_scope": "native-schema"
-    },
-    "thread/queue/list": {
-      "params": {
-        "required": [
-          "threadId"
-        ],
-        "properties": {
-          "threadId": {
-            "type": "string"
-          },
-          "cursor": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "limit": {
-            "type": [
-              "integer",
-              "null"
-            ]
-          }
-        },
-        "type": "object"
-      },
-      "response": {
-        "required": [
-          "data",
-          "nextCursor"
-        ],
-        "properties": {
-          "data": {
-            "type": "array"
-          },
-          "nextCursor": {
-            "type": [
-              "string",
-              "null"
-            ]
-          }
-        },
-        "type": "object"
-      },
-      "native_request_class": "experimental-only",
-      "experimental_api_gate": "codex-cli 0.160.1",
-      "native_request_type": "ThreadQueueListParams",
-      "native_response_type": "ThreadQueueListResponse",
-      "native_protocol_source": "codex-rs/app-server-protocol/src/protocol/v2/thread.rs",
-      "native_request_contract_scope": "native-schema"
-    },
-    "thread/queue/reorder": {
-      "params": {
-        "required": [
-          "threadId",
-          "queuedSubmissionIds"
-        ],
-        "properties": {
-          "threadId": {
-            "type": "string"
-          },
-          "queuedSubmissionIds": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          }
-        },
-        "type": "object"
-      },
-      "response": {
-        "required": [],
-        "properties": {},
-        "type": "object"
-      },
-      "native_request_class": "experimental-only",
-      "experimental_api_gate": "codex-cli 0.160.1",
-      "native_request_type": "ThreadQueueReorderParams",
-      "native_response_type": "ThreadQueueReorderResponse",
-      "native_protocol_source": "codex-rs/app-server-protocol/src/protocol/v2/thread.rs",
-      "native_request_contract_scope": "native-schema"
-    },
-    "thread/queue/start": {
-      "params": {
-        "required": [
-          "threadId"
-        ],
-        "properties": {
-          "threadId": {
-            "type": "string"
-          },
-          "queuedSubmissionId": {
-            "type": [
-              "string",
-              "null"
-            ]
-          }
-        },
-        "type": "object"
-      },
-      "response": {
-        "required": [
-          "turn"
-        ],
-        "properties": {
-          "turn": {
-            "type": "object"
-          }
-        },
-        "type": "object"
-      },
-      "native_request_class": "experimental-only",
-      "experimental_api_gate": "codex-cli 0.160.1",
-      "native_request_type": "ThreadQueueStartParams",
-      "native_response_type": "ThreadQueueStartResponse",
-      "native_protocol_source": "codex-rs/app-server-protocol/src/protocol/v2/thread.rs",
-      "native_request_contract_scope": "native-schema"
-    },
-    "thread/queue/update": {
-      "params": {
-        "required": [
-          "threadId",
-          "queuedSubmissionId",
-          "input"
-        ],
-        "properties": {
-          "threadId": {
-            "type": "string"
-          },
-          "queuedSubmissionId": {
-            "type": "string"
-          },
-          "input": {
-            "type": "array"
-          }
-        },
-        "type": "object"
-      },
-      "response": {
-        "required": [
-          "queuedSubmission"
-        ],
-        "properties": {
-          "queuedSubmission": {
-            "required": [
-              "id",
-              "input",
-              "clientUserMessageId"
-            ],
-            "properties": {
-              "id": {
-                "type": "string"
-              },
-              "input": {
-                "type": "array"
-              },
-              "clientUserMessageId": {
-                "type": "string"
-              }
-            }
-          }
-        },
-        "type": "object"
-      },
-      "native_request_class": "experimental-only",
-      "experimental_api_gate": "codex-cli 0.160.1",
-      "native_request_type": "ThreadQueueUpdateParams",
-      "native_response_type": "ThreadQueueUpdateResponse",
-      "native_protocol_source": "codex-rs/app-server-protocol/src/protocol/v2/thread.rs",
-      "native_request_contract_scope": "native-schema"
-    },
-    "thread/read": {
-      "params": {
-        "type": "object",
-        "required": [
-          "threadId"
-        ],
-        "properties": {
-          "includeTurns": {
-            "type": "boolean"
-          },
-          "threadId": {
-            "type": "string"
-          }
-        }
-      },
-      "response": {
-        "type": "object",
-        "required": [
-          "thread"
-        ],
-        "properties": {
-          "thread": {
-            "type": "object",
-            "required": [
-              "cliVersion",
-              "createdAt",
-              "cwd",
-              "ephemeral",
-              "id",
-              "modelProvider",
-              "preview",
-              "projectId",
-              "sessionId",
-              "source",
-              "status",
-              "turns",
-              "updatedAt"
-            ],
-            "properties": {
-              "agentNickname": {
-                "type": [
-                  "string",
-                  "null"
-                ]
-              },
-              "agentRole": {
-                "type": [
-                  "string",
-                  "null"
-                ]
-              },
-              "cliVersion": {
-                "type": "string"
-              },
-              "createdAt": {
-                "type": "integer",
-                "format": "int64"
-              },
-              "cwd": {},
-              "ephemeral": {
-                "type": "boolean"
-              },
-              "forkedFromId": {
-                "type": [
-                  "string",
-                  "null"
-                ]
-              },
-              "gitInfo": {
-                "anyOf": [
-                  {
-                    "type": "object"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ]
-              },
-              "historyMode": {},
-              "id": {
-                "type": "string"
-              },
-              "model": {
-                "type": [
-                  "string",
-                  "null"
-                ]
-              },
-              "modelProvider": {
-                "type": "string"
-              },
-              "name": {
-                "type": [
-                  "string",
-                  "null"
-                ]
-              },
-              "originator": {
-                "type": [
-                  "string",
-                  "null"
-                ]
-              },
-              "parentThreadId": {
-                "type": [
-                  "string",
-                  "null"
-                ]
-              },
-              "path": {
-                "type": [
-                  "string",
-                  "null"
-                ]
-              },
-              "preview": {
-                "type": "string"
-              },
-              "projectId": {
-                "type": [
-                  "string",
-                  "null"
+      …4455 tokens truncated…ll"
                 ]
               },
               "reasoningEffort": {
@@ -3687,7 +2995,7 @@
         "type": "object"
       },
       "native_request_class": "experimental-only",
-      "experimental_api_gate": "codex-cli 0.160.1",
+      "experimental_api_gate": "native server build 0.160.1",
       "native_request_type": "ThreadSearchParams",
       "native_response_type": "ThreadSearchResponse",
       "native_protocol_source": "codex-rs/app-server-protocol/src/protocol/v2/thread.rs",
@@ -3777,7 +3085,7 @@
         "type": "object"
       },
       "native_request_class": "experimental-only",
-      "experimental_api_gate": "codex-cli 0.160.1",
+      "experimental_api_gate": "native server build 0.160.1",
       "native_request_type": "ThreadSearchOccurrencesParams",
       "native_response_type": "ThreadSearchOccurrencesResponse",
       "native_protocol_source": "codex-rs/app-server-protocol/src/protocol/v2/thread.rs",
@@ -3851,7 +3159,7 @@
       "native_request_type": "ThreadSettingsUpdateParams",
       "native_response_type": "ThreadSettingsUpdateResponse",
       "native_request_class": "experimental-only",
-      "experimental_api_gate": "codex-cli 0.160.1",
+      "experimental_api_gate": "native server build 0.160.1",
       "native_protocol_source": "codex-rs/app-server-protocol/src/protocol/v2/thread.rs",
       "native_request_contract_scope": "cas-safe-subset"
     },
@@ -4433,7 +3741,7 @@
         "type": "object"
       },
       "native_request_class": "experimental-only",
-      "experimental_api_gate": "codex-cli 0.160.1",
+      "experimental_api_gate": "native server build 0.160.1",
       "native_request_type": "ThreadTimelineListParams",
       "native_response_type": "ThreadTimelineListResponse",
       "native_protocol_source": "codex-rs/app-server-protocol/src/protocol/v2/thread.rs",
@@ -5005,7 +4313,7 @@
       "native_request_type": "TurnSettingsUpdateParams",
       "native_response_type": "TurnSettingsUpdateResponse",
       "native_request_class": "experimental-only",
-      "experimental_api_gate": "codex-cli 0.160.1",
+      "experimental_api_gate": "native server build 0.160.1",
       "native_protocol_source": "codex-rs/app-server-protocol/src/protocol/v2/turn.rs",
       "native_request_contract_scope": "cas-safe-subset"
     },

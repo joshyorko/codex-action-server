@@ -7,6 +7,7 @@ import subprocess
 import sys
 
 import pytest
+from native_test_helpers import native_server_user_agent
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -359,28 +360,28 @@ def test_worker_exec_uses_source_cwd_instead_of_pid1_cwd(monkeypatch):
     ),
     [
         (
-            "codex-cli 0.160.1",
+            native_server_user_agent("0.160.1"),
             {"process": {"id": 1}, "gauges": []},
             "passed",
             ["thread/list", "server/diagnostics"],
             None,
         ),
         (
-            "codex-cli 0.159.2",
+            native_server_user_agent("0.159.2"),
             None,
             "skipped",
             ["thread/list"],
             None,
         ),
         (
-            "codex-cli 0.160.1",
+            native_server_user_agent("0.160.1"),
             "rpc-error",
             "failed",
             ["thread/list", "server/diagnostics"],
             "RpcError",
         ),
         (
-            "codex-cli 0.160.1",
+            native_server_user_agent("0.160.1"),
             {"process": {}, "gauges": []},
             "failed",
             ["thread/list", "server/diagnostics"],
@@ -446,10 +447,13 @@ def test_provider_smoke_gates_diagnostics_by_exact_native_version(
     assert evidence == {
         "codex_home": "/home/vscode/.codex",
         "native_user_agent": user_agent,
+        "native_server_build_version": (
+            "0.160.1" if expected_diagnostics_status != "skipped" else "0.159.2"
+        ),
         "diagnostics_status": expected_diagnostics_status,
         **({"diagnostics_error": expected_error} if expected_error is not None else {}),
         **(
-            {"diagnostics_skip_reason": "native_user_agent_not_pinned"}
+            {"diagnostics_skip_reason": ("native_server_build_version_not_pinned")}
             if expected_diagnostics_status == "skipped"
             else {}
         ),
@@ -475,7 +479,8 @@ def test_run_records_codex_version_before_pinned_diagnostics_failure(
         "source_commit": "fixture-source-sha",
     }
     native_evidence = {
-        "native_user_agent": "codex-cli 0.160.1",
+        "native_user_agent": native_server_user_agent("0.160.1"),
+        "native_server_build_version": "0.160.1",
         "diagnostics_status": "failed",
         "diagnostics_error": "RpcError",
     }

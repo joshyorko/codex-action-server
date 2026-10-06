@@ -7,6 +7,7 @@ import pytest
 
 import codex_rpc
 from test_actions import FakeClient, load_actions
+from native_test_helpers import native_server_user_agent
 from native_wire_contracts import (
     assert_native_request_contract,
     assert_native_response_contract,
@@ -213,7 +214,7 @@ def test_queue_mutations_reject_cwd_mismatch_before_native_queue_method(
 def test_experimental_methods_reject_unpinned_daemon_before_dispatch(method):
     client = codex_rpc.Client(codex_rpc.Target("local", socket_path="fixture"))
     client.ws = Mock()
-    client.metadata = {"userAgent": "codex-cli 0.153.4"}
+    client.metadata = {"userAgent": native_server_user_agent("0.153.4")}
 
     with pytest.raises(codex_rpc.RpcError, match="pinned experimental"):
         client.request(method, {})
@@ -223,7 +224,7 @@ def test_experimental_methods_reject_unpinned_daemon_before_dispatch(method):
 def test_experimental_queue_method_uses_pinned_schema_version():
     client = codex_rpc.Client(codex_rpc.Target("local", socket_path="fixture"))
     client.ws = Mock()
-    client.metadata = {"userAgent": "codex-cli 0.160.1"}
+    client.metadata = {"userAgent": native_server_user_agent("0.160.1")}
     client.ws.recv.return_value = json.dumps(
         {"id": 1, "result": {"queuedSubmission": {"id": "queue-1"}}}
     )

@@ -8,6 +8,7 @@ from pathlib import Path
 import sys
 import unittest
 from unittest.mock import patch
+from native_test_helpers import native_server_user_agent
 
 SRC = Path(__file__).resolve().parents[1] / "src"
 sys.path.insert(0, str(SRC))
@@ -189,7 +190,7 @@ class NativeLifecycleTests(unittest.TestCase):
                                 "id": message["id"],
                                 "result": {
                                     "codexHome": "/codex",
-                                    "userAgent": "codex-cli 0.160.1",
+                                    "userAgent": native_server_user_agent("0.160.1"),
                                 },
                             }
                         )
@@ -324,7 +325,7 @@ class NativeLifecycleTests(unittest.TestCase):
         fixture = NativeProtocolFixture(existing=True)
         client = connected_client(fixture)
         try:
-            client.metadata["userAgent"] = "codex-cli 0.160.1"
+            client.metadata["userAgent"] = native_server_user_agent("0.160.1")
             client.set_workstream("/repo", "existing", "existing-turn")
             calls = {
                 "thread/list": {"cwd": "/repo", "limit": 1},

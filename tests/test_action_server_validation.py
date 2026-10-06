@@ -24,6 +24,7 @@ import unittest
 from unittest.mock import patch
 
 from action_catalog_contract import EXPECTED_ACTION_NAMES
+from native_test_helpers import native_server_user_agent
 
 
 PACKAGE = Path(__file__).resolve().parents[1]
@@ -72,7 +73,11 @@ class NativeFixture:
         cwd: Path,
         codex_home: Path,
         *,
-        user_agent: str = "friday-validation-native-fixture/0.153.4",
+        user_agent: str = native_server_user_agent(
+            "0.153.4",
+            originator="friday-validation-native-fixture",
+            client_name="friday-validation-native-fixture",
+        ),
     ):
         from websockets.sync.server import unix_serve
 

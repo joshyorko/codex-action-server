@@ -11,6 +11,7 @@ from dataclasses import dataclass
 import json
 import math
 import queue
+import re
 import secrets
 import threading
 from pathlib import Path
@@ -102,7 +103,46 @@ EXPERIMENTAL_METHODS = {
     "thread/backgroundTerminals/terminate",
     "turn/settings/update",
 }
-EXPERIMENTAL_NATIVE_USER_AGENT = "codex-cli 0.160.1"
+EXPERIMENTAL_NATIVE_VERSION = "0.160.1"
+_NATIVE_BUILD_VERSION_PATTERN = re.compile(
+    r"(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)"
+    r"(?:-(?:0|[1-9][0-9]*|[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*)"
+    r"(?:\.(?:0|[1-9][0-9]*|[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*))*)?"
+    r"(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?\Z"
+)
+
+
+def native_server_build_version(user_agent: object) -> str | None:
+    """Extract the build version from the native InitializeResponse userAgent.
+
+    Codex constructs this server response as
+    ``<originator>/<CARGO_PKG_VERSION> (<platform>) <product UA>``. The
+    originator and trailing clientInfo suffix vary by connecting client; only
+    the slash-delimited version immediately before the platform block is the
+    app-server build slot. Unknown or malformed formats fail closed.
+    """
+    if (
+        not isinstance(user_agent, str)
+        or not user_agent
+        or len(user_agent) > 2048
+        or any(character in user_agent for character in "\r\n\x00")
+    ):
+        return None
+    prefix, separator, details = user_agent.partition(" (")
+    if not separator or not details:
+        return None
+    platform, closing_parenthesis, product_details = details.partition(")")
+    if not closing_parenthesis or not platform.strip() or not product_details.strip():
+        return None
+    originator, version_separator, version = prefix.rpartition("/")
+    if (
+        not version_separator
+        or not originator.strip()
+        or not _NATIVE_BUILD_VERSION_PATTERN.fullmatch(version)
+    ):
+        return None
+    return version
+
 
 THREAD_ID_METHODS = {
     "thread/goal/clear",
@@ -851,7 +891,8 @@ class Client:
             raise ValueError("Method outside the typed native surface: " + method)
         if (
             method in EXPERIMENTAL_METHODS
-            and self.metadata.get("userAgent") != EXPERIMENTAL_NATIVE_USER_AGENT
+            and native_server_build_version(self.metadata.get("userAgent"))
+            != EXPERIMENTAL_NATIVE_VERSION
         ):
             raise RpcError(
                 method + " requires the pinned experimental Codex 0.160.1 schema"

@@ -96,7 +96,9 @@ def test_each_exposed_action_method_matches_the_pinned_request_inventory_and_gat
     } == experimental_only & exposed
     assert "app/read" in default
     assert CONTRACTS["app/read"]["native_request_class"] == "default"
-    assert CONTRACTS["app/read"]["experimental_api_gate"] == "codex-cli 0.160.1"
+    assert (
+        CONTRACTS["app/read"]["experimental_api_gate"] == "native server build 0.160.1"
+    )
 
 
 def test_pinned_wire_fixture_response_shapes_are_valid():

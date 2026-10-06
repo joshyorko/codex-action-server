@@ -108,7 +108,12 @@ def valid_native_diagnostics(value):
 
 def smoke(args, worker, target_file):
     from boundary import resolve_target
-    from codex_rpc import Client, EXPERIMENTAL_NATIVE_USER_AGENT, RpcError
+    from codex_rpc import (
+        Client,
+        EXPERIMENTAL_NATIVE_VERSION,
+        RpcError,
+        native_server_build_version,
+    )
     from websockets.exceptions import ConnectionClosed
 
     target_file.write_text(
@@ -132,10 +137,11 @@ def smoke(args, worker, target_file):
         if client.metadata.get("codexHome") != worker["codex_home"]:
             raise RuntimeError("Initialize returned the wrong Codex home")
         user_agent = client.metadata.get("userAgent")
+        native_build_version = native_server_build_version(user_agent)
         threads = client.request("thread/list", {"limit": 1})
         if not isinstance(threads, dict) or not isinstance(threads.get("data"), list):
             raise RuntimeError("Native thread discovery was not a data list")
-        if user_agent == EXPERIMENTAL_NATIVE_USER_AGENT:
+        if native_build_version == EXPERIMENTAL_NATIVE_VERSION:
             try:
                 diagnostics = client.request("server/diagnostics", {})
             except (
@@ -161,12 +167,13 @@ def smoke(args, worker, target_file):
         else:
             diagnostics_evidence = {
                 "diagnostics_status": "skipped",
-                "diagnostics_skip_reason": "native_user_agent_not_pinned",
+                "diagnostics_skip_reason": "native_server_build_version_not_pinned",
             }
         # Do not store thread contents, diagnostic content, or account data.
         evidence = {
             "codex_home": client.metadata["codexHome"],
             "native_user_agent": user_agent,
+            "native_server_build_version": native_build_version,
             **diagnostics_evidence,
             "thread_list_read": True,
             "discovered_threads": len(threads["data"]),

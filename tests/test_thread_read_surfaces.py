@@ -7,6 +7,7 @@ import pytest
 
 import codex_rpc
 from test_actions import FakeClient, load_actions
+from native_test_helpers import native_server_user_agent
 from native_wire_contracts import (
     assert_native_request_contract,
     assert_native_response_contract,
@@ -173,13 +174,13 @@ def test_timeline_rejects_thread_cwd_mismatch_before_native_timeline_request():
 def test_experimental_search_fails_closed_unless_exact_schema_version_is_advertised():
     client = codex_rpc.Client(codex_rpc.Target("local", socket_path="fixture"))
     client.ws = Mock()
-    client.metadata = {"userAgent": "codex-cli 0.153.4"}
+    client.metadata = {"userAgent": native_server_user_agent("0.153.4")}
 
     with pytest.raises(codex_rpc.RpcError, match="pinned experimental"):
         client.request("thread/search", {"searchTerm": "needle", "limit": 10})
     client.ws.send.assert_not_called()
 
-    client.metadata = {"userAgent": "codex-cli 0.160.1"}
+    client.metadata = {"userAgent": native_server_user_agent("0.160.1")}
     client.ws.recv.return_value = json.dumps({"id": 1, "result": {"data": []}})
     assert client.request("thread/search", {"searchTerm": "needle", "limit": 10}) == {
         "data": []

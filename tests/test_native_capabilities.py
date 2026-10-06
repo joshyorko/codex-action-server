@@ -7,6 +7,7 @@ from unittest.mock import Mock
 import pytest
 from test_actions import FakeClient, load_actions
 from unittest.mock import patch
+from native_test_helpers import native_server_user_agent
 
 import codex_rpc
 from native_capabilities import (
@@ -23,11 +24,98 @@ SCHEMA_MANIFEST = json.loads(
     ).read_text()
 )
 
+ACTUAL_PINNED_SERVER_USER_AGENT = native_server_user_agent("0.160.1")
+
+
+@pytest.mark.parametrize(
+    ("user_agent", "expected"),
+    [
+        (ACTUAL_PINNED_SERVER_USER_AGENT, "0.160.1"),
+        (
+            native_server_user_agent("0.159.2", client_version="0.160.1"),
+            "0.159.2",
+        ),
+        (
+            native_server_user_agent(
+                "0.159.2",
+                originator="spoofed/0.160.1",
+                client_name="spoofed/0.160.1",
+                client_version="0.160.1",
+            ),
+            "0.159.2",
+        ),
+        (
+            native_server_user_agent("0.160.1-beta.1"),
+            "0.160.1-beta.1",
+        ),
+        (
+            native_server_user_agent("0.160.2"),
+            "0.160.2",
+        ),
+        (
+            native_server_user_agent("0.160.1+build.2"),
+            "0.160.1+build.2",
+        ),
+        ("codex-cli 0.160.1", None),
+        (native_server_user_agent("0.160.01"), None),
+        (native_server_user_agent("0.160.1١"), None),
+        ("friday-external-codex/0.160.1", None),
+        (None, None),
+    ],
+)
+def test_native_server_build_version_comes_from_initialize_build_slot(
+    user_agent, expected
+):
+    assert codex_rpc.native_server_build_version(user_agent) == expected
+
+
+def test_experimental_gate_uses_server_build_version_not_client_info_suffix():
+    def client_with_user_agent(user_agent):
+        client = codex_rpc.Client(codex_rpc.Target("local", socket_path="fixture"))
+        client.ws = Mock()
+        client.metadata = {"userAgent": user_agent}
+        client.ws.recv.return_value = json.dumps({"id": 1, "result": {}})
+        return client
+
+    pinned = client_with_user_agent(ACTUAL_PINNED_SERVER_USER_AGENT)
+    assert pinned.request("server/diagnostics", {}) == {}
+    pinned.ws.send.assert_called_once()
+
+    spoofed_client_suffix = client_with_user_agent(
+        native_server_user_agent("0.159.2", client_version="0.160.1")
+    )
+    with pytest.raises(codex_rpc.RpcError, match="pinned experimental"):
+        spoofed_client_suffix.request("server/diagnostics", {})
+    spoofed_client_suffix.ws.send.assert_not_called()
+
+    spoofed_originator = client_with_user_agent(
+        native_server_user_agent(
+            "0.159.2",
+            originator="spoofed/0.160.1",
+            client_name="spoofed/0.160.1",
+            client_version="0.160.1",
+        )
+    )
+    with pytest.raises(codex_rpc.RpcError, match="pinned experimental"):
+        spoofed_originator.request("server/diagnostics", {})
+    spoofed_originator.ws.send.assert_not_called()
+
+    for non_pinned in (
+        native_server_user_agent("0.160.1-beta.1"),
+        native_server_user_agent("0.160.2"),
+        native_server_user_agent("0.160.1+build.2"),
+        "malformed user agent with codex-cli 0.160.1",
+    ):
+        client = client_with_user_agent(non_pinned)
+        with pytest.raises(codex_rpc.RpcError, match="pinned experimental"):
+            client.request("server/diagnostics", {})
+        client.ws.send.assert_not_called()
+
 
 def test_inventory_is_versioned_and_classifies_exposure_without_expansion():
-    data = inventory("codex-cli 0.160.1")
+    data = inventory("0.160.1")
 
-    assert data["native_codex_version"] == "codex-cli 0.160.1"
+    assert data["native_codex_version"] == "0.160.1"
     assert data["native_schema_version"] == "0.160.1"
     assert data["cas_contract_version"] == "0.1.0"
     assert data["schema_request_counts"] == {
@@ -122,7 +210,7 @@ def test_exposed_native_methods_require_explicit_classification():
 def test_default_union_app_read_is_version_gated_by_schema_annotation():
     client = codex_rpc.Client(codex_rpc.Target("local", socket_path="fixture"))
     client.ws = Mock()
-    client.metadata = {"userAgent": "codex-cli 0.153.4"}
+    client.metadata = {"userAgent": native_server_user_agent("0.153.4")}
     client.ws.recv.return_value = json.dumps(
         {"id": 1, "result": {"apps": [], "missingAppIds": ["docs"]}}
     )
@@ -132,7 +220,7 @@ def test_default_union_app_read_is_version_gated_by_schema_annotation():
         client.request("app/read", {"appIds": ["docs"]})
     client.ws.send.assert_not_called()
 
-    client.metadata = {"userAgent": codex_rpc.EXPERIMENTAL_NATIVE_USER_AGENT}
+    client.metadata = {"userAgent": ACTUAL_PINNED_SERVER_USER_AGENT}
     assert client.request("app/read", {"appIds": ["docs"]}) == {
         "apps": [],
         "missingAppIds": ["docs"],
@@ -158,13 +246,13 @@ def test_every_experimental_only_exposed_method_is_version_gated_before_send():
     for method, params in samples.items():
         client = codex_rpc.Client(codex_rpc.Target("local", socket_path="fixture"))
         client.ws = Mock()
-        client.metadata = {"userAgent": "codex-cli 0.159.2"}
+        client.metadata = {"userAgent": native_server_user_agent("0.159.2")}
 
         with pytest.raises(codex_rpc.RpcError, match="pinned experimental"):
             client.request(method, params)
 
         client.ws.send.assert_not_called()
-        client.metadata = {"userAgent": codex_rpc.EXPERIMENTAL_NATIVE_USER_AGENT}
+        client.metadata = {"userAgent": ACTUAL_PINNED_SERVER_USER_AGENT}
         client.ws.recv.return_value = json.dumps({"id": 1, "result": {}})
         assert client.request(method, params) == {}
         client.ws.send.assert_called_once()
@@ -173,7 +261,7 @@ def test_every_experimental_only_exposed_method_is_version_gated_before_send():
 def test_capability_action_reports_runtime_version_and_profile():
     module = load_actions()
     client = FakeClient(None)
-    client.metadata["userAgent"] = "codex-cli 0.160.1"
+    client.metadata["userAgent"] = ACTUAL_PINNED_SERVER_USER_AGENT
 
     with patch.object(module, "Client", return_value=client):
         response = module.list_native_capabilities(
@@ -181,5 +269,5 @@ def test_capability_action_reports_runtime_version_and_profile():
         )
 
     result = response.result.result
-    assert result["native_codex_version"] == "codex-cli 0.160.1"
+    assert result["native_codex_version"] == "0.160.1"
     assert result["server_exposure_profile"] == "operator"

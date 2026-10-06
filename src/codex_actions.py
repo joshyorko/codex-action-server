@@ -23,7 +23,7 @@ from actions import ActionError, Response, action as _runtime_action
 
 from action_catalog_contract import ACTION_NAMES_BY_PROFILE, action_names_for_profile
 from boundary import configurations, resolve_target, validate_cwd, validate_identifier
-from codex_rpc import Client, RpcError
+from codex_rpc import Client, RpcError, native_server_build_version
 from native_capabilities import inventory as native_capability_inventory
 
 TargetName = str  # Runtime operator allowlist is authoritative, not baked-in hostnames.
@@ -1331,7 +1331,9 @@ def list_native_capabilities(
     return _run(
         "list_native_capabilities",
         payload.target,
-        lambda client: native_capability_inventory(client.metadata.get("userAgent")),
+        lambda client: native_capability_inventory(
+            native_server_build_version(client.metadata.get("userAgent"))
+        ),
     )
 
 

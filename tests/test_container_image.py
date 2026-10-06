@@ -12,6 +12,7 @@ import uuid
 import pytest
 
 from action_catalog_contract import EXPECTED_ACTION_NAMES
+from native_test_helpers import native_server_user_agent
 from test_action_server_validation import NativeFixture
 from test_thread_discovery import assert_scoped_mcp_discovery
 
@@ -48,7 +49,11 @@ def test_production_image_mcp_native_socket_and_persistent_receipt(tmp_path):
         native_socket,
         tmp_path,
         tmp_path / "native-home",
-        user_agent="codex-cli 0.160.1",
+        user_agent=native_server_user_agent(
+            "0.160.1",
+            originator="friday-validation-native-fixture",
+            client_name="friday-validation-native-fixture",
+        ),
     )
     native_socket.chmod(0o660)
     target = tmp_path / "targets.json"
@@ -142,7 +147,11 @@ def test_production_image_mcp_native_socket_and_persistent_receipt(tmp_path):
                     assert not diagnostics.is_error
                     connection = diagnostics.structured_content["result"]["connection"]
                     assert connection["socket"] == "/run/native-codex/native.sock"
-                    assert connection["server"] == "codex-cli 0.160.1"
+                    assert connection["server"] == native_server_user_agent(
+                        "0.160.1",
+                        originator="friday-validation-native-fixture",
+                        client_name="friday-validation-native-fixture",
+                    )
                     result = await session.call_tool(
                         "create_thread_and_start_turn",
                         {
