@@ -2,6 +2,7 @@
 
 import json
 from pathlib import Path
+from unittest.mock import Mock
 
 import pytest
 from test_actions import FakeClient, load_actions
@@ -86,10 +87,8 @@ def test_pinned_schema_manifest_is_completely_classified():
     assert len(default | experimental_only) == 167
     assert len(experimental_only) == 63
     assert default <= classified
-    assert set(experimental) == experimental_only | {"app/read"}
-    assert set(exposed_experimental) == (experimental_only & codex_rpc.METHODS) | {
-        "app/read"
-    }
+    assert set(experimental) == experimental_only
+    assert set(exposed_experimental) == experimental_only & codex_rpc.METHODS
     assert codex_rpc.EXPERIMENTAL_METHODS <= set(exposed_experimental)
 
 
@@ -99,6 +98,22 @@ def test_exposed_native_methods_require_explicit_classification():
     assert classify_exposed_method("future/nativeMethod") is None
     with pytest.raises(ValueError, match="lack an explicit classification"):
         validate_exposed_methods({"future/nativeMethod"})
+
+
+def test_default_app_read_is_not_version_gated_as_experimental():
+    client = codex_rpc.Client(codex_rpc.Target("local", socket_path="fixture"))
+    client.ws = Mock()
+    client.metadata = {"userAgent": "codex-cli 0.153.4"}
+    client.ws.recv.return_value = json.dumps(
+        {"id": 1, "result": {"apps": [], "missingAppIds": ["docs"]}}
+    )
+
+    assert "app/read" not in codex_rpc.EXPERIMENTAL_METHODS
+    assert client.request("app/read", {"appIds": ["docs"]}) == {
+        "apps": [],
+        "missingAppIds": ["docs"],
+    }
+    client.ws.send.assert_called_once()
 
 
 def test_capability_action_reports_runtime_version_and_profile():

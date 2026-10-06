@@ -29,8 +29,7 @@ mechanism.
 The exposed action count is not evidence that the issue's required operator
 tranche is complete. `thread/section/move` and `app/read` now have typed
 mappings, exact identity checks, and pinned 0.160.1 request/response fixtures.
-`app/read` is experimental and fails closed unless the daemon identifies as
-`codex-cli 0.160.1`.
+`app/read` is a default-schema read and does not require an exact-version gate.
 
 The checked-in 0.160.1 request manifest proves method inventory and
 classification completeness; the separate typed RPC contract fixture now
