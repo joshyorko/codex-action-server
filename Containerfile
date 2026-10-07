@@ -42,7 +42,9 @@ COPY scripts/install_runtime_annotation_patch.py ./scripts/
 RUN python3 scripts/install_runtime_annotation_patch.py
 
 # Both split packages carry the complete shared source and exact entrypoint policy.
-RUN python3 scripts/assemble_packages.py --output /opt/codex-action-packages
+# Build-owned sources are readable by the unprivileged runtime user.
+RUN python3 scripts/assemble_packages.py --output /opt/codex-action-packages \
+    && chmod -R a+rX /opt/codex-action-packages
 
 USER 1000:1000
 FROM base AS prepared
