@@ -64,6 +64,8 @@ def start(address: str, port: str) -> None:
     binary = os.environ.get("ACTION_SERVER_BIN", "action-server")
     split = packages != ("codex-action-server",)
     if split:
+        # Core and its log rewrite hook must not mutate verified source artifacts.
+        os.environ["PYTHONDONTWRITEBYTECODE"] = "1"
         configured = os.environ.get("CODEX_ACTION_PACKAGE_ROOT")
         if configured is not None:
             artifacts = Path(configured)

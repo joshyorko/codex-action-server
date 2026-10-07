@@ -58,6 +58,10 @@ if args[0]=='import':
  directory=pathlib.Path(args[args.index('--dir')+1])
  package=next(line[6:] for line in (directory/'package.yaml').read_text().splitlines() if line.startswith('name: '))
  data=pathlib.Path(args[args.index('--datadir')+1])
+ if os.environ.get('FAKE_READ_ONLY_ARTIFACTS'):
+  sys.path.insert(0,str(directory/'src'))
+  import importlib
+  importlib.import_module('codex_shared')
  stored_directory=str(directory)
  if os.environ.get('FAKE_RELATIVE_PATHS'):
   relative=directory.relative_to(data)
@@ -77,6 +81,9 @@ if args[0]=='import':
     binary.write_text(
         binary.read_text()
         + """
+if os.environ.get('FAKE_READ_ONLY_ARTIFACTS'):
+ assert os.environ.get('PYTHONDONTWRITEBYTECODE')=='1'
+ assert sys.dont_write_bytecode
 if args[0]=='start' and os.environ.get('FAKE_RELATIVE_PATHS'):
  data=pathlib.Path(args[args.index('--datadir')+1])
  with sqlite3.connect(data/'server.db') as db:
@@ -204,3 +211,17 @@ def test_datadir_relative_package_records_resolve_on_import_start_and_restart(la
     for (directory,) in directories:
         assert not Path(directory).is_absolute()
         assert (data / directory / "src/codex_actions.py").is_file()
+
+
+def test_split_runtime_keeps_assembled_sources_unchanged_on_restart(launcher):
+    for _ in range(2):
+        result, commands = run(
+            launcher,
+            CODEX_ACTION_PACKAGES="codex-observe,codex-control",
+            FAKE_READ_ONLY_ARTIFACTS="1",
+            PYTHONDONTWRITEBYTECODE="",
+        )
+        assert result.returncode == 0, result.stderr
+    assert len(commands) == 6
+    data = Path(launcher[1]["CODEX_ACTION_DATA"])
+    assert not list((data / "packages").rglob("__pycache__"))
