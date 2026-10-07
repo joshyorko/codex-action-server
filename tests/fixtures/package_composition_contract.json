@@ -4,6 +4,7 @@
       "arguments": {
         "payload": "ThreadAttachmentAddRequest"
       },
+      "output_schema_sha256": "fa690fdd67143783030a92cec2fc870cfbf061404d0d1e8c5bff6b0e1b42f33e",
       "payload_schema_sha256": "dca0ee6dde960a4cd94e8c486144ec757d4804569199bbb1ba491bd2fd499dfb",
       "return": "Response[RpcEnvelope]"
     },
@@ -11,6 +12,7 @@
       "arguments": {
         "payload": "ThreadQueueAddRequest"
       },
+      "output_schema_sha256": "fa690fdd67143783030a92cec2fc870cfbf061404d0d1e8c5bff6b0e1b42f33e",
       "payload_schema_sha256": "9ecf6e40b710f30bb8ac05b025884c77a0a2e3c2d7f60678f88685856b424cac",
       "return": "Response[RpcEnvelope]"
     },
@@ -18,6 +20,7 @@
       "arguments": {
         "payload": "ThreadMutationRequest"
       },
+      "output_schema_sha256": "fa690fdd67143783030a92cec2fc870cfbf061404d0d1e8c5bff6b0e1b42f33e",
       "payload_schema_sha256": "975b49930337aa57f4126ea0b196b433f1dfb9b54cfede3810efac73d2403c11",
       "return": "Response[RpcEnvelope]"
     },
@@ -25,6 +28,7 @@
       "arguments": {
         "payload": "McpToolCallRequest"
       },
+      "output_schema_sha256": "fa690fdd67143783030a92cec2fc870cfbf061404d0d1e8c5bff6b0e1b42f33e",
       "payload_schema_sha256": "036bf4c08b69c7832e7f58928a9f60f0ff6e3542473ba3266c349a61cabaf6de",
       "return": "Response[RpcEnvelope]"
     },
@@ -32,6 +36,7 @@
       "arguments": {
         "payload": "ThreadGoalClearRequest"
       },
+      "output_schema_sha256": "fa690fdd67143783030a92cec2fc870cfbf061404d0d1e8c5bff6b0e1b42f33e",
       "payload_schema_sha256": "9fd6dc0aef90d1f884af5f4a490aae39a2a4548d5750d78317d915a6eebca7f2",
       "return": "Response[RpcEnvelope]"
     },
@@ -39,6 +44,7 @@
       "arguments": {
         "payload": "ThreadMutationRequest"
       },
+      "output_schema_sha256": "fa690fdd67143783030a92cec2fc870cfbf061404d0d1e8c5bff6b0e1b42f33e",
       "payload_schema_sha256": "975b49930337aa57f4126ea0b196b433f1dfb9b54cfede3810efac73d2403c11",
       "return": "Response[RpcEnvelope]"
     },
@@ -46,6 +52,7 @@
       "arguments": {
         "payload": "CreateThreadAndStartTurnRequest"
       },
+      "output_schema_sha256": "fa690fdd67143783030a92cec2fc870cfbf061404d0d1e8c5bff6b0e1b42f33e",
       "payload_schema_sha256": "827391b3bfdcb73ef9592519b4882250a39c8e3edcaa630cf2b805b65cb2fead",
       "return": "Response[RpcEnvelope]"
     },
@@ -53,6 +60,7 @@
       "arguments": {
         "payload": "ThreadSectionCreateRequest"
       },
+      "output_schema_sha256": "fa690fdd67143783030a92cec2fc870cfbf061404d0d1e8c5bff6b0e1b42f33e",
       "payload_schema_sha256": "92130dac4ca3f2d1692e87724da79af66bccef0750da4cb54cceb816f22cf41e",
       "return": "Response[RpcEnvelope]"
     },
@@ -60,6 +68,7 @@
       "arguments": {
         "payload": "ThreadMutationRequest"
       },
+      "output_schema_sha256": "fa690fdd67143783030a92cec2fc870cfbf061404d0d1e8c5bff6b0e1b42f33e",
       "payload_schema_sha256": "975b49930337aa57f4126ea0b196b433f1dfb9b54cfede3810efac73d2403c11",
       "return": "Response[RpcEnvelope]"
     },
@@ -67,6 +76,7 @@
       "arguments": {
         "payload": "ThreadQueueDeleteRequest"
       },
+      "output_schema_sha256": "fa690fdd67143783030a92cec2fc870cfbf061404d0d1e8c5bff6b0e1b42f33e",
       "payload_schema_sha256": "bd8e02a223bdad46cf9a27350a7b114ed6ccd2ae164ed9ebcf2bc5546e393156",
       "return": "Response[RpcEnvelope]"
     },
@@ -74,6 +84,7 @@
       "arguments": {
         "payload": "ThreadSectionDeleteRequest"
       },
+      "output_schema_sha256": "fa690fdd67143783030a92cec2fc870cfbf061404d0d1e8c5bff6b0e1b42f33e",
       "payload_schema_sha256": "43e0dbb600962c469c529ccf5f8ba9016a3991c03dd334834730799b5132c5c9",
       "return": "Response[RpcEnvelope]"
     },
@@ -81,6 +92,7 @@
       "arguments": {
         "payload": "ThreadListRequest"
       },
+      "output_schema_sha256": "fa690fdd67143783030a92cec2fc870cfbf061404d0d1e8c5bff6b0e1b42f33e",
       "payload_schema_sha256": "81e24dc900f326c28793794391cf71890a2339c14b516d03ee7fc636b3c95116",
       "return": "Response[RpcEnvelope]"
     },
@@ -88,6 +100,7 @@
       "arguments": {
         "payload": "ThreadForkRequest"
       },
+      "output_schema_sha256": "fa690fdd67143783030a92cec2fc870cfbf061404d0d1e8c5bff6b0e1b42f33e",
       "payload_schema_sha256": "32d9ec4f62a6bb8248fec635b59b04a6dde9f7458cff765230afa84ace66782b",
       "return": "Response[RpcEnvelope]"
     },
@@ -95,6 +108,7 @@
       "arguments": {
         "payload": "ThreadGoalGetRequest"
       },
+      "output_schema_sha256": "fa690fdd67143783030a92cec2fc870cfbf061404d0d1e8c5bff6b0e1b42f33e",
       "payload_schema_sha256": "7f3f8a1cf3e509a5ee4ad285cab012c714cb979e92a6bacebc889c62393a977e",
       "return": "Response[RpcEnvelope]"
     },
@@ -102,6 +116,7 @@
       "arguments": {
         "payload": "ThreadSnapshotRequest"
       },
+      "output_schema_sha256": "fa690fdd67143783030a92cec2fc870cfbf061404d0d1e8c5bff6b0e1b42f33e",
       "payload_schema_sha256": "31346b97d4241ebca954b108d18c6de911e6e51debe393f9f2a2ead50e4fe305",
       "return": "Response[RpcEnvelope]"
     },
@@ -109,6 +124,7 @@
       "arguments": {
         "payload": "ThreadInjectItemsRequest"
       },
+      "output_schema_sha256": "fa690fdd67143783030a92cec2fc870cfbf061404d0d1e8c5bff6b0e1b42f33e",
       "payload_schema_sha256": "80c1e872fa430af0ca0632b8aa0e8596ec969944e10ed62896b1b312c4c47e22",
       "return": "Response[RpcEnvelope]"
     },
@@ -116,6 +132,7 @@
       "arguments": {
         "payload": "ServerDiagnosticsRequest"
       },
+      "output_schema_sha256": "960a1cada70d0b82d9b57d87fe6e1680fc99932c0caf7bd35d18d5a558fcb85b",
       "payload_schema_sha256": "074565004809d4ea629a7e59b2c79959aeb3ae647c98ebfcffa21f68c3b91d5b",
       "return": "Response[dict[str, Any]]"
     },
@@ -123,6 +140,7 @@
       "arguments": {
         "payload": "TurnInterruptRequest"
       },
+      "output_schema_sha256": "fa690fdd67143783030a92cec2fc870cfbf061404d0d1e8c5bff6b0e1b42f33e",
       "payload_schema_sha256": "790b56e6e844f4650fa3faf1a4a8502e168092286d28af45bff4a95320b872d9",
       "return": "Response[RpcEnvelope]"
     },
@@ -130,6 +148,7 @@
       "arguments": {
         "payload": "AppsListRequest"
       },
+      "output_schema_sha256": "fa690fdd67143783030a92cec2fc870cfbf061404d0d1e8c5bff6b0e1b42f33e",
       "payload_schema_sha256": "89fa01169916e90cd458f9d7a217faa92a1394e55662f7a961c3c97262dcf42a",
       "return": "Response[RpcEnvelope]"
     },
@@ -137,6 +156,7 @@
       "arguments": {
         "payload": "ThreadBackgroundTerminalsListRequest"
       },
+      "output_schema_sha256": "fa690fdd67143783030a92cec2fc870cfbf061404d0d1e8c5bff6b0e1b42f33e",
       "payload_schema_sha256": "e734793a2bcf7a87595cbf89639ef25183c402aa6a36a05c244c68bfea69e787",
       "return": "Response[RpcEnvelope]"
     },
@@ -144,6 +164,7 @@
       "arguments": {
         "payload": "CwdInventoryRequest"
       },
+      "output_schema_sha256": "fa690fdd67143783030a92cec2fc870cfbf061404d0d1e8c5bff6b0e1b42f33e",
       "payload_schema_sha256": "b320bf35538b9fe949712fc26c76d583d2f42a0cc192be74fcc588c810863470",
       "return": "Response[RpcEnvelope]"
     },
@@ -151,6 +172,7 @@
       "arguments": {
         "payload": "LoadedThreadListRequest"
       },
+      "output_schema_sha256": "fa690fdd67143783030a92cec2fc870cfbf061404d0d1e8c5bff6b0e1b42f33e",
       "payload_schema_sha256": "dd37110533fd90fe9318d384edbb1bb95219d14c5fb7f75e9fa1b3c8475a6556",
       "return": "Response[RpcEnvelope]"
     },
@@ -158,6 +180,7 @@
       "arguments": {
         "payload": "McpServerStatusListRequest"
       },
+      "output_schema_sha256": "fa690fdd67143783030a92cec2fc870cfbf061404d0d1e8c5bff6b0e1b42f33e",
       "payload_schema_sha256": "ae56ce94cf88a2797afc5f0276f4b294c87e91c496085e673d99e9bbf12ed004",
       "return": "Response[RpcEnvelope]"
     },
@@ -165,6 +188,7 @@
       "arguments": {
         "payload": "ModelListRequest"
       },
+      "output_schema_sha256": "fa690fdd67143783030a92cec2fc870cfbf061404d0d1e8c5bff6b0e1b42f33e",
       "payload_schema_sha256": "2e71d91b8ce73a5a653822a332622201c4b949dcf4dfa32a7c3ea675d8326c69",
       "return": "Response[RpcEnvelope]"
     },
@@ -172,6 +196,7 @@
       "arguments": {
         "payload": "NativeCapabilitiesRequest"
       },
+      "output_schema_sha256": "fa690fdd67143783030a92cec2fc870cfbf061404d0d1e8c5bff6b0e1b42f33e",
       "payload_schema_sha256": "309fd8d7aa0f4f864883b1c4bf479f25494f6249ce1813faae35842952d462f5",
       "return": "Response[RpcEnvelope]"
     },
@@ -179,6 +204,7 @@
       "arguments": {
         "payload": "CwdInventoryRequest"
       },
+      "output_schema_sha256": "fa690fdd67143783030a92cec2fc870cfbf061404d0d1e8c5bff6b0e1b42f33e",
       "payload_schema_sha256": "b320bf35538b9fe949712fc26c76d583d2f42a0cc192be74fcc588c810863470",
       "return": "Response[RpcEnvelope]"
     },
@@ -186,17 +212,20 @@
       "arguments": {
         "payload": "CwdInventoryRequest"
       },
+      "output_schema_sha256": "fa690fdd67143783030a92cec2fc870cfbf061404d0d1e8c5bff6b0e1b42f33e",
       "payload_schema_sha256": "b320bf35538b9fe949712fc26c76d583d2f42a0cc192be74fcc588c810863470",
       "return": "Response[RpcEnvelope]"
     },
     "list_targets": {
       "arguments": {},
+      "output_schema_sha256": "960a1cada70d0b82d9b57d87fe6e1680fc99932c0caf7bd35d18d5a558fcb85b",
       "return": "Response[dict[str, Any]]"
     },
     "list_thread_attachments": {
       "arguments": {
         "payload": "ThreadAttachmentListRequest"
       },
+      "output_schema_sha256": "fa690fdd67143783030a92cec2fc870cfbf061404d0d1e8c5bff6b0e1b42f33e",
       "payload_schema_sha256": "6def8710751078aa5a82935bd1a79031b7dce108c3af8b007c01ade3d7e75483",
       "return": "Response[RpcEnvelope]"
     },
@@ -204,6 +233,7 @@
       "arguments": {
         "payload": "ThreadItemsListRequest"
       },
+      "output_schema_sha256": "fa690fdd67143783030a92cec2fc870cfbf061404d0d1e8c5bff6b0e1b42f33e",
       "payload_schema_sha256": "3049065ea4c0c82201ecc366634700fd23e6ed8ba85479723a83ba76418b360b",
       "return": "Response[RpcEnvelope]"
     },
@@ -211,6 +241,7 @@
       "arguments": {
         "payload": "ThreadQueueListRequest"
       },
+      "output_schema_sha256": "fa690fdd67143783030a92cec2fc870cfbf061404d0d1e8c5bff6b0e1b42f33e",
       "payload_schema_sha256": "6a2a53b9e205d4e221832c86d6b6ac2f44536692c679d844abc10f2cdfd57424",
       "return": "Response[RpcEnvelope]"
     },
@@ -218,6 +249,7 @@
       "arguments": {
         "payload": "ThreadSectionListRequest"
       },
+      "output_schema_sha256": "fa690fdd67143783030a92cec2fc870cfbf061404d0d1e8c5bff6b0e1b42f33e",
       "payload_schema_sha256": "a921a090dfaa92f347a9efd54e8452540ff111ee7ee6c7e471c468a96004fa41",
       "return": "Response[RpcEnvelope]"
     },
@@ -225,6 +257,7 @@
       "arguments": {
         "payload": "ThreadTimelineListRequest"
       },
+      "output_schema_sha256": "fa690fdd67143783030a92cec2fc870cfbf061404d0d1e8c5bff6b0e1b42f33e",
       "payload_schema_sha256": "ac3990e7f8e04e1d63fbf0afa08d8ca90cf33e1549ab6dc1ab234e0f11998240",
       "return": "Response[RpcEnvelope]"
     },
@@ -232,6 +265,7 @@
       "arguments": {
         "payload": "ThreadTurnsListRequest"
       },
+      "output_schema_sha256": "fa690fdd67143783030a92cec2fc870cfbf061404d0d1e8c5bff6b0e1b42f33e",
       "payload_schema_sha256": "afb97b7d29c5af50ea81e75908339e8db6b1aa69e4a4115761934b8b563eee57",
       "return": "Response[RpcEnvelope]"
     },
@@ -239,6 +273,7 @@
       "arguments": {
         "payload": "ThreadSectionMoveRequest"
       },
+      "output_schema_sha256": "fa690fdd67143783030a92cec2fc870cfbf061404d0d1e8c5bff6b0e1b42f33e",
       "payload_schema_sha256": "37dc0d9ac43874d5483613aae2125f2980fbaff7273ea6e0818930b0879860ef",
       "return": "Response[RpcEnvelope]"
     },
@@ -246,6 +281,7 @@
       "arguments": {
         "payload": "AccountRateLimitsRequest"
       },
+      "output_schema_sha256": "fa690fdd67143783030a92cec2fc870cfbf061404d0d1e8c5bff6b0e1b42f33e",
       "payload_schema_sha256": "37380ea924eca9efeee2b19bbe53366bece32f059942cab12b8f47b370599c7f",
       "return": "Response[RpcEnvelope]"
     },
@@ -253,6 +289,7 @@
       "arguments": {
         "payload": "AccountUsageRequest"
       },
+      "output_schema_sha256": "fa690fdd67143783030a92cec2fc870cfbf061404d0d1e8c5bff6b0e1b42f33e",
       "payload_schema_sha256": "de4459e434865b0266ae0a5f06765c5c57d17fc5fded07c58cb1f3abe43fc1b6",
       "return": "Response[RpcEnvelope]"
     },
@@ -260,6 +297,7 @@
       "arguments": {
         "payload": "AppReadRequest"
       },
+      "output_schema_sha256": "fa690fdd67143783030a92cec2fc870cfbf061404d0d1e8c5bff6b0e1b42f33e",
       "payload_schema_sha256": "2a34ec04c518309a1ca816e96c18d33c64dcb5925db859ec5908e59c37a51fd4",
       "return": "Response[RpcEnvelope]"
     },
@@ -267,6 +305,7 @@
       "arguments": {
         "payload": "DispatchReceiptRequest"
       },
+      "output_schema_sha256": "960a1cada70d0b82d9b57d87fe6e1680fc99932c0caf7bd35d18d5a558fcb85b",
       "payload_schema_sha256": "1522c58f6c3fc8bcc1959a240c6a9d99b4f6ceb2f236b2a895ecf3d8660d7892",
       "return": "Response[dict[str, Any]]"
     },
@@ -274,6 +313,7 @@
       "arguments": {
         "payload": "McpResourceReadRequest"
       },
+      "output_schema_sha256": "fa690fdd67143783030a92cec2fc870cfbf061404d0d1e8c5bff6b0e1b42f33e",
       "payload_schema_sha256": "be34cf78c12d5736f77093aa486e9b7915cc273afed463789d1d9c6c5d847dcf",
       "return": "Response[RpcEnvelope]"
     },
@@ -281,6 +321,7 @@
       "arguments": {
         "payload": "ModelProviderCapabilitiesRequest"
       },
+      "output_schema_sha256": "fa690fdd67143783030a92cec2fc870cfbf061404d0d1e8c5bff6b0e1b42f33e",
       "payload_schema_sha256": "d6780a8515d56eabb70f5f056fe2f78a20ab2ac4e5121a83129032d4edbef1f4",
       "return": "Response[RpcEnvelope]"
     },
@@ -288,6 +329,7 @@
       "arguments": {
         "payload": "PluginReadRequest"
       },
+      "output_schema_sha256": "fa690fdd67143783030a92cec2fc870cfbf061404d0d1e8c5bff6b0e1b42f33e",
       "payload_schema_sha256": "79f5c155098aad9858fceeda60053a1ac0b75ec217a8b0e7d193ba0c3a0cbe36",
       "return": "Response[RpcEnvelope]"
     },
@@ -295,6 +337,7 @@
       "arguments": {
         "payload": "ServerDiagnosticsRequest"
       },
+      "output_schema_sha256": "fa690fdd67143783030a92cec2fc870cfbf061404d0d1e8c5bff6b0e1b42f33e",
       "payload_schema_sha256": "074565004809d4ea629a7e59b2c79959aeb3ae647c98ebfcffa21f68c3b91d5b",
       "return": "Response[RpcEnvelope]"
     },
@@ -302,6 +345,7 @@
       "arguments": {
         "payload": "ThreadReadRequest"
       },
+      "output_schema_sha256": "fa690fdd67143783030a92cec2fc870cfbf061404d0d1e8c5bff6b0e1b42f33e",
       "payload_schema_sha256": "89d499594d33c651242118a35bc61391764a45c7ec29c845d4d14991aeda3dbe",
       "return": "Response[RpcEnvelope]"
     },
@@ -309,6 +353,7 @@
       "arguments": {
         "payload": "ThreadAttachmentRemoveRequest"
       },
+      "output_schema_sha256": "fa690fdd67143783030a92cec2fc870cfbf061404d0d1e8c5bff6b0e1b42f33e",
       "payload_schema_sha256": "062c9068fcb62b8f08385d88f81bd6f7a844b993fd05bd478a0b2d05ffb1e099",
       "return": "Response[RpcEnvelope]"
     },
@@ -316,6 +361,7 @@
       "arguments": {
         "payload": "ThreadQueueReorderRequest"
       },
+      "output_schema_sha256": "fa690fdd67143783030a92cec2fc870cfbf061404d0d1e8c5bff6b0e1b42f33e",
       "payload_schema_sha256": "18f30d4421c0326eddfb0dc88bb41b8b9d4953561728131473237d0c270b502e",
       "return": "Response[RpcEnvelope]"
     },
@@ -323,6 +369,7 @@
       "arguments": {
         "payload": "ThreadResumeRequest"
       },
+      "output_schema_sha256": "fa690fdd67143783030a92cec2fc870cfbf061404d0d1e8c5bff6b0e1b42f33e",
       "payload_schema_sha256": "f8d150fb486f5fe3f71cde02fc63a58806af3e5a4f32cef5521aa8c5c4a03e39",
       "return": "Response[RpcEnvelope]"
     },
@@ -330,6 +377,7 @@
       "arguments": {
         "payload": "ThreadRevertRequest"
       },
+      "output_schema_sha256": "fa690fdd67143783030a92cec2fc870cfbf061404d0d1e8c5bff6b0e1b42f33e",
       "payload_schema_sha256": "e58b4d025c47a7159e8f75e3da3cb315ee993c795bd9245505e5850a1b4ee7df",
       "return": "Response[RpcEnvelope]"
     },
@@ -337,6 +385,7 @@
       "arguments": {
         "payload": "ThreadSearchOccurrencesRequest"
       },
+      "output_schema_sha256": "fa690fdd67143783030a92cec2fc870cfbf061404d0d1e8c5bff6b0e1b42f33e",
       "payload_schema_sha256": "6fab928fc2f1cd230116227f4d78b2844379a7094f345bb80161f972adaa16a5",
       "return": "Response[RpcEnvelope]"
     },
@@ -344,6 +393,7 @@
       "arguments": {
         "payload": "ThreadSearchRequest"
       },
+      "output_schema_sha256": "fa690fdd67143783030a92cec2fc870cfbf061404d0d1e8c5bff6b0e1b42f33e",
       "payload_schema_sha256": "bebc6669ecdaef7cfccc79c64193c3f09eedbdd994de9b994efbb59d6a1be6ae",
       "return": "Response[RpcEnvelope]"
     },
@@ -351,6 +401,7 @@
       "arguments": {
         "payload": "ThreadGoalSetRequest"
       },
+      "output_schema_sha256": "fa690fdd67143783030a92cec2fc870cfbf061404d0d1e8c5bff6b0e1b42f33e",
       "payload_schema_sha256": "0c74eb29e1e6da311fe43f3dc04eaea7b7da521cd83af1b116b74dcb942dcc05",
       "return": "Response[RpcEnvelope]"
     },
@@ -358,6 +409,7 @@
       "arguments": {
         "payload": "ThreadNameSetRequest"
       },
+      "output_schema_sha256": "fa690fdd67143783030a92cec2fc870cfbf061404d0d1e8c5bff6b0e1b42f33e",
       "payload_schema_sha256": "10be136c5cb38ee7062e18f4a6040b8c64dd09f81cb18c65bf7dd5798237278c",
       "return": "Response[RpcEnvelope]"
     },
@@ -365,6 +417,7 @@
       "arguments": {
         "payload": "ReviewStartRequest"
       },
+      "output_schema_sha256": "fa690fdd67143783030a92cec2fc870cfbf061404d0d1e8c5bff6b0e1b42f33e",
       "payload_schema_sha256": "bac07fb866d30bf6afa5552a328a4d84ec0c0fde6679eacc35e3412ec7e16f70",
       "return": "Response[RpcEnvelope]"
     },
@@ -372,6 +425,7 @@
       "arguments": {
         "payload": "ThreadStartRequest"
       },
+      "output_schema_sha256": "fa690fdd67143783030a92cec2fc870cfbf061404d0d1e8c5bff6b0e1b42f33e",
       "payload_schema_sha256": "4f976c540f5b5c189d949eff13b7435fcb7d17a28ecbe4d473b3bfb454f8c9ae",
       "return": "Response[RpcEnvelope]"
     },
@@ -379,6 +433,7 @@
       "arguments": {
         "payload": "ThreadQueueStartRequest"
       },
+      "output_schema_sha256": "fa690fdd67143783030a92cec2fc870cfbf061404d0d1e8c5bff6b0e1b42f33e",
       "payload_schema_sha256": "a381b98e177a9459b4bc5ce04d879ce183a94e814156e05c1755714f58a0c137",
       "return": "Response[RpcEnvelope]"
     },
@@ -386,6 +441,7 @@
       "arguments": {
         "payload": "TurnStartRequest"
       },
+      "output_schema_sha256": "fa690fdd67143783030a92cec2fc870cfbf061404d0d1e8c5bff6b0e1b42f33e",
       "payload_schema_sha256": "c902388b8b0ec68f9ce3c816c4a5b3b4447ba0e2d1442682858362a577fcd40f",
       "return": "Response[RpcEnvelope]"
     },
@@ -393,6 +449,7 @@
       "arguments": {
         "payload": "TurnSteerRequest"
       },
+      "output_schema_sha256": "fa690fdd67143783030a92cec2fc870cfbf061404d0d1e8c5bff6b0e1b42f33e",
       "payload_schema_sha256": "1a207d4fcaa591f8d59678f8514d993be9855f4ca694cb0bbf536ddbc5106206",
       "return": "Response[RpcEnvelope]"
     },
@@ -400,6 +457,7 @@
       "arguments": {
         "payload": "ThreadBackgroundTerminalTerminateRequest"
       },
+      "output_schema_sha256": "fa690fdd67143783030a92cec2fc870cfbf061404d0d1e8c5bff6b0e1b42f33e",
       "payload_schema_sha256": "2deb338b9baeb577a9ebc531117b27fa0b54add9cd7d05c82c8f5337f3edf4fb",
       "return": "Response[RpcEnvelope]"
     },
@@ -407,6 +465,7 @@
       "arguments": {
         "payload": "ThreadMutationRequest"
       },
+      "output_schema_sha256": "fa690fdd67143783030a92cec2fc870cfbf061404d0d1e8c5bff6b0e1b42f33e",
       "payload_schema_sha256": "975b49930337aa57f4126ea0b196b433f1dfb9b54cfede3810efac73d2403c11",
       "return": "Response[RpcEnvelope]"
     },
@@ -414,6 +473,7 @@
       "arguments": {
         "payload": "ThreadMetadataUpdateRequest"
       },
+      "output_schema_sha256": "fa690fdd67143783030a92cec2fc870cfbf061404d0d1e8c5bff6b0e1b42f33e",
       "payload_schema_sha256": "04814f07ccce2bcc737af2daad3c36a6b2b2b973ab4a269b187a0f42bab51d1f",
       "return": "Response[RpcEnvelope]"
     },
@@ -421,6 +481,7 @@
       "arguments": {
         "payload": "ThreadQueueUpdateRequest"
       },
+      "output_schema_sha256": "fa690fdd67143783030a92cec2fc870cfbf061404d0d1e8c5bff6b0e1b42f33e",
       "payload_schema_sha256": "5fa6adcf8338148ff3d708468930f744d586cb706c1bcd236a86cf28b037b0b2",
       "return": "Response[RpcEnvelope]"
     },
@@ -428,6 +489,7 @@
       "arguments": {
         "payload": "ThreadSectionUpdateRequest"
       },
+      "output_schema_sha256": "fa690fdd67143783030a92cec2fc870cfbf061404d0d1e8c5bff6b0e1b42f33e",
       "payload_schema_sha256": "57a2b72f5c54c14845c835d6baf15f4c7c78e28095bb6692152c62031ab59562",
       "return": "Response[RpcEnvelope]"
     },
@@ -435,6 +497,7 @@
       "arguments": {
         "payload": "ThreadSettingsUpdateRequest"
       },
+      "output_schema_sha256": "fa690fdd67143783030a92cec2fc870cfbf061404d0d1e8c5bff6b0e1b42f33e",
       "payload_schema_sha256": "7dd2084aa1594c84424e78dd1abc4d77df93052c1f5b7c56e66cc794597460c1",
       "return": "Response[RpcEnvelope]"
     },
@@ -442,13 +505,14 @@
       "arguments": {
         "payload": "TurnSettingsUpdateRequest"
       },
+      "output_schema_sha256": "fa690fdd67143783030a92cec2fc870cfbf061404d0d1e8c5bff6b0e1b42f33e",
       "payload_schema_sha256": "d7e71c3247d5c8567e51a4f667d7e8c9f7c1ae67be30e9a76c79e0c2eec012dd",
       "return": "Response[RpcEnvelope]"
     }
   },
   "provenance": {
     "commit": "a731d2e48917561b6ee8d209e01e47802effe563",
-    "description": "Fixed compatibility signatures and payload JSON-schema digests captured before extraction; independent of production capability metadata.",
+    "description": "Fixed compatibility signatures, payload and Response output JSON-schema digests captured from immutable baseline before extraction; independent of production capability metadata.",
     "source": "src/codex_actions.py"
   }
 }

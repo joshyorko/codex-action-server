@@ -87,6 +87,7 @@ def test_fixed_baseline_has_disjoint_complete_catalog():
 
 
 def test_compatibility_signatures_and_payload_schemas_are_unchanged(monkeypatch):
+    from actions import Response
     from test_actions import load_actions
 
     monkeypatch.setenv("CODEX_ACTION_PROFILE", "operator")
@@ -94,6 +95,13 @@ def test_compatibility_signatures_and_payload_schemas_are_unchanged(monkeypatch)
     module = load_actions()
     _assert_signatures(ROOT / "src/codex_actions.py", OBSERVE | CONTROL)
     for name, fixed in CONTRACT["actions"].items():
+        output_model = eval(fixed["return"], {**vars(module), "Response": Response})
+        output_digest = hashlib.sha256(
+            json.dumps(
+                output_model.model_json_schema(), sort_keys=True, separators=(",", ":")
+            ).encode()
+        ).hexdigest()
+        assert output_digest == fixed["output_schema_sha256"], name
         model_name = fixed["arguments"].get("payload")
         if model_name is None:
             continue
