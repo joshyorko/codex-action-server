@@ -406,7 +406,9 @@ async def _exercise(
                         json={"payload": read_payload},
                     )
                     assert response.status_code == 200, response.text
-                    assert response.json()["result"]["thread"]["id"] == native.thread_id
+                    envelope = response.json()["result"]
+                    assert envelope["operation"] == "thread/read"
+                    assert envelope["result"]["thread"]["id"] == native.thread_id
                 if "start_thread" in expected and dispatch:
                     package = (
                         "codex-action-server"
@@ -418,7 +420,9 @@ async def _exercise(
                         json={"payload": start_payload},
                     )
                     assert response.status_code == 200, response.text
-                    assert response.json()["result"]["dispatch"]["replayed"] is True
+                    envelope = response.json()["result"]
+                    assert envelope["operation"] == "thread/start"
+                    assert envelope["result"]["dispatch"]["replayed"] is True
                 if "start_thread" not in expected:
                     before = len(native.calls)
                     try:
