@@ -127,32 +127,23 @@ def test_action_catalog_contract_only_declares_implemented_profiles():
         action_names_for_profile("unknown")
 
 
-def test_profile_catalogs_match_explicit_action_annotations():
-    tree = ast.parse((ROOT / "src/codex_actions.py").read_text())
-    all_actions = set()
-    observe_actions = set()
-    for node in tree.body:
-        if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-            continue
-        action_decorators = [
-            decorator
-            for decorator in node.decorator_list
-            if isinstance(decorator, ast.Call)
-            and getattr(decorator.func, "id", None) == "action"
-        ]
-        if not action_decorators:
-            continue
-        all_actions.add(node.name)
-        consequential = next(
-            keyword.value
-            for keyword in action_decorators[0].keywords
-            if keyword.arg == "is_consequential"
-        )
-        if ast.literal_eval(consequential) is False:
-            observe_actions.add(node.name)
+def test_profile_catalogs_match_entrypoint_membership_and_independent_fixtures():
+    from test_mcp_annotations import READS, CONTROLS
 
-    assert all_actions == set(action_names_for_profile("operator"))
-    assert observe_actions == set(action_names_for_profile("observe"))
+    tree = ast.parse((ROOT / "src/codex_actions.py").read_text())
+    names = {
+        node.name
+        for node in tree.body
+        if isinstance(node, ast.FunctionDef)
+        and any(
+            isinstance(decorator, ast.Call)
+            and getattr(decorator.func, "id", None) == "action"
+            for decorator in node.decorator_list
+        )
+    }
+    assert names == READS | CONTROLS
+    assert action_names_for_profile("observe") == READS
+    assert action_names_for_profile("operator") == READS | CONTROLS
 
 
 def test_health_probe_rejects_stale_tool_catalog(monkeypatch):
@@ -181,3 +172,25 @@ def test_health_probe_rejects_unknown_name_even_when_catalog_size_matches(
         health.main()
 
     assert opener.methods[-1] == "DELETE"
+
+
+def test_health_control_only_needs_no_observer_tools(monkeypatch):
+    monkeypatch.setenv("CODEX_ACTION_PACKAGES", "codex-control")
+    health = load_health()
+    from test_mcp_annotations import CONTROLS
+
+    opener = FakeOpener(CONTROLS)
+    monkeypatch.setenv("CODEX_ACTION_BRIDGE_GATEWAY", "172.30.186.1")
+    monkeypatch.setattr(health, "build_opener", lambda *_: opener)
+    health.main()
+    assert opener.methods[-1] == "DELETE"
+
+
+def test_health_control_only_rejects_retained_compatibility_catalog(monkeypatch):
+    monkeypatch.setenv("CODEX_ACTION_PACKAGES", "codex-control")
+    health = load_health()
+    opener = FakeOpener(EXPECTED_ACTION_NAMES)
+    monkeypatch.setenv("CODEX_ACTION_BRIDGE_GATEWAY", "172.30.186.1")
+    monkeypatch.setattr(health, "build_opener", lambda *_: opener)
+    with pytest.raises(ValueError, match="unexpected_catalog"):
+        health.main()

@@ -306,3 +306,33 @@ def test_capability_action_reports_runtime_version_and_profile():
     result = response.result.result
     assert result["native_codex_version"] == "0.160.1"
     assert result["server_exposure_profile"] == "operator"
+
+
+def test_inventory_reports_selected_control_package_and_actual_guard_methods(
+    monkeypatch,
+):
+    monkeypatch.setenv("CODEX_ACTION_PACKAGES", "codex-control")
+    data = inventory(None)
+    assert data["selected_packages"] == ["codex-control"]
+    exposed = {
+        family["classification"]: set(family.get("exposed_methods", ()))
+        for family in data["families"]
+    }
+    assert "thread/read" in exposed["OBSERVE"]
+    assert "account/usage/read" not in exposed["OBSERVE"]
+    assert "turn/start" in exposed["OPERATOR_CONTROL"]
+    assert "app/read" not in exposed["EXPERIMENTAL"]
+    assert exposed["ADMIN"] == set()
+    assert exposed["CALLBACK"] == set()
+
+
+def test_inventory_reports_observe_package_without_control_methods(monkeypatch):
+    monkeypatch.setenv("CODEX_ACTION_PACKAGES", "codex-observe")
+    data = inventory(None)
+    assert data["selected_packages"] == ["codex-observe"]
+    control = next(
+        family
+        for family in data["families"]
+        if family["classification"] == "OPERATOR_CONTROL"
+    )
+    assert control["exposed_methods"] == []

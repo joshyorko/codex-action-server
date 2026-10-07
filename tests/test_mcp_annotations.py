@@ -1,8 +1,11 @@
 """Every Codex action has an explicit behavioral MCP classification."""
 
-import ast
 from pathlib import Path
 import runpy
+import json
+import os
+import subprocess
+import sys
 
 import pytest
 
@@ -84,20 +87,28 @@ CONTROLS = {
 
 
 def test_complete_actual_catalog_is_intentionally_classified():
-    declared = {}
-    for node in ast.parse((ROOT / "src/codex_actions.py").read_text()).body:
-        if isinstance(node, ast.FunctionDef):
-            for decorator in node.decorator_list:
-                if (
-                    isinstance(decorator, ast.Call)
-                    and isinstance(decorator.func, ast.Name)
-                    and decorator.func.id == "action"
-                ):
-                    declared[node.name] = next(
-                        ast.literal_eval(k.value)
-                        for k in decorator.keywords
-                        if k.arg == "is_consequential"
-                    )
+    code = """
+import json
+from actions._hooks import on_action_func_found
+registered = {}
+with on_action_func_found.register(lambda func, options: registered.update({func.__name__: options["is_consequential"]})):
+    import codex_actions
+print(json.dumps(registered))
+"""
+    result = subprocess.run(
+        [sys.executable, "-c", code],
+        cwd=ROOT,
+        env={
+            **os.environ,
+            "PYTHONPATH": str(ROOT / "src"),
+            "CODEX_ACTION_PROFILE": "operator",
+            "CODEX_ACTION_PACKAGES": "codex-action-server",
+        },
+        text=True,
+        capture_output=True,
+        check=True,
+    )
+    declared = json.loads(result.stdout)
     assert set(declared) == READS | CONTROLS
     assert set(declared) == EXPECTED_ACTION_NAMES
     assert POLICY["READ_ONLY_TOOLS"] == READS
@@ -184,3 +195,53 @@ def test_projection_patch_rejects_unreviewed_versions(runtime, sdk):
 def test_projection_patch_rejects_changed_upstream_source():
     with pytest.raises(RuntimeError):
         POLICY["patch_source"]("untrusted source", "1.0.2", "2.0.0")
+
+
+@pytest.mark.parametrize(
+    "package,names", [("codex-observe", READS), ("codex-control", CONTROLS)]
+)
+def test_split_package_actions_receive_the_same_reviewed_hints(package, names):
+    for name in names:
+        projected = POLICY["annotation_options"](
+            package, "src/codex_actions.py", name, {}
+        )
+        assert projected["read_only_hint"] is (name in READS)
+        assert projected["destructive_hint"] is (name in CONTROLS)
+        assert projected["idempotent_hint"] is (name in READS)
+
+
+def test_other_split_package_names_never_receive_read_hints():
+    projected = POLICY["annotation_options"](
+        "codex-control", "src/codex_actions.py", "list_targets", {}
+    )
+    assert projected["read_only_hint"] is False
+    assert projected["destructive_hint"] is True
+
+
+def test_serialized_patch_policy_is_independent_of_project_runtime_imports():
+    import hashlib
+
+    source = "def register():\n" + POLICY["ORIGINAL"]
+    patch = POLICY["patch_source"]
+    previous = patch.__globals__["SOURCE_SHA256"]
+    patch.__globals__["SOURCE_SHA256"] = hashlib.sha256(source.encode()).hexdigest()
+    try:
+        patched = patch(source, "1.0.2", "2.0.0")
+    finally:
+        patch.__globals__["SOURCE_SHA256"] = previous
+    # Only the adapter replacement is nested in real runtime code; execute the serialized suffix independently.
+    policy = patched.split("\n\nREVIEWED_ANNOTATIONS =", 1)[1]
+    namespace = {}
+    exec("REVIEWED_ANNOTATIONS =" + policy, namespace)
+    assert (
+        namespace["annotation_options"](
+            "codex-observe", "src/codex_actions.py", "list_targets", {}
+        )["read_only_hint"]
+        is True
+    )
+    assert (
+        namespace["annotation_options"](
+            "foreign-package", "src/codex_actions.py", "list_targets", {}
+        )
+        == {}
+    )

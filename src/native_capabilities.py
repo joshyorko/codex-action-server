@@ -1,7 +1,11 @@
 """Pinned native capability inventory; this is descriptive, never an RPC allowlist."""
 
 from codex_rpc import METHODS
-from action_catalog_contract import IMPLEMENTED_PROFILE
+from action_catalog_contract import (
+    IMPLEMENTED_PROFILE,
+    native_methods_for_deployment,
+    selected_package_names,
+)
 
 SCHEMA_VERSION = "0.160.1"
 SCHEMA_SOURCE = "openai/codex rust-v0.160.1 (d27764b82f7118f674371e6d6e76271d9d606edb)"
@@ -365,21 +369,20 @@ FAMILIES = (
 
 
 def inventory(native_version: str | None) -> dict:
+    packages = selected_package_names()
+    exposed_methods = native_methods_for_deployment(packages=packages)
     families = []
     for family in FAMILIES:
         entry = {
             **family,
             "methods": list(family["methods"]),
         }
-        if family["classification"] == "OPERATOR_CONTROL":
-            entry["exposed_methods"] = (
-                list(family["methods"]) if IMPLEMENTED_PROFILE == "operator" else []
-            )
+        if family["classification"] in {"OBSERVE", "OPERATOR_CONTROL"}:
+            entry["exposed_methods"] = sorted(set(family["methods"]) & exposed_methods)
         elif "exposed_methods" in family:
-            exposed = set(family["exposed_methods"])
-            if IMPLEMENTED_PROFILE == "observe":
-                exposed &= OBSERVE_METHODS
-            entry["exposed_methods"] = sorted(exposed)
+            entry["exposed_methods"] = sorted(
+                set(family["exposed_methods"]) & exposed_methods
+            )
         families.append(entry)
     return {
         "native_codex_version": native_version or "unavailable",
@@ -392,6 +395,7 @@ def inventory(native_version: str | None) -> dict:
         },
         "cas_contract_version": CONTRACT_VERSION,
         "server_exposure_profile": IMPLEMENTED_PROFILE,
+        "selected_packages": list(packages),
         "admin_enabled": False,
         "families": families,
     }

@@ -58,9 +58,10 @@ if action_names_for_profile() == action_names_for_profile("observe"):
             if method != "thread/read":
                 raise AssertionError(f"observe profile attempted native write: {method}")
             return {"thread": {"id": params["threadId"], "cwd": "/work"}}
+    from codex_shared import common
     native = SyntheticNativeClient()
-    with patch.object(codex_actions, "Client", return_value=native), patch.object(
-        codex_actions, "resolve_target", return_value="local"
+    with patch.object(common, "Client", return_value=native), patch.object(
+        common, "resolve_target", return_value="local"
     ):
         result = codex_actions.read_thread(
             codex_actions.ThreadReadRequest(

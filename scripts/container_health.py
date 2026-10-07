@@ -11,10 +11,11 @@ from urllib.request import build_opener, ProxyHandler, Request
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 from action_catalog_contract import (
     IMPLEMENTED_PROFILE,
-    action_names_for_profile,
+    action_names_for_deployment,
+    selected_package_names,
 )
 
-EXPECTED_TOOL_NAMES = action_names_for_profile(IMPLEMENTED_PROFILE)
+EXPECTED_TOOL_NAMES = action_names_for_deployment()
 
 
 def main():
@@ -82,17 +83,7 @@ def main():
         ):
             raise ValueError("unexpected_catalog")
         names = {tool["name"] for tool in tools}
-        required = {
-            "list_targets",
-            "inspect_target",
-            "read_dispatch_receipt",
-            "get_thread_snapshot",
-        }
-        if (
-            len(tools) != len(EXPECTED_TOOL_NAMES)
-            or names != EXPECTED_TOOL_NAMES
-            or not required <= names
-        ):
+        if len(tools) != len(EXPECTED_TOOL_NAMES) or names != EXPECTED_TOOL_NAMES:
             raise ValueError("unexpected_catalog")
     finally:
         if "Mcp-Session-Id" in headers:
@@ -104,7 +95,9 @@ def main():
             except HTTPError as error:
                 if error.code != 405:
                     raise
-    print(f"MCP catalog ready: {IMPLEMENTED_PROFILE} profile")
+    print(
+        f"MCP catalog ready: {IMPLEMENTED_PROFILE} profile, packages {','.join(selected_package_names())}"
+    )
 
 
 if __name__ == "__main__":
