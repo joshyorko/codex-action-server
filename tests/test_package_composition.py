@@ -427,7 +427,7 @@ async def _exercise(base, packages, expected, native, *, dispatch=True):
                     )
                     assert not receipt.is_error
                     assert receipt.structured_content["result"]["state"] in {
-                        "accepted",
+                        "created_not_materialized",
                         "not_found",
                     }
                 return tools
@@ -464,7 +464,7 @@ def test_real_runtime_composition_catalog_http_dispatch_and_restart(
         receipt = dispatch_receipts.read(
             Path(environment["CODEX_ACTION_RECEIPTS"]), "composition-restart-proof"
         )
-        assert receipt["state"] == "accepted"
+        assert receipt["state"] == "created_not_materialized"
         assert receipt["thread_id"] == native.thread_id
 
 
