@@ -23,6 +23,12 @@ SCHEMA_MANIFEST = json.loads(
         Path(__file__).parent / "fixtures/protocol/codex_0.160.1_client_requests.json"
     ).read_text()
 )
+SCHEMA_COMPATIBILITY = json.loads(
+    (
+        Path(__file__).parent
+        / "fixtures/protocol/codex_0.160.1_to_0.161.0_experimental_compatibility.json"
+    ).read_text()
+)
 
 ACTUAL_PINNED_SERVER_USER_AGENT = native_server_user_agent("0.160.1")
 
@@ -42,7 +48,7 @@ ACTUAL_PINNED_SERVER_USER_AGENT = native_server_user_agent("0.160.1")
                 client_name="spoofed/0.160.1",
                 client_version="0.160.1",
             ),
-            "0.159.2",
+            None,
         ),
         (
             native_server_user_agent(
@@ -67,6 +73,12 @@ ACTUAL_PINNED_SERVER_USER_AGENT = native_server_user_agent("0.160.1")
         ),
         (
             native_server_user_agent("0.160.1", originator="native client (desktop)"),
+            None,
+        ),
+        (
+            native_server_user_agent(
+                "0.160.1", originator="friday-validation-native-fixture"
+            ),
             "0.160.1",
         ),
         (
@@ -92,6 +104,15 @@ def test_native_server_build_version_comes_from_initialize_build_slot(
     user_agent, expected
 ):
     assert codex_rpc.native_server_build_version(user_agent) == expected
+
+
+def test_native_server_build_version_ignores_product_user_agent_versions():
+    user_agent = (
+        "codex-tui/0.161.0 (Linux Unknown; x86_64) "
+        "ghostty/1.3.1 (friday-external-codex; 0.1.0)"
+    )
+
+    assert codex_rpc.native_server_build_version(user_agent) == "0.161.0"
 
 
 def test_experimental_gate_uses_server_build_version_not_client_info_suffix():
@@ -217,6 +238,44 @@ def test_pinned_schema_manifest_is_completely_classified():
     assert codex_rpc.EXPERIMENTAL_METHODS <= set(exposed_experimental)
 
 
+def test_protocol_compatibility_fixture_covers_every_experimental_cas_method():
+    contracts = {
+        contract["method"]: contract
+        for contract in SCHEMA_COMPATIBILITY["cas_experimental_contracts"]
+    }
+
+    assert set(contracts) == codex_rpc.EXPERIMENTAL_METHODS
+    assert all(
+        contract["request_contract"] == "unchanged" for contract in contracts.values()
+    )
+    assert {
+        method
+        for method, contract in contracts.items()
+        if contract["response_contract"] != "unchanged"
+    } == {
+        "thread/queue/start",
+        "thread/search",
+        "thread/timeline/list",
+    }
+    for contract in contracts.values():
+        assert (
+            contract["request_sha256"]["0.160.1"]
+            == contract["request_sha256"]["0.161.0"]
+        )
+        response_hashes = contract["response_sha256"]
+        assert (response_hashes["0.160.1"] == response_hashes["0.161.0"]) == (
+            contract["response_contract"] == "unchanged"
+        )
+    assert SCHEMA_COMPATIBILITY["request_counts"] == {
+        "0.160.1": {"default": 104, "experimental": 167},
+        "0.161.0": {"default": 104, "experimental": 169},
+    }
+    assert SCHEMA_COMPATIBILITY["new_experimental_only_methods_not_exposed_by_cas"] == [
+        "account/bedrock/checkGovCloudRequirements",
+        "thread/prediction/request",
+    ]
+
+
 def test_internal_message_board_names_are_not_public_app_server_methods():
     inventory_methods = set(SCHEMA_MANIFEST["default_client_requests"]) | set(
         SCHEMA_MANIFEST["experimental_only_client_requests"]
@@ -291,6 +350,75 @@ def test_every_experimental_only_exposed_method_is_version_gated_before_send():
         client.ws.recv.return_value = json.dumps({"id": 1, "result": {}})
         assert client.request(method, params) == {}
         client.ws.send.assert_called_once()
+
+
+def test_01610_allows_only_reviewed_diagnostics_and_queue_methods():
+    compatible = {
+        "server/diagnostics": {},
+        "thread/queue/list": {"threadId": "thread-1"},
+        "thread/queue/add": {
+            "threadId": "thread-1",
+            "input": [{"type": "text", "text": "queued"}],
+            "clientUserMessageId": "message-1",
+        },
+        "thread/queue/update": {
+            "threadId": "thread-1",
+            "queuedSubmissionId": "queue-1",
+            "input": [{"type": "text", "text": "updated"}],
+        },
+        "thread/queue/delete": {
+            "threadId": "thread-1",
+            "queuedSubmissionId": "queue-1",
+        },
+        "thread/queue/reorder": {
+            "threadId": "thread-1",
+            "queuedSubmissionIds": ["queue-1"],
+        },
+        "thread/queue/start": {
+            "threadId": "thread-1",
+            "queuedSubmissionId": "queue-1",
+        },
+    }
+    user_agent = (
+        "codex-tui/0.161.0 (Linux Unknown; x86_64) "
+        "ghostty/1.3.1 (friday-external-codex; 0.1.0)"
+    )
+
+    for method, params in compatible.items():
+        client = codex_rpc.Client(codex_rpc.Target("local", socket_path="fixture"))
+        client.ws = Mock()
+        client.metadata = {"userAgent": user_agent}
+        client.ws.recv.return_value = json.dumps({"id": 1, "result": {}})
+
+        assert client.request(method, params) == {}
+        client.ws.send.assert_called_once()
+
+    deferred = codex_rpc.Client(codex_rpc.Target("local", socket_path="fixture"))
+    deferred.ws = Mock()
+    deferred.metadata = {"userAgent": user_agent}
+
+    with pytest.raises(codex_rpc.RpcError, match="pinned experimental"):
+        deferred.request(
+            "thread/settings/update", {"threadId": "thread-1", "effort": "high"}
+        )
+
+    deferred.ws.send.assert_not_called()
+
+
+def test_01610_unexposed_experimental_method_stays_outside_typed_surface():
+    client = codex_rpc.Client(codex_rpc.Target("local", socket_path="fixture"))
+    client.ws = Mock()
+    client.metadata = {
+        "userAgent": (
+            "codex-tui/0.161.0 (Linux Unknown; x86_64) "
+            "ghostty/1.3.1 (friday-external-codex; 0.1.0)"
+        )
+    }
+
+    with pytest.raises(ValueError, match="outside the typed native surface"):
+        client.request("collaborationMode/list", {})
+
+    client.ws.send.assert_not_called()
 
 
 def test_capability_action_reports_runtime_version_and_profile():

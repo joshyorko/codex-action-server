@@ -104,6 +104,28 @@ EXPERIMENTAL_METHODS = {
     "turn/settings/update",
 }
 EXPERIMENTAL_NATIVE_VERSION = "0.160.1"
+REVIEWED_EXPERIMENTAL_METHODS_BY_NATIVE_VERSION = {
+    EXPERIMENTAL_NATIVE_VERSION: frozenset(EXPERIMENTAL_METHODS),
+    "0.161.0": frozenset(
+        {
+            "server/diagnostics",
+            "thread/queue/add",
+            "thread/queue/delete",
+            "thread/queue/list",
+            "thread/queue/reorder",
+            "thread/queue/start",
+            "thread/queue/update",
+        }
+    ),
+}
+_NATIVE_SERVER_ORIGINATORS = frozenset(
+    {
+        "codex-cli",
+        "codex-tui",
+        "friday-external-codex",
+        "friday-validation-native-fixture",
+    }
+)
 _NATIVE_BUILD_VERSION_PATTERN = re.compile(
     r"(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)"
     r"(?:-(?:0|[1-9][0-9]*|[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*)"
@@ -129,20 +151,15 @@ def native_server_build_version(user_agent: object) -> str | None:
         or any(character in user_agent for character in "\r\n\x00")
     ):
         return None
-    candidates = list(re.finditer(r"/([^/() ]+) \(", user_agent))
-    if len(candidates) != 1:
+    candidate = re.match(r"([^/\s()]+)/([^/() ]+) \(([^()]*)\)", user_agent)
+    if candidate is None or candidate.group(1) not in _NATIVE_SERVER_ORIGINATORS:
         return None
-    candidate = candidates[0]
-    version = candidate.group(1)
+    version = candidate.group(2)
     if not _NATIVE_BUILD_VERSION_PATTERN.fullmatch(version):
         return None
-    build_slot_start = candidate.start()
-    prefix = user_agent[:build_slot_start]
-    details = user_agent[candidate.end() :]
-    if not prefix.strip():
-        return None
-    platform, closing_parenthesis, product_details = details.partition(")")
-    if not closing_parenthesis or not platform.strip() or not product_details.strip():
+    platform = candidate.group(3)
+    product_details = user_agent[candidate.end() :]
+    if not platform.strip() or not product_details.strip():
         return None
     return version
 
@@ -892,10 +909,11 @@ class Client:
     def request(self, method, params, timeout=None):
         if method not in METHODS | {"initialize"}:
             raise ValueError("Method outside the typed native surface: " + method)
-        if (
-            method in EXPERIMENTAL_METHODS
-            and native_server_build_version(self.metadata.get("userAgent"))
-            != EXPERIMENTAL_NATIVE_VERSION
+        native_version = native_server_build_version(self.metadata.get("userAgent"))
+        if method in EXPERIMENTAL_METHODS and method not in (
+            REVIEWED_EXPERIMENTAL_METHODS_BY_NATIVE_VERSION.get(
+                native_version, frozenset()
+            )
         ):
             raise RpcError(
                 method + " requires the pinned experimental Codex 0.160.1 schema"
