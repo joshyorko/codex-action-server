@@ -1,8 +1,10 @@
 # Native capability inventory
 
 `list_native_capabilities({target})` reports the selected daemon's `userAgent`,
-the versioned CAS contract, capability families, and the current exposure
-profile. Its catalog is static: a newer daemon cannot expand CAS's RPC allowlist.
+the versioned CAS contract, capability families, current exposure profile, and
+`selected_packages`. Each family's `exposed_methods` reflects the selected
+package/profile intersection, including native reads used by control guards.
+Its catalog is static: a newer daemon cannot expand CAS's RPC allowlist.
 The inventory is based on Codex `rust-v0.160.1`
 (`d27764b82f7118f674371e6d6e76271d9d606edb`); the generated-schema baseline is
 104 default client requests and 167 with experimental requests (63 additional).
@@ -42,6 +44,35 @@ Action Server/process restart and catalog refresh; it does not change an
 in-flight process. This is a server-wide trusted-reader boundary, not per-client
 or per-repository isolation. No caller-selectable elevation or ADMIN action
 exists.
+
+## Package composition
+
+`CODEX_ACTION_PACKAGES` selects the default compatibility package
+`codex-action-server`, the 31-action `codex-observe` package, the 33-action
+`codex-control` package, or both disjoint split packages. Both split packages
+preserve the compatibility catalog's 64 global MCP names. The compatibility
+package cannot be combined with either split package. The `observe` profile
+rejects explicit control-package selection.
+
+`src/action_catalog_contract.py:CAPABILITIES` owns one frozen record per public
+action. Registration, consequential metadata, annotations, package/profile
+membership, health expectations, and inventory derive from those records.
+`native_methods_for_deployment` includes composite operations and guard reads;
+package membership is separate from native method classifications such as
+EXPERIMENTAL and ADMIN.
+
+`src/capability_registration.py:action` registers only the selected/profile-
+allowed wrappers and rejects excluded direct calls. Shared functions in
+`src/codex_shared/` are undecorated implementation code, not public entrypoints.
+Both split packages served together share one Runtime, MCP catalog, runtime
+credential, target configuration, and durable receipt directory. Package
+selection does not authorize clients or isolate repositories.
+
+See [PACKAGE_COMPOSITION.md](PACKAGE_COMPOSITION.md) for assembly, startup,
+retained-catalog handling, HTTP migration, and acceptance limits. The existing
+compatibility HTTP routes remain the default. Native tool metadata and its
+separate proof boundary are documented in
+[RUNTIME_CAPABILITIES.md](RUNTIME_CAPABILITIES.md).
 
 ## Required tranche status: incomplete
 

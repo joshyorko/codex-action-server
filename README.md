@@ -26,6 +26,11 @@ Defaults to loopback port8088 to avoid the existing Friday service on8087.
 MCP is `/mcp`, OpenAPI is `/openapi.json`. The launcher starts only this API.
 It never starts, restarts or authenticates Codex or Devsy.
 
+The default `codex-action-server` package retains the compatibility catalog and
+HTTP routes. `CODEX_ACTION_PACKAGES` can explicitly select `codex-observe`,
+`codex-control`, or both. See [package composition](docs/PACKAGE_COMPOSITION.md)
+for profile compatibility, assembly, retained state, and HTTP migration.
+
 ## Targets
 
 For the production API image and Linux Compose mount/network contract, see
