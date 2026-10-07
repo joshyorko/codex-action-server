@@ -53,21 +53,37 @@ def launcher(tmp_path):
 import json, os, pathlib, sqlite3, sys
 args=sys.argv[1:]
 with open(os.environ['COMMAND_LOG'],'a') as f: f.write(json.dumps(args)+'\\n')
+with open(os.environ['CWD_LOG'],'a') as f: f.write(str(pathlib.Path.cwd())+'\\n')
 if args[0]=='import':
  directory=pathlib.Path(args[args.index('--dir')+1])
  package=next(line[6:] for line in (directory/'package.yaml').read_text().splitlines() if line.startswith('name: '))
  data=pathlib.Path(args[args.index('--datadir')+1])
+ stored_directory=str(directory)
+ if os.environ.get('FAKE_RELATIVE_PATHS'):
+  relative=directory.relative_to(data)
+  assert directory.samefile(relative)
+  stored_directory=str(relative)
  with sqlite3.connect(data/'server.db') as db:
   db.execute('CREATE TABLE IF NOT EXISTS action_package(id TEXT, name TEXT, directory TEXT)')
   db.execute('CREATE TABLE IF NOT EXISTS action(action_package_id TEXT, name TEXT, enabled INTEGER, file TEXT)')
   db.execute('DELETE FROM action WHERE action_package_id=?',(package,))
   db.execute('DELETE FROM action_package WHERE id=?',(package,))
-  db.execute('INSERT INTO action_package VALUES (?,?,?)',(package,package,str(directory)))
+  db.execute('INSERT INTO action_package VALUES (?,?,?)',(package,package,stored_directory))
   name='read' if package=='codex-observe' else 'write'
   for i in range(2 if os.environ.get('FAKE_DUPLICATE') else 1):
    if os.environ.get('FAKE_MISSING')!=name:
     db.execute('INSERT INTO action VALUES (?,?,1,?)',(package,name,'src/codex_actions.py'))
 """)
+    binary.write_text(
+        binary.read_text()
+        + """
+if args[0]=='start' and os.environ.get('FAKE_RELATIVE_PATHS'):
+ data=pathlib.Path(args[args.index('--datadir')+1])
+ with sqlite3.connect(data/'server.db') as db:
+  for (directory,) in db.execute('SELECT directory FROM action_package'):
+   assert pathlib.Path(directory).samefile(data/directory)
+"""
+    )
     binary.chmod(0o700)
     env = {
         **os.environ,
@@ -76,6 +92,7 @@ if args[0]=='import':
         "CODEX_ACTION_DATA": str(tmp_path / "runtime"),
         "ACTION_SERVER_BIN": str(binary),
         "COMMAND_LOG": str(tmp_path / "commands.jsonl"),
+        "CWD_LOG": str(tmp_path / "working-directories.txt"),
     }
     env.pop("CODEX_ACTION_PACKAGE_ROOT", None)
     env.pop("CODEX_ACTION_PROFILE", None)
@@ -106,6 +123,7 @@ def test_compatibility_keeps_root_routes_and_one_process(launcher):
     result, commands = run(launcher)
     assert result.returncode == 0, result.stderr
     assert len(commands) == 1
+    assert Path(launcher[1]["CWD_LOG"]).read_text().splitlines() == [str(Path.cwd())]
     start = commands[0]
     assert start[:3] == ["start", "--dir", str(launcher[0])]
     assert "--actions-sync=true" in start
@@ -167,3 +185,22 @@ def test_missing_explicit_artifacts_fail_without_runtime_import(launcher, tmp_pa
     )
     assert result.returncode != 0
     assert commands == []
+
+
+def test_datadir_relative_package_records_resolve_on_import_start_and_restart(launcher):
+    for _ in range(2):
+        result, commands = run(
+            launcher,
+            CODEX_ACTION_PACKAGES="codex-observe,codex-control",
+            FAKE_RELATIVE_PATHS="1",
+        )
+        assert result.returncode == 0, result.stderr
+    data = Path(launcher[1]["CODEX_ACTION_DATA"])
+    assert len(commands) == 6
+    assert Path(launcher[1]["CWD_LOG"]).read_text().splitlines() == [str(data)] * 6
+    with sqlite3.connect(data / "server.db") as db:
+        directories = db.execute("SELECT directory FROM action_package").fetchall()
+    assert len(directories) == 2
+    for (directory,) in directories:
+        assert not Path(directory).is_absolute()
+        assert (data / directory / "src/codex_actions.py").is_file()

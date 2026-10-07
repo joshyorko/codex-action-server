@@ -90,9 +90,12 @@ def start(address: str, port: str) -> None:
                     whitelist,
                 ],
                 check=True,
+                cwd=data,
             )
         assert_imported_catalog(data, expected, directories)
         directory = directories[packages[0]]
+        # Published Runtime resolves datadir-relative package records from cwd.
+        os.chdir(data)
     else:
         directory = ROOT
     command = [
