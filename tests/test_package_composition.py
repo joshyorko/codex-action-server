@@ -295,7 +295,9 @@ def composition_runtime(tmp_path):
         native.close()
 
 
-async def _exercise(base, packages, expected, native, *, dispatch=True):
+async def _exercise(
+    base, packages, expected, native, *, profile="operator", dispatch=True
+):
     import httpx
     from mcp import ClientSession
     from mcp.client.streamable_http import streamable_http_client
@@ -330,6 +332,7 @@ async def _exercise(base, packages, expected, native, *, dispatch=True):
                     assert routes[route]["post"]["x-openai-isConsequential"] is (
                         name in CONTROL
                     ), name
+                    assert routes[route]["post"]["x-operation-kind"] == "action", name
                 for name, tool in tools.items():
                     schema = tool.input_schema
                     assert isinstance(schema, dict)
@@ -357,6 +360,21 @@ async def _exercise(base, packages, expected, native, *, dispatch=True):
                     "cwd": native.cwd,
                     "request_id": "composition-restart-proof",
                 }
+                if "list_native_capabilities" in expected:
+                    inventory = _result_data(
+                        await session.call_tool(
+                            "list_native_capabilities", {"payload": {"target": "local"}}
+                        )
+                    )["result"]
+                    assert inventory["selected_packages"] == list(packages)
+                    assert inventory["server_exposure_profile"] == profile
+                    exposed = {
+                        method
+                        for family in inventory["families"]
+                        for method in family.get("exposed_methods", [])
+                    }
+                    assert "thread/read" in exposed
+                    assert ("thread/start" in exposed) is ("start_thread" in expected)
                 # Alternate both package keys. Equal entrypoint filenames must
                 # not reuse the wrong package's imported wrapper module.
                 for _ in range(2):
@@ -453,7 +471,9 @@ def test_real_runtime_composition_catalog_http_dispatch_and_restart(
     catalogs = []
     for phase in ("first", "restart"):
         with _running(environment, root, phase) as base:
-            tools = asyncio.run(_exercise(base, packages, expected, native))
+            tools = asyncio.run(
+                _exercise(base, packages, expected, native, profile=profile)
+            )
             catalogs.append({name: tool.input_schema for name, tool in tools.items()})
     assert catalogs[0] == catalogs[1]
     starts = [call for call in native.calls if call.get("method") == "thread/start"]
@@ -484,7 +504,9 @@ def test_real_runtime_reused_datadir_excludes_stale_aggregate_and_control(
             CODEX_ACTION_PACKAGES=",".join(packages), CODEX_ACTION_PROFILE=profile
         )
         with _running(environment, root, f"selection-{phase}") as base:
-            tools = asyncio.run(_exercise(base, packages, expected, native))
+            tools = asyncio.run(
+                _exercise(base, packages, expected, native, profile=profile)
+            )
             for name, tool in tools.items():
                 if name in schemas:
                     assert tool.input_schema == schemas[name], name
