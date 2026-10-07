@@ -38,4 +38,4 @@ if [ -n "${CODEX_ACTION_PREPARED_CACHE:-}" ]; then
         cp -a --no-clobber "${cache_entries[@]}" "$ACTIONS_HOME/"
     fi
 fi
-exec "${ACTION_SERVER_BIN:-action-server}" start --dir "$root" --datadir "$CODEX_ACTION_DATA" --address "$CODEX_ACTION_BRIDGE_GATEWAY" --port "$port" --actions-sync=true --min-processes 1 --max-processes 1
+exec python3 "$root/scripts/start_packages.py" --address "$CODEX_ACTION_BRIDGE_GATEWAY" --port "$port"

@@ -10,7 +10,7 @@ RUN test "$TARGETARCH" = amd64 \
     && echo '9aef9ec55c17d90ec11a32d8d4da694def92502ba46a73621c35267f230873d3  /tmp/runtime-wheel/actions_runtime-1.0.2-cp312-cp312-manylinux_2_17_x86_64.manylinux_2_5_x86_64.manylinux1_x86_64.manylinux2014_x86_64.whl' | sha256sum -c - \
     && python -m pip install --no-cache-dir /tmp/runtime-wheel/*.whl actions-core==1.0.1 mcp==2.0.0 \
     && rm -rf /tmp/runtime-wheel \
-    && curl -fL --max-time 120 --retry 2 https://github.com/joshyorko/homebrew-tools/releases/download/devsy-1.19.0/devsy-linux-amd64 -o /usr/local/bin/devsy \
+    && curl -fL --max-time 120 --retry 2 https://github.com/devsy-org/devsy/releases/download/v1.19.0/devsy-linux-amd64 -o /usr/local/bin/devsy \
     && echo '2f43f28ab5b399b379091aeb09628ec6b70dc82212a64d30de8e2a4a18a49ef5  /usr/local/bin/devsy' | sha256sum -c - \
     && chmod 0755 /usr/local/bin/devsy \
     && groupadd --gid 1000 codex-actions \
@@ -25,6 +25,7 @@ ENV CODEX_ACTION_TARGETS=/run/codex-action-server/targets.json \
     CODEX_ACTION_DATA=/var/lib/codex-action-server/runtime \
     ACTIONS_HOME=/var/lib/codex-action-server/actions \
     CODEX_ACTION_PREPARED_CACHE=/opt/codex-action-server-cache \
+    CODEX_ACTION_PACKAGE_ROOT=/opt/codex-action-packages \
     ROBOTS_HOME=/var/lib/codex-action-server/robots \
     DEVSY_HOME=/run/operator-devsy \
     DEVSY_DISABLE_TELEMETRY=true \
@@ -34,16 +35,23 @@ ENV CODEX_ACTION_TARGETS=/run/codex-action-server/targets.json \
 WORKDIR /opt/codex-action-server
 COPY package.yaml ./
 COPY src/ ./src/
-COPY scripts/run-container.sh scripts/preflight.py scripts/container_health.py ./scripts/
+COPY scripts/run.sh scripts/run-packages.sh scripts/run-container.sh scripts/start_packages.py scripts/assemble_packages.py scripts/preflight.py scripts/container_health.py ./scripts/
 COPY scripts/install_runtime_transport_patch.py ./scripts/
 RUN python3 scripts/install_runtime_transport_patch.py
 COPY scripts/install_runtime_annotation_patch.py ./scripts/
 RUN python3 scripts/install_runtime_annotation_patch.py
 
+# Both split packages carry the complete shared source and exact entrypoint policy.
+# Build-owned sources are readable by the unprivileged runtime user.
+RUN python3 scripts/assemble_packages.py --output /opt/codex-action-packages \
+    && chmod -R a+rX /opt/codex-action-packages
+
 USER 1000:1000
 FROM base AS prepared
 # Warm the exact package environment at build time; no daemon is started.
 RUN action-server import --dir /opt/codex-action-server --datadir /tmp/cas-image-import \
+    && CODEX_ACTION_PACKAGES=codex-observe,codex-control action-server import --dir /opt/codex-action-packages/codex-observe --datadir /tmp/cas-image-import \
+    && CODEX_ACTION_PACKAGES=codex-observe,codex-control action-server import --dir /opt/codex-action-packages/codex-control --datadir /tmp/cas-image-import \
     && rm -rf /tmp/cas-image-import
 RUN rm -rf "$ACTIONS_HOME/pkgs" "$ACTIONS_HOME/uvcache" "$ACTIONS_HOME/temp"
 

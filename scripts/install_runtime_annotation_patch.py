@@ -4,6 +4,8 @@
 import ast
 import hashlib
 import inspect
+from pathlib import Path
+import sys
 from importlib.metadata import distribution, version
 
 
@@ -11,36 +13,28 @@ RUNTIME_VERSION = "1.0.2"
 SDK_VERSION = "2.0.0"
 SOURCE_SHA256 = "d8d8cf0914419c3e2037b81339d089b3cbdc1900f7dd3027dc8751d19ac73898"
 
+# Import only the standard-library metadata at build/install time. The injected
+# adapter policy below contains serialized records and no CAS/Core imports.
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
+from action_catalog_contract import CAPABILITIES, PACKAGE_ACTION_NAMES  # noqa: E402
+
 READ_ONLY_TOOLS = frozenset(
-    {
-        "read_dispatch_receipt",
-        "list_targets",
-        "inspect_target",
-        "discover_threads",
-        "list_thread_turns",
-        "list_thread_items",
-        "read_thread",
-        "get_thread_goal",
-        "list_models",
-        "read_model_provider_capabilities",
-        "read_server_diagnostics",
-        "list_mcp_server_status",
-        "list_loaded_threads",
-    }
+    name for name, capability in CAPABILITIES.items() if capability.read_only_hint
 )
 CONTROL_TOOLS = frozenset(
-    {
-        "update_thread_settings",
-        "update_turn_settings",
-        "set_thread_goal",
-        "clear_thread_goal",
-        "start_thread",
-        "create_thread_and_start_turn",
-        "resume_thread",
-        "start_turn",
-        "steer_turn",
-        "interrupt_turn",
+    name for name, capability in CAPABILITIES.items() if capability.is_consequential
+)
+REVIEWED_ANNOTATIONS = {
+    (package, "src/codex_actions.py", name): {
+        "read_only_hint": capability.read_only_hint,
+        "destructive_hint": capability.destructive_hint,
+        "idempotent_hint": capability.idempotent_hint,
     }
+    for name, capability in CAPABILITIES.items()
+    for package in sorted(capability.packages)
+}
+REVIEWED_PACKAGE_FILES = frozenset(
+    (package, "src/codex_actions.py") for package in PACKAGE_ACTION_NAMES
 )
 
 ORIGINAL = "        options = json.loads(action.options) if action.options else {}\n"
@@ -54,15 +48,21 @@ REPLACEMENT = (
 
 
 def annotation_options(package_name, file, name, options):
-    if (
-        package_name != "codex-action-server"
-        or file != "src/codex_actions.py"
-        or options.get("kind", "action") != "action"
-    ):
+    if (package_name, file) not in REVIEWED_PACKAGE_FILES or options.get(
+        "kind", "action"
+    ) != "action":
         return options
     projected = dict(options)
-    read_only = name in READ_ONLY_TOOLS
-    projected.update(read_only_hint=read_only, destructive_hint=not read_only)
+    projected.update(
+        REVIEWED_ANNOTATIONS.get(
+            (package_name, file, name),
+            {
+                "read_only_hint": False,
+                "destructive_hint": True,
+                "idempotent_hint": False,
+            },
+        )
+    )
     return projected
 
 
@@ -74,8 +74,8 @@ def patch_source(source, runtime_version, sdk_version):
     if source.count(ORIGINAL) != 1:
         raise RuntimeError("unexpected_runtime_adapter_shape")
     policy = (
-        f"\n\nREAD_ONLY_TOOLS = frozenset({tuple(sorted(READ_ONLY_TOOLS))!r})\n"
-        f"CONTROL_TOOLS = frozenset({tuple(sorted(CONTROL_TOOLS))!r})\n\n"
+        f"\n\nREVIEWED_ANNOTATIONS = {REVIEWED_ANNOTATIONS!r}\n"
+        f"REVIEWED_PACKAGE_FILES = frozenset({tuple(sorted(REVIEWED_PACKAGE_FILES))!r})\n\n"
         + inspect.getsource(annotation_options)
     )
     patched = source.replace(ORIGINAL, REPLACEMENT) + policy

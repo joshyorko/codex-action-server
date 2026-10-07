@@ -11,18 +11,34 @@ import time
 
 import pytest
 
+from action_catalog_contract import action_names_for_profile
 from test_thread_discovery import assert_mcp_cwd_rejected
 
 
-def test_standalone_http_boot_catalog_and_safe_diagnostics(tmp_path):
+@pytest.mark.parametrize("profile", ["operator", "observe"])
+def test_standalone_http_boot_catalog_and_safe_diagnostics(tmp_path, profile):
     binary = shutil.which("action-server")
     if not binary:
         pytest.skip("Actions Runtime CLI not installed")
     import httpx
     from mcp import ClientSession
     from mcp.client.streamable_http import streamable_http_client
+    from mcp.shared.exceptions import MCPError
 
     package = Path(__file__).parents[1]
+    native = None
+    thread_id = "thread-1"
+    cwd = "/work"
+    socket_path = tmp_path / "does-not-exist.sock"
+    if profile == "observe":
+        from test_action_server_validation import NativeFixture, _result_data
+
+        worktree = tmp_path / "worktree"
+        codex_home = tmp_path / "codex-home"
+        worktree.mkdir()
+        codex_home.mkdir()
+        native = NativeFixture(tmp_path / "native.sock", worktree, codex_home)
+        thread_id, cwd, socket_path = native.thread_id, native.cwd, native.socket_path
     with socket.socket() as s:
         s.bind(("127.0.0.1", 0))
         port = s.getsockname()[1]
@@ -33,7 +49,7 @@ def test_standalone_http_boot_catalog_and_safe_diagnostics(tmp_path):
                 "targets": {
                     "local": {
                         "transport": "local",
-                        "socket_path": str(tmp_path / "does-not-exist.sock"),
+                        "socket_path": str(socket_path),
                     }
                 }
             }
@@ -46,6 +62,7 @@ def test_standalone_http_boot_catalog_and_safe_diagnostics(tmp_path):
         "CODEX_HOME": str(tmp_path / "isolated-codex"),
         "CODEX_ACTION_DATA": str(tmp_path / "runtime"),
         "CODEX_ACTION_PORT": str(port),
+        "CODEX_ACTION_PROFILE": profile,
         "ACTION_SERVER_BIN": binary,
     }
     with (tmp_path / "server.log").open("w") as log:
@@ -79,15 +96,36 @@ def test_standalone_http_boot_catalog_and_safe_diagnostics(tmp_path):
                         await session.initialize()
                         catalog = await session.list_tools()
                         tools = {t.name: t for t in catalog.tools}
-                        assert len(tools) == 23
+                        assert set(tools) == action_names_for_profile(profile)
                         assert {
                             "list_targets",
                             "inspect_target",
                             "read_dispatch_receipt",
-                            "create_thread_and_start_turn",
+                            "get_thread_snapshot",
                         } <= tools.keys()
-                        schema = tools["create_thread_and_start_turn"].input_schema
-                        assert "request_id" in json.dumps(schema)
+                        if profile == "operator":
+                            assert "create_thread_and_start_turn" in tools
+                            schema = tools["create_thread_and_start_turn"].input_schema
+                            assert "request_id" in json.dumps(schema)
+                        else:
+                            assert "create_thread_and_start_turn" not in tools
+                            try:
+                                forbidden = await session.call_tool(
+                                    "start_turn",
+                                    {
+                                        "payload": {
+                                            "target": "local",
+                                            "cwd": cwd,
+                                            "thread_id": thread_id,
+                                            "text": "must not reach native Codex",
+                                            "profile": "operator",
+                                        }
+                                    },
+                                )
+                            except MCPError:
+                                pass
+                            else:
+                                assert forbidden.is_error
                         discovery = tools["discover_threads"].input_schema[
                             "properties"
                         ]["payload"]
@@ -119,6 +157,49 @@ def test_standalone_http_boot_catalog_and_safe_diagnostics(tmp_path):
                             {"payload": {"request_id": "not-created"}},
                         )
                         assert r.structured_content["result"]["state"] == "not_found"
+                        if profile == "observe":
+                            read = _result_data(
+                                await session.call_tool(
+                                    "read_thread",
+                                    {
+                                        "payload": {
+                                            "target": "local",
+                                            "cwd": cwd,
+                                            "thread_id": thread_id,
+                                            "include_turns": False,
+                                        }
+                                    },
+                                )
+                            )
+                            assert read["result"]["thread"]["id"] == thread_id
+                            assert read["result"]["thread"]["cwd"] == cwd
+                            direct_read = await http.post(
+                                f"http://127.0.0.1:{port}/api/actions/"
+                                "codex-action-server/read-thread/run",
+                                json={
+                                    "payload": {
+                                        "target": "local",
+                                        "cwd": cwd,
+                                        "thread_id": thread_id,
+                                        "include_turns": False,
+                                    }
+                                },
+                            )
+                            assert direct_read.status_code == 200
+                            direct_write = await http.post(
+                                f"http://127.0.0.1:{port}/api/actions/"
+                                "codex-action-server/start-turn/run",
+                                json={
+                                    "payload": {
+                                        "target": "local",
+                                        "cwd": cwd,
+                                        "thread_id": thread_id,
+                                        "text": "must not reach native Codex",
+                                        "profile": "operator",
+                                    }
+                                },
+                            )
+                            assert direct_write.status_code == 404
 
         asyncio.run(exercise())
     finally:
@@ -128,3 +209,17 @@ def test_standalone_http_boot_catalog_and_safe_diagnostics(tmp_path):
         except subprocess.TimeoutExpired:
             proc.kill()
             proc.wait(timeout=5)
+        if native is not None:
+            native.close()
+
+    if native is not None:
+        assert [call.get("method") for call in native.calls].count("thread/read") == 2
+        assert not {call.get("method") for call in native.calls}.intersection(
+            {
+                "thread/start",
+                "thread/resume",
+                "turn/start",
+                "turn/steer",
+                "turn/interrupt",
+            }
+        )

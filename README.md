@@ -26,6 +26,11 @@ Defaults to loopback port8088 to avoid the existing Friday service on8087.
 MCP is `/mcp`, OpenAPI is `/openapi.json`. The launcher starts only this API.
 It never starts, restarts or authenticates Codex or Devsy.
 
+The default `codex-action-server` package retains the compatibility catalog and
+HTTP routes. `CODEX_ACTION_PACKAGES` can explicitly select `codex-observe`,
+`codex-control`, or both. See [package composition](docs/PACKAGE_COMPOSITION.md)
+for profile compatibility, assembly, retained state, and HTTP migration.
+
 ## Targets
 
 For the production API image and Linux Compose mount/network contract, see
@@ -55,11 +60,24 @@ version, then the native proxy carries WebSocket RPC over SSH.
 
 ## Typed surface
 
-All original20actions remain: discover/read/loaded threads, turn/item pages,
+The original 23 actions remain compatible: discover/read/loaded threads, turn/item pages,
 models, provider capabilities, MCP inventory, diagnostics; start/create+turn,
 resume/start/steer/interrupt, supported model/effort settings and coordinator
 goals. Model/provider omissions preserve native configuration. New actions:
-`list_targets`, `inspect_target`, `read_dispatch_receipt`.
+`list_targets`, `inspect_target`, `read_dispatch_receipt`, and
+`list_native_capabilities`.
+`list_native_capabilities` reports the selected daemon version, pinned schema
+inventory, and methods intentionally absent from the current operator profile;
+it does not grant methods merely because the daemon supports them. See
+[native capabilities](docs/NATIVE_CAPABILITIES.md).
+
+Additional typed native methods include thread fork/archive/unarchive/delete,
+name/metadata updates, revert/compact, section listing and exact section moves,
+CWD-filtered thread search, bounded search-occurrence/timeline reads, native
+queue controls, inline review, account usage reads, skills/hooks/plugin/app
+inventory and app metadata reads, MCP resource/tool calls, thread attachments,
+and background-terminal observation/termination. Mutations require a request
+ID and verify exact thread/CWD identity before dispatch.
 
 The API accepts stable logical target strings; the runtime allowlist rejects any
 unconfigured name before connection. Thread mutations require exact cwd/thread

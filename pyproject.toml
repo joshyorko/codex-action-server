@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "codex-action-server"
-version = "0.1.0"
+version = "0.2.0"
 description = "Typed control of existing native Codex app-server daemons"
 requires-python = ">=3.12"
 dependencies = ["actions-core==1.0.1", "pydantic==2.13.5", "websockets==15.0.1"]
@@ -14,7 +14,11 @@ test = ["pytest==8.3.3", "ruff==0.8.6", "mcp==2.0.0", "httpx==0.28.1"]
 
 [tool.setuptools]
 package-dir = {"" = "src"}
-py-modules = ["boundary", "codex_actions", "codex_rpc", "dispatch_receipts", "worker_containers"]
+py-modules = ["action_catalog_contract", "boundary", "capability_registration", "codex_actions", "codex_rpc", "dispatch_receipts", "native_capabilities", "worker_containers"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["codex_shared", "codex_shared.*"]
 
 [tool.pytest.ini_options]
 pythonpath = ["src", "tests"]

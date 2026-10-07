@@ -10,6 +10,8 @@ import threading
 
 import pytest
 
+from action_catalog_contract import EXPECTED_ACTION_NAMES
+
 
 ROOT = Path(__file__).parents[1]
 
@@ -102,15 +104,9 @@ def test_health_catalog_contract_and_session_cleanup(tmp_path, sse, catalog_vali
                 self.end_headers()
                 return
             else:
-                names = [
-                    "list_targets",
-                    "inspect_target",
-                    "read_dispatch_receipt",
-                    "create_thread_and_start_turn",
-                    *[f"other_{index}" for index in range(19)],
-                ]
+                names = sorted(EXPECTED_ACTION_NAMES)
                 if not catalog_valid:
-                    names.pop()
+                    names[-1] = "unknown_action"
                 result = {"tools": [{"name": name} for name in names]}
             response = json.dumps(
                 {"jsonrpc": "2.0", "id": payload["id"], "result": result}

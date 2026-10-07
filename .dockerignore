@@ -3,8 +3,14 @@
 !package.yaml
 !src/
 !src/*.py
+!src/codex_shared/
+!src/codex_shared/*.py
 !scripts/
+!scripts/run.sh
+!scripts/run-packages.sh
 !scripts/run-container.sh
+!scripts/start_packages.py
+!scripts/assemble_packages.py
 !scripts/preflight.py
 !scripts/container_health.py
 !scripts/install_runtime_transport_patch.py

@@ -1,0 +1,15 @@
+{
+  "codex_version": "0.160.1",
+  "source": "openai/codex rust-v0.160.1 codex-rs/app-server-protocol/schema/json/v2/ThreadMetadataUpdateParams.json",
+  "properties": {
+    "threadId": {},
+    "gitInfo": {
+      "properties": {
+        "branch": {},
+        "originUrl": {},
+        "sha": {}
+      }
+    }
+  },
+  "required": ["threadId"]
+}

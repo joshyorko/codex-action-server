@@ -11,6 +11,7 @@ from dataclasses import dataclass
 import json
 import math
 import queue
+import re
 import secrets
 import threading
 from pathlib import Path
@@ -28,33 +29,158 @@ METHODS = {
     "mcpServerStatus/list",
     "model/list",
     "modelProvider/capabilities/read",
+    "account/rateLimits/read",
+    "account/usage/read",
+    "app/list",
+    "app/read",
+    "hooks/list",
+    "mcpServer/resource/read",
+    "mcpServer/tool/call",
+    "plugin/list",
+    "plugin/read",
+    "review/start",
     "server/diagnostics",
+    "skills/list",
+    "thread/archive",
+    "thread/attachment/add",
+    "thread/attachment/list",
+    "thread/attachment/remove",
+    "thread/backgroundTerminals/list",
+    "thread/backgroundTerminals/terminate",
+    "thread/compact/start",
+    "thread/delete",
+    "thread/fork",
     "thread/goal/clear",
     "thread/goal/get",
     "thread/goal/set",
     "thread/items/list",
+    "thread/inject_items",
     "thread/list",
     "thread/loaded/list",
+    "thread/metadata/update",
+    "thread/name/set",
     "thread/read",
+    "thread/queue/add",
+    "thread/queue/delete",
+    "thread/queue/list",
+    "thread/queue/reorder",
+    "thread/queue/start",
+    "thread/queue/update",
+    "thread/revert",
     "thread/resume",
+    "thread/section/move",
+    "thread/search",
+    "thread/searchOccurrences",
+    "thread/timeline/list",
+    "threadSection/list",
+    "threadSection/create",
+    "threadSection/update",
+    "threadSection/delete",
     "thread/settings/update",
     "thread/start",
     "thread/turns/list",
+    "thread/unarchive",
     "turn/start",
     "turn/steer",
     "turn/interrupt",
     "turn/settings/update",
 }
 
+EXPERIMENTAL_METHODS = {
+    "app/read",
+    "server/diagnostics",
+    "thread/search",
+    "thread/searchOccurrences",
+    "thread/settings/update",
+    "thread/timeline/list",
+    "thread/queue/add",
+    "thread/queue/list",
+    "thread/queue/update",
+    "thread/queue/delete",
+    "thread/queue/reorder",
+    "thread/queue/start",
+    "thread/backgroundTerminals/list",
+    "thread/backgroundTerminals/terminate",
+    "turn/settings/update",
+}
+EXPERIMENTAL_NATIVE_VERSION = "0.160.1"
+_NATIVE_BUILD_VERSION_PATTERN = re.compile(
+    r"(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)"
+    r"(?:-(?:0|[1-9][0-9]*|[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*)"
+    r"(?:\.(?:0|[1-9][0-9]*|[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*))*)?"
+    r"(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?\Z"
+)
+
+
+def native_server_build_version(user_agent: object) -> str | None:
+    """Extract the build version from the native InitializeResponse userAgent.
+
+    Codex constructs this server response as
+    ``<originator>/<CARGO_PKG_VERSION> (<platform>) <product UA>``. The
+    originator and trailing clientInfo suffix vary by connecting client; only
+    the slash-delimited version immediately before the platform block is the
+    app-server build slot. Exactly one unambiguous build/platform boundary is
+    accepted; unknown or malformed formats fail closed.
+    """
+    if (
+        not isinstance(user_agent, str)
+        or not user_agent
+        or len(user_agent) > 2048
+        or any(character in user_agent for character in "\r\n\x00")
+    ):
+        return None
+    candidates = list(re.finditer(r"/([^/() ]+) \(", user_agent))
+    if len(candidates) != 1:
+        return None
+    candidate = candidates[0]
+    version = candidate.group(1)
+    if not _NATIVE_BUILD_VERSION_PATTERN.fullmatch(version):
+        return None
+    build_slot_start = candidate.start()
+    prefix = user_agent[:build_slot_start]
+    details = user_agent[candidate.end() :]
+    if not prefix.strip():
+        return None
+    platform, closing_parenthesis, product_details = details.partition(")")
+    if not closing_parenthesis or not platform.strip() or not product_details.strip():
+        return None
+    return version
+
+
 THREAD_ID_METHODS = {
     "thread/goal/clear",
     "thread/goal/get",
     "thread/goal/set",
     "thread/items/list",
+    "thread/inject_items",
+    "thread/archive",
+    "thread/attachment/add",
+    "thread/attachment/list",
+    "thread/attachment/remove",
+    "thread/backgroundTerminals/list",
+    "thread/backgroundTerminals/terminate",
+    "thread/compact/start",
+    "thread/delete",
+    "thread/fork",
     "thread/read",
+    "thread/metadata/update",
+    "thread/name/set",
+    "thread/section/move",
+    "thread/revert",
+    "review/start",
+    "mcpServer/tool/call",
+    "thread/queue/add",
+    "thread/queue/delete",
+    "thread/queue/list",
+    "thread/queue/reorder",
+    "thread/queue/start",
+    "thread/queue/update",
     "thread/resume",
+    "thread/searchOccurrences",
     "thread/settings/update",
+    "thread/timeline/list",
     "thread/turns/list",
+    "thread/unarchive",
     "turn/interrupt",
     "turn/settings/update",
     "turn/start",
@@ -67,7 +193,13 @@ TURN_ID_METHODS = {
     "turn/interrupt",
 }
 
-OPTIONAL_THREAD_ID_METHODS = {"mcpServerStatus/list"}
+OPTIONAL_THREAD_ID_METHODS = {
+    "account/usage/read",
+    "app/list",
+    "app/read",
+    "mcpServerStatus/list",
+    "mcpServer/resource/read",
+}
 
 
 class RpcError(RuntimeError):
@@ -759,8 +891,14 @@ class Client:
 
     def request(self, method, params, timeout=None):
         if method not in METHODS | {"initialize"}:
-            raise ValueError(
-                "Method outside the bounded thread/turn surface: " + method
+            raise ValueError("Method outside the typed native surface: " + method)
+        if (
+            method in EXPERIMENTAL_METHODS
+            and native_server_build_version(self.metadata.get("userAgent"))
+            != EXPERIMENTAL_NATIVE_VERSION
+        ):
+            raise RpcError(
+                method + " requires the pinned experimental Codex 0.160.1 schema"
             )
         self._validate_request(method, params)
         self.next_id += 1

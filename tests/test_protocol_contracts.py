@@ -3,12 +3,12 @@
 from __future__ import annotations
 
 import json
-import importlib
 from pathlib import Path
 import sys
-import types
 import unittest
 from unittest.mock import patch
+
+from native_wire_contracts import assert_native_request_contract
 
 SRC = Path(__file__).resolve().parents[1] / "src"
 FIXTURE = (
@@ -54,6 +54,7 @@ class RecordingClient:
         self.workstreams.append((cwd, thread_id, turn_id))
 
     def request(self, method, params):
+        assert_native_request_contract(method, params)
         self.calls.append((method, params))
         if method == "thread/read":
             return {
@@ -135,21 +136,9 @@ class RecordingClient:
 
 def load_actions_with_framework_shim():
     """Load the entrypoint without registering actions in a live server."""
-    fake_actions = types.ModuleType("actions")
+    from test_actions import load_actions
 
-    class FakeResponse:
-        def __init__(self, result):
-            self.result = result
-
-    def action(**_kwargs):
-        return lambda function: function
-
-    fake_actions.ActionError = RuntimeError
-    fake_actions.Response = FakeResponse
-    fake_actions.action = action
-    with patch.dict(sys.modules, {"actions": fake_actions}):
-        sys.modules.pop("codex_actions", None)
-        return importlib.import_module("codex_actions")
+    return load_actions()
 
 
 class NativeProtocolContractTests(unittest.TestCase):
@@ -159,12 +148,14 @@ class NativeProtocolContractTests(unittest.TestCase):
 
     def test_bounded_native_allowlist_contains_the_priority_controls(self):
         import codex_rpc
+        from native_capabilities import CAS_ADDITIVE_METHODS
 
         self.assertTrue(
             set(self.contract["bounded_native_methods"]).issubset(codex_rpc.METHODS)
         )
         self.assertEqual(
-            codex_rpc.METHODS, set(self.contract["bounded_native_methods"])
+            codex_rpc.METHODS,
+            set(self.contract["bounded_native_methods"]) | CAS_ADDITIVE_METHODS,
         )
 
     def test_fixture_is_versioned_and_explicitly_non_live(self):

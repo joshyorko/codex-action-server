@@ -80,9 +80,41 @@ def worker_exec(args, worker, *operation):
     )
 
 
+def valid_native_diagnostics(value):
+    if not isinstance(value, dict):
+        return False
+    process = value.get("process")
+    gauges = value.get("gauges")
+    if (
+        not isinstance(process, dict)
+        or type(process.get("id")) is not int
+        or not isinstance(gauges, list)
+    ):
+        return False
+    for key in ("residentMemoryBytes", "physicalFootprintBytes"):
+        if (
+            key in process
+            and process[key] is not None
+            and type(process[key]) is not int
+        ):
+            return False
+    return all(
+        isinstance(gauge, dict)
+        and isinstance(gauge.get("name"), str)
+        and type(gauge.get("value")) is int
+        for gauge in gauges
+    )
+
+
 def smoke(args, worker, target_file):
     from boundary import resolve_target
-    from codex_rpc import Client
+    from codex_rpc import (
+        Client,
+        EXPERIMENTAL_NATIVE_VERSION,
+        RpcError,
+        native_server_build_version,
+    )
+    from websockets.exceptions import ConnectionClosed
 
     target_file.write_text(
         json.dumps(
@@ -104,17 +136,45 @@ def smoke(args, worker, target_file):
     with Client(target, timeout=30) as client:
         if client.metadata.get("codexHome") != worker["codex_home"]:
             raise RuntimeError("Initialize returned the wrong Codex home")
-        diagnostics = client.request("server/diagnostics", {})
+        user_agent = client.metadata.get("userAgent")
+        native_build_version = native_server_build_version(user_agent)
         threads = client.request("thread/list", {"limit": 1})
-        if not isinstance(diagnostics, dict):
-            raise RuntimeError("Native diagnostics was not an object")
         if not isinstance(threads, dict) or not isinstance(threads.get("data"), list):
             raise RuntimeError("Native thread discovery was not a data list")
-        # Do not store diagnostic content, thread contents, or account data.
+        if native_build_version == EXPERIMENTAL_NATIVE_VERSION:
+            try:
+                diagnostics = client.request("server/diagnostics", {})
+            except (
+                ConnectionClosed,
+                OSError,
+                RpcError,
+                TimeoutError,
+                ValueError,
+                KeyError,
+            ) as error:
+                diagnostics_status = "failed"
+                diagnostics_error = type(error).__name__
+            else:
+                if valid_native_diagnostics(diagnostics):
+                    diagnostics_status = "passed"
+                    diagnostics_error = None
+                else:
+                    diagnostics_status = "failed"
+                    diagnostics_error = "invalid_response"
+            diagnostics_evidence = {"diagnostics_status": diagnostics_status}
+            if diagnostics_error is not None:
+                diagnostics_evidence["diagnostics_error"] = diagnostics_error
+        else:
+            diagnostics_evidence = {
+                "diagnostics_status": "skipped",
+                "diagnostics_skip_reason": "native_server_build_version_not_pinned",
+            }
+        # Do not store thread contents, diagnostic content, or account data.
         evidence = {
             "codex_home": client.metadata["codexHome"],
-            "server": client.metadata.get("userAgent"),
-            "diagnostics_read": True,
+            "native_user_agent": user_agent,
+            "native_server_build_version": native_build_version,
+            **diagnostics_evidence,
             "thread_list_read": True,
             "discovered_threads": len(threads["data"]),
         }
@@ -191,11 +251,18 @@ def run(args, report):
             recipe["image"]
         ):
             raise RuntimeError("Worker did not use the reviewed recipe image")
+        # Record the executable's own version before any version-gated RPC can
+        # fail, so the failure artifact identifies both the CLI and app server.
+        versions = {"codex": worker_exec(args, first, first["codex_bin"], "--version")}
+        report["installed_versions"] = versions
         report["stage"] = "native_read_only"
         stale_target, report["first_rpc"] = smoke(args, first, target_file)
-        versions = {}
+        if report["first_rpc"]["diagnostics_status"] == "failed":
+            raise RuntimeError(
+                "Pinned native diagnostics failed: "
+                + report["first_rpc"]["diagnostics_error"]
+            )
         for name, path in (
-            ("codex", first["codex_bin"]),
             ("headroom", "/home/linuxbrew/.linuxbrew/bin/headroom"),
             ("rtk", "/home/linuxbrew/.linuxbrew/bin/rtk"),
             ("gh", "/home/linuxbrew/.linuxbrew/bin/gh"),
@@ -233,6 +300,11 @@ def run(args, report):
         if hashlib.sha256(retained_config.encode()).hexdigest() != config_hash:
             raise RuntimeError("Stop/start changed the retained Codex config")
         _, report["resumed_rpc"] = smoke(args, resumed, target_file)
+        if report["resumed_rpc"]["diagnostics_status"] == "failed":
+            raise RuntimeError(
+                "Pinned native diagnostics failed after restart: "
+                + report["resumed_rpc"]["diagnostics_error"]
+            )
         report["retained_home_and_config"] = True
         report["restart_skipped_create_hook"] = True
         report["stage"] = "delete"

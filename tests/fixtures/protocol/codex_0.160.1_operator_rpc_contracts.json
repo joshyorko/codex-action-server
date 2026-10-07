@@ -1,0 +1,5462 @@
+{
+  "schema_version": "0.160.1",
+  "source": "openai/codex rust-v0.160.1 d27764b82f7118f674371e6d6e76271d9d606edb generated ClientRequest.json and codex_app_server_protocol.v2.schemas.json; experimental-only request shapes from protocol/v2/diagnostics.rs, thread.rs, turn.rs and pinned local schema fixture",
+  "contracts": {
+    "account/rateLimits/read": {
+      "params": {
+        "type": "object",
+        "properties": {
+          "excludeResetCreditDetails": {
+            "type": "boolean"
+          },
+          "supportsLunaReserve": {
+            "type": "boolean"
+          }
+        }
+      },
+      "response": {
+        "type": "object",
+        "required": [
+          "rateLimits"
+        ],
+        "properties": {
+          "accountId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "ordinaryUsageAllowed": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "rateLimitResetCredits": {
+            "anyOf": [
+              {
+                "type": "object",
+                "required": [
+                  "availableCount"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "rateLimitUpsell": {},
+          "rateLimits": {},
+          "rateLimitsByLimitId": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "additionalProperties": {
+              "$ref": "#/definitions/RateLimitSnapshot"
+            }
+          }
+        }
+      },
+      "native_request_type": "GetAccountRateLimitsParams",
+      "native_response_type": "GetAccountRateLimitsResponse",
+      "native_request_class": "default",
+      "native_protocol_source": "codex-rs/app-server-protocol/schema/json/ClientRequest.json + codex_app_server_protocol.v2.schemas.json",
+      "native_request_contract_scope": "native-schema"
+    },
+    "account/usage/read": {
+      "params": {
+        "type": "object",
+        "properties": {
+          "threadId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "response": {
+        "type": "object",
+        "required": [
+          "summary"
+        ],
+        "properties": {
+          "dailyUsageBuckets": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "object",
+              "required": [
+                "startDate",
+                "tokens"
+              ]
+            }
+          },
+          "summary": {
+            "type": "object",
+            "properties": {
+              "currentStreakDays": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "format": "int64"
+              },
+              "lifetimeTokens": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "format": "int64"
+              },
+              "longestRunningTurnSec": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "format": "int64"
+              },
+              "longestStreakDays": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "format": "int64"
+              },
+              "peakDailyTokens": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "format": "int64"
+              }
+            }
+          },
+          "threadUsage": {
+            "anyOf": [
+              {
+                "type": "object",
+                "required": [
+                  "estimatedUsageCreditsMicros",
+                  "groups",
+                  "threadId"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      },
+      "native_request_type": "GetAccountTokenUsageParams",
+      "native_response_type": "GetAccountTokenUsageResponse",
+      "native_request_class": "default",
+      "native_protocol_source": "codex-rs/app-server-protocol/schema/json/ClientRequest.json + codex_app_server_protocol.v2.schemas.json",
+      "native_request_contract_scope": "native-schema"
+    },
+    "app/list": {
+      "params": {
+        "type": "object",
+        "properties": {
+          "cursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "forceRefetch": {
+            "type": "boolean"
+          },
+          "limit": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0,
+            "format": "uint32"
+          },
+          "threadId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "response": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "id",
+                "name"
+              ]
+            }
+          },
+          "nextCursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "native_request_type": "AppsListParams",
+      "native_response_type": "AppsListResponse",
+      "native_request_class": "default",
+      "native_protocol_source": "codex-rs/app-server-protocol/schema/json/ClientRequest.json + codex_app_server_protocol.v2.schemas.json",
+      "native_request_contract_scope": "native-schema"
+    },
+    "app/read": {
+      "params": {
+        "required": [
+          "appIds"
+        ],
+        "properties": {
+          "appIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "threadId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "includeTools": {
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
+      "response": {
+        "required": [
+          "apps",
+          "missingAppIds"
+        ],
+        "properties": {
+          "apps": {
+            "type": "array",
+            "items": {
+              "required": [
+                "id",
+                "name"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "distributionChannel": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "iconUrl": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "iconUrlDark": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "installUrl": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "pluginDisplayNames": {
+                  "type": "array"
+                },
+                "toolSummaries": {
+                  "type": [
+                    "array",
+                    "null"
+                  ],
+                  "items": {
+                    "required": [
+                      "name",
+                      "description"
+                    ],
+                    "properties": {
+                      "name": {
+                        "type": "string"
+                      },
+                      "title": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "description": {
+                        "type": "string"
+                      },
+                      "isEnabled": {
+                        "type": "boolean"
+                      },
+                      "disabledReason": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "isReadOnly": {
+                        "type": "boolean"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "missingAppIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "type": "object"
+      },
+      "native_request_class": "default",
+      "experimental_api_gate": "native server build 0.160.1",
+      "native_request_type": "AppsReadParams",
+      "native_response_type": "AppsReadResponse",
+      "native_protocol_source": "codex-rs/app-server-protocol/src/protocol/v2/apps.rs",
+      "native_request_contract_scope": "native-schema"
+    },
+    "hooks/list": {
+      "params": {
+        "type": "object",
+        "properties": {
+          "cwds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "response": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "cwd",
+                "errors",
+                "hooks",
+                "warnings"
+              ]
+            }
+          }
+        }
+      },
+      "native_request_type": "HooksListParams",
+      "native_response_type": "HooksListResponse",
+      "native_request_class": "default",
+      "native_protocol_source": "codex-rs/app-server-protocol/schema/json/ClientRequest.json + codex_app_server_protocol.v2.schemas.json",
+      "native_request_contract_scope": "native-schema"
+    },
+    "mcpServer/resource/read": {
+      "params": {
+        "type": "object",
+        "required": [
+          "server",
+          "uri"
+        ],
+        "properties": {
+          "connectorId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "originCallId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "server": {
+            "type": "string"
+          },
+          "target": {
+            "anyOf": [
+              {
+                "type": "object",
+                "required": [
+                  "connectorId",
+                  "linkId"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "threadId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "uri": {
+            "type": "string"
+          }
+        }
+      },
+      "response": {
+        "type": "object",
+        "required": [
+          "contents"
+        ],
+        "properties": {
+          "contents": {
+            "type": "array",
+            "items": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "required": [
+                    "text",
+                    "uri"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "required": [
+                    "blob",
+                    "uri"
+                  ]
+                }
+              ]
+            }
+          },
+          "originCallId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "native_request_type": "McpResourceReadParams",
+      "native_response_type": "McpResourceReadResponse",
+      "native_request_class": "default",
+      "native_protocol_source": "codex-rs/app-server-protocol/schema/json/ClientRequest.json + codex_app_server_protocol.v2.schemas.json",
+      "native_request_contract_scope": "native-schema"
+    },
+    "mcpServer/tool/call": {
+      "params": {
+        "type": "object",
+        "required": [
+          "server",
+          "threadId",
+          "tool"
+        ],
+        "properties": {
+          "_meta": {
+            "type": "any"
+          },
+          "arguments": {
+            "type": "any"
+          },
+          "server": {
+            "type": "string"
+          },
+          "threadId": {
+            "type": "string"
+          },
+          "tool": {
+            "type": "string"
+          }
+        }
+      },
+      "response": {
+        "type": "object",
+        "required": [
+          "content"
+        ],
+        "properties": {
+          "_meta": {
+            "type": "any"
+          },
+          "content": {
+            "type": "array",
+            "items": {
+              "type": "any"
+            }
+          },
+          "isError": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "structuredContent": {
+            "type": "any"
+          }
+        }
+      },
+      "native_request_type": "McpServerToolCallParams",
+      "native_response_type": "McpServerToolCallResponse",
+      "native_request_class": "default",
+      "native_protocol_source": "codex-rs/app-server-protocol/schema/json/ClientRequest.json + codex_app_server_protocol.v2.schemas.json",
+      "native_request_contract_scope": "native-schema"
+    },
+    "mcpServerStatus/list": {
+      "params": {
+        "type": "object",
+        "properties": {
+          "cursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "detail": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "full",
+                  "toolsAndAuthOnly"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "limit": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0,
+            "format": "uint32"
+          },
+          "serverName": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "threadId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "response": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "authStatus",
+                "name",
+                "resourceTemplates",
+                "resources",
+                "tools"
+              ]
+            }
+          },
+          "nextCursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "native_request_type": "ListMcpServerStatusParams",
+      "native_response_type": "ListMcpServerStatusResponse",
+      "native_request_class": "default",
+      "native_protocol_source": "codex-rs/app-server-protocol/schema/json/ClientRequest.json + codex_app_server_protocol.v2.schemas.json",
+      "native_request_contract_scope": "native-schema"
+    },
+    "model/list": {
+      "params": {
+        "type": "object",
+        "properties": {
+          "cursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "includeHidden": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "limit": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0,
+            "format": "uint32"
+          }
+        }
+      },
+      "response": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "defaultReasoningEffort",
+                "description",
+                "displayName",
+                "hidden",
+                "id",
+                "isDefault",
+                "model",
+                "supportedReasoningEfforts"
+              ]
+            }
+          },
+          "nextCursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "native_request_type": "ModelListParams",
+      "native_response_type": "ModelListResponse",
+      "native_request_class": "default",
+      "native_protocol_source": "codex-rs/app-server-protocol/schema/json/ClientRequest.json + codex_app_server_protocol.v2.schemas.json",
+      "native_request_contract_scope": "native-schema"
+    },
+    "modelProvider/capabilities/read": {
+      "params": {
+        "type": "object"
+      },
+      "response": {
+        "type": "object",
+        "required": [
+          "imageGeneration",
+          "namespaceTools",
+          "webSearch"
+        ],
+        "properties": {
+          "imageGeneration": {
+            "type": "boolean"
+          },
+          "namespaceTools": {
+            "type": "boolean"
+          },
+          "webSearch": {
+            "type": "boolean"
+          }
+        }
+      },
+      "native_request_type": "ModelProviderCapabilitiesReadParams",
+      "native_response_type": "ModelProviderCapabilitiesReadResponse",
+      "native_request_class": "default",
+      "native_protocol_source": "codex-rs/app-server-protocol/schema/json/ClientRequest.json + codex_app_server_protocol.v2.schemas.json",
+      "native_request_contract_scope": "native-schema"
+    },
+    "plugin/list": {
+      "params": {
+        "type": "object",
+        "properties": {
+          "cwds": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "string"
+            }
+          },
+          "forceRefetch": {
+            "type": "boolean"
+          },
+          "marketplaceKinds": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "string",
+              "enum": [
+                "local",
+                "vertical",
+                "workspace-directory",
+                "shared-with-me",
+                "created-by-me-remote"
+              ]
+            }
+          }
+        }
+      },
+      "response": {
+        "type": "object",
+        "required": [
+          "marketplaces"
+        ],
+        "properties": {
+          "featuredPluginIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "marketplaceLoadErrors": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "marketplacePath",
+                "message"
+              ]
+            }
+          },
+          "marketplaces": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "name",
+                "plugins"
+              ]
+            }
+          }
+        }
+      },
+      "native_request_type": "PluginListParams",
+      "native_response_type": "PluginListResponse",
+      "native_request_class": "default",
+      "native_protocol_source": "codex-rs/app-server-protocol/schema/json/ClientRequest.json + codex_app_server_protocol.v2.schemas.json",
+      "native_request_contract_scope": "native-schema"
+    },
+    "plugin/read": {
+      "params": {
+        "type": "object",
+        "required": [
+          "pluginName"
+        ],
+        "properties": {
+          "marketplacePath": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "pluginName": {
+            "type": "string"
+          },
+          "remoteMarketplaceName": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "response": {
+        "type": "object",
+        "required": [
+          "plugin"
+        ],
+        "properties": {
+          "plugin": {
+            "type": "object",
+            "required": [
+              "appTemplates",
+              "apps",
+              "hooks",
+              "marketplaceName",
+              "mcpServers",
+              "skills",
+              "summary"
+            ],
+            "properties": {
+              "appTemplates": {
+                "type": "array"
+              },
+              "apps": {
+                "type": "array"
+              },
+              "description": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "hooks": {
+                "type": "array"
+              },
+              "marketplaceName": {
+                "type": "string"
+              },
+              "marketplacePath": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "mcpServers": {
+                "type": "array"
+              },
+              "onboardingSkill": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "required": [
+                      "description",
+                      "enabled",
+                      "name"
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "scheduledTasks": {
+                "type": [
+                  "array",
+                  "null"
+                ]
+              },
+              "shareUrl": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "skills": {
+                "type": "array"
+              },
+              "summary": {
+                "type": "object",
+                "required": [
+                  "authPolicy",
+                  "enabled",
+                  "id",
+                  "installPolicy",
+                  "installed",
+                  "name",
+                  "source"
+                ]
+              }
+            }
+          }
+        }
+      },
+      "native_request_type": "PluginReadParams",
+      "native_response_type": "PluginReadResponse",
+      "native_request_class": "default",
+      "native_protocol_source": "codex-rs/app-server-protocol/schema/json/ClientRequest.json + codex_app_server_protocol.v2.schemas.json",
+      "native_request_contract_scope": "native-schema"
+    },
+    "review/start": {
+      "params": {
+        "type": "object",
+        "required": [
+          "target",
+          "threadId"
+        ],
+        "properties": {
+          "delivery": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "inline",
+                  "detached"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "target": {
+            "oneOf": [
+              {
+                "type": "object",
+                "required": [
+                  "type"
+                ],
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "uncommittedChanges"
+                    ]
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "required": [
+                  "branch",
+                  "type"
+                ],
+                "properties": {
+                  "branch": {
+                    "type": "string"
+                  },
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "baseBranch"
+                    ]
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "required": [
+                  "sha",
+                  "type"
+                ],
+                "properties": {
+                  "sha": {
+                    "type": "string"
+                  },
+                  "title": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "commit"
+                    ]
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "required": [
+                  "instructions",
+                  "type"
+                ],
+                "properties": {
+                  "instructions": {
+                    "type": "string"
+                  },
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "custom"
+                    ]
+                  }
+                }
+              }
+            ]
+          },
+          "threadId": {
+            "type": "string"
+          }
+        }
+      },
+      "response": {
+        "type": "object",
+        "required": [
+          "reviewThreadId",
+          "turn"
+        ],
+        "properties": {
+          "reviewThreadId": {
+            "type": "string"
+          },
+          "turn": {
+            "type": "object",
+            "required": [
+              "id",
+              "items",
+              "status"
+            ],
+            "properties": {
+              "completedAt": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "format": "int64"
+              },
+              "durationMs": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "format": "int64"
+              },
+              "error": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "required": [
+                      "message"
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "id": {
+                "type": "string"
+              },
+              "items": {
+                "type": "array"
+              },
+              "itemsView": {},
+              "startedAt": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "format": "int64"
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "completed",
+                  "interrupted",
+                  "failed",
+                  "inProgress"
+                ]
+              }
+            }
+          }
+        }
+      },
+      "native_request_type": "ReviewStartParams",
+      "native_response_type": "ReviewStartResponse",
+      "native_request_class": "default",
+      "native_protocol_source": "codex-rs/app-server-protocol/schema/json/ClientRequest.json + codex_app_server_protocol.v2.schemas.json",
+      "native_request_contract_scope": "native-schema"
+    },
+    "server/diagnostics": {
+      "params": {
+        "required": [],
+        "properties": {},
+        "type": "object"
+      },
+      "response": {
+        "required": [
+          "process",
+          "gauges"
+        ],
+        "properties": {
+          "process": {
+            "type": "object",
+            "required": [
+              "id"
+            ],
+            "properties": {
+              "id": {
+                "type": "integer"
+              },
+              "residentMemoryBytes": {
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              },
+              "physicalFootprintBytes": {
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              }
+            }
+          },
+          "gauges": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "name",
+                "value"
+              ],
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "value": {
+                  "type": "integer"
+                }
+              }
+            }
+          }
+        },
+        "type": "object"
+      },
+      "native_request_type": "ServerDiagnosticsParams",
+      "native_response_type": "ServerDiagnosticsResponse",
+      "native_request_class": "experimental-only",
+      "experimental_api_gate": "native server build 0.160.1",
+      "native_protocol_source": "codex-rs/app-server-protocol/src/protocol/v2/diagnostics.rs",
+      "native_request_contract_scope": "native-schema"
+    },
+    "skills/list": {
+      "params": {
+        "type": "object",
+        "properties": {
+          "cwds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "forceReload": {
+            "type": "boolean"
+          }
+        }
+      },
+      "response": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "cwd",
+                "errors",
+                "skills"
+              ]
+            }
+          }
+        }
+      },
+      "native_request_type": "SkillsListParams",
+      "native_response_type": "SkillsListResponse",
+      "native_request_class": "default",
+      "native_protocol_source": "codex-rs/app-server-protocol/schema/json/ClientRequest.json + codex_app_server_protocol.v2.schemas.json",
+      "native_request_contract_scope": "native-schema"
+    },
+    "thread/archive": {
+      "params": {
+        "type": "object",
+        "required": [
+          "threadId"
+        ],
+        "properties": {
+          "threadId": {
+            "type": "string"
+          }
+        }
+      },
+      "response": {
+        "type": "object"
+      },
+      "native_request_type": "ThreadArchiveParams",
+      "native_response_type": "ThreadArchiveResponse",
+      "native_request_class": "default",
+      "native_protocol_source": "codex-rs/app-server-protocol/schema/json/ClientRequest.json + codex_app_server_protocol.v2.schemas.json",
+      "native_request_contract_scope": "native-schema"
+    },
+    "thread/attachment/add": {
+      "params": {
+        "type": "object",
+        "required": [
+          "attachmentType",
+          "identityKey",
+          "payload",
+          "threadId"
+        ],
+        "properties": {
+          "attachmentType": {
+            "type": "string"
+          },
+          "identityKey": {
+            "type": "string"
+          },
+          "payload": {
+            "type": "any"
+          },
+          "threadId": {
+            "type": "string"
+          }
+        }
+      },
+      "response": {
+        "type": "object",
+        "required": [
+          "attachment",
+          "outcome"
+        ],
+        "properties": {
+          "attachment": {
+            "type": "object",
+            "required": [
+              "attachmentType",
+              "createdAt",
+              "id",
+              "identityKey",
+              "payload"
+            ],
+            "properties": {
+              "attachmentType": {
+                "type": "string"
+              },
+              "createdAt": {
+                "type": "integer",
+                "format": "int64"
+              },
+              "id": {
+                "type": "string"
+              },
+              "identityKey": {
+                "type": "string"
+              },
+              "payload": {
+                "type": "any"
+              }
+            }
+          },
+          "outcome": {
+            "type": "string",
+            "enum": [
+              "created",
+              "existing"
+            ]
+          }
+        }
+      },
+      "native_request_type": "ThreadAttachmentAddParams",
+      "native_response_type": "ThreadAttachmentAddResponse",
+      "native_request_class": "default",
+      "native_protocol_source": "codex-rs/app-server-protocol/schema/json/ClientRequest.json + codex_app_server_protocol.v2.schemas.json",
+      "native_request_contract_scope": "native-schema"
+    },
+    "thread/attachment/list": {
+      "params": {
+        "type": "object",
+        "required": [
+          "threadId"
+        ],
+        "properties": {
+          "cursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "limit": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0,
+            "format": "uint32"
+          },
+          "threadId": {
+            "type": "string"
+          }
+        }
+      },
+      "response": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "attachmentType",
+                "createdAt",
+                "id",
+                "identityKey",
+                "payload"
+              ]
+            }
+          },
+          "nextCursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "native_request_type": "ThreadAttachmentListParams",
+      "native_response_type": "ThreadAttachmentListResponse",
+      "native_request_class": "default",
+      "native_protocol_source": "codex-rs/app-server-protocol/schema/json/ClientRequest.json + codex_app_server_protocol.v2.schemas.json",
+      "native_request_contract_scope": "native-schema"
+    },
+    "thread/attachment/remove": {
+      "params": {
+        "type": "object",
+        "required": [
+          "attachmentType",
+          "identityKey",
+          "threadId"
+        ],
+        "properties": {
+          "attachmentType": {
+            "type": "string"
+          },
+          "identityKey": {
+            "type": "string"
+          },
+          "threadId": {
+            "type": "string"
+          }
+        }
+      },
+      "response": {
+        "type": "object"
+      },
+      "native_request_type": "ThreadAttachmentRemoveParams",
+      "native_response_type": "ThreadAttachmentRemoveResponse",
+      "native_request_class": "default",
+      "native_protocol_source": "codex-rs/app-server-protocol/schema/json/ClientRequest.json + codex_app_server_protocol.v2.schemas.json",
+      "native_request_contract_scope": "native-schema"
+    },
+    "thread/backgroundTerminals/list": {
+      "params": {
+        "required": [
+          "threadId"
+        ],
+        "properties": {
+          "threadId": {
+            "type": "string"
+          },
+          "cursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "limit": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          }
+        },
+        "type": "object"
+      },
+      "response": {
+        "required": [
+          "data",
+          "nextCursor"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "required": [
+                "itemId",
+                "processId",
+                "command",
+                "cwd"
+              ],
+              "properties": {
+                "itemId": {
+                  "type": "string"
+                },
+                "processId": {
+                  "type": "string"
+                },
+                "command": {
+                  "type": "string"
+                },
+                "cwd": {
+                  "type": "string"
+                },
+                "osPid": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ]
+                },
+                "cpuPercent": {
+                  "type": [
+                    "number",
+                    "null"
+                  ]
+                },
+                "rssKb": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ]
+                }
+              }
+            }
+          },
+          "nextCursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "type": "object"
+      },
+      "native_request_class": "experimental-only",
+      "experimental_api_gate": "native server build 0.160.1",
+      "native_request_type": "ThreadBackgroundTerminalsListParams",
+      "native_response_type": "ThreadBackgroundTerminalsListResponse",
+      "native_protocol_source": "codex-rs/app-server-protocol/src/protocol/v2/thread.rs",
+      "native_request_contract_scope": "native-schema"
+    },
+    "thread/backgroundTerminals/terminate": {
+      "params": {
+        "required": [
+          "threadId",
+          "processId"
+        ],
+        "properties": {
+          "threadId": {
+            "type": "string"
+          },
+          "processId": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "response": {
+        "required": [
+          "terminated"
+        ],
+        "properties": {
+          "terminated": {
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
+      "native_request_class": "experimental-only",
+      "experimental_api_gate": "native server build 0.160.1",
+      "native_request_type": "ThreadBackgroundTerminalsTerminateParams",
+      "native_response_type": "ThreadBackgroundTerminalsTerminateResponse",
+      "native_protocol_source": "codex-rs/app-server-protocol/src/protocol/v2/thread.rs",
+      "native_request_contract_scope": "native-schema"
+    },
+    "thread/compact/start": {
+      "params": {
+        "type": "object",
+        "required": [
+          "threadId"
+        ],
+        "properties": {
+          "threadId": {
+            "type": "string"
+          }
+        }
+      },
+      "response": {
+        "type": "object"
+      },
+      "native_request_type": "ThreadCompactStartParams",
+      "native_response_type": "ThreadCompactStartResponse",
+      "native_request_class": "default",
+      "native_protocol_source": "codex-rs/app-server-protocol/schema/json/ClientRequest.json + codex_app_server_protocol.v2.schemas.json",
+      "native_request_contract_scope": "native-schema"
+    },
+    "thread/delete": {
+      "params": {
+        "type": "object",
+        "required": [
+          "threadId"
+        ],
+        "properties": {
+          "threadId": {
+            "type": "string"
+          }
+        }
+      },
+      "response": {
+        "type": "object"
+      },
+      "native_request_type": "ThreadDeleteParams",
+      "native_response_type": "ThreadDeleteResponse",
+      "native_request_class": "default",
+      "native_protocol_source": "codex-rs/app-server-protocol/schema/json/ClientRequest.json + codex_app_server_protocol.v2.schemas.json",
+      "native_request_contract_scope": "native-schema"
+    },
+    "thread/fork": {
+      "params": {
+        "type": "object",
+        "required": [
+          "threadId"
+        ],
+        "properties": {
+          "approvalPolicy": {
+            "anyOf": [
+              {
+                "oneOf": [
+                  {
+                    "type": "string",
+                    "enum": [
+                      "untrusted",
+                      "on-request",
+                      "never"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "required": [
+                      "granular"
+                    ],
+                    "additionalProperties": false
+                  }
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "approvalsReviewer": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "user",
+                  "auto_review",
+                  "guardian_subagent"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "baseInstructions": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "config": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "additionalProperties": true
+          },
+          "cwd": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "developerInstructions": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "ephemeral": {
+            "type": "boolean"
+          },
+          "excludeTurns": {
+            "type": "boolean"
+          },
+          "lastTurnId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "model": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "modelProvider": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "sandbox": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "read-only",
+                  "workspace-write",
+                  "danger-full-access"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "serviceTier": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "threadId": {
+            "type": "string"
+          },
+          "threadSource": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      },
+      "response": {
+        "type": "object",
+        "required": [
+          "approvalPolicy",
+          "approvalsReviewer",
+          "cwd",
+          "model",
+          "modelProvider",
+          "sandbox",
+          "thread"
+        ],
+        "properties": {
+          "approvalPolicy": {
+            "oneOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "untrusted",
+                  "on-request",
+                  "never"
+                ]
+              },
+              {
+                "type": "object",
+                "required": [
+                  "granular"
+                ],
+                "additionalProperties": false
+              }
+            ]
+          },
+          "approvalsReviewer": {},
+          "cwd": {
+            "type": "string"
+          },
+          "disabledPluginIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "instructionSources": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "model": {
+            "type": "string"
+          },
+          "modelProvider": {
+            "type": "string"
+          },
+          "reasoningEffort": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "sandbox": {},
+          "serviceTier": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "thread": {
+            "type": "object",
+            "required": [
+              "cliVersion",
+              "createdAt",
+              "cwd",
+              "ephemeral",
+              "id",
+              "modelProvider",
+              "preview",
+              "projectId",
+              "sessionId",
+              "source",
+              "status",
+              "turns",
+              "updatedAt"
+            ],
+            "properties": {
+              "agentNickname": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "agentRole": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "cliVersion": {
+                "type": "string"
+              },
+              "createdAt": {
+                "type": "integer",
+                "format": "int64"
+              },
+              "cwd": {},
+              "ephemeral": {
+                "type": "boolean"
+              },
+              "forkedFromId": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "gitInfo": {
+                "anyOf": [
+                  {
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "historyMode": {},
+              "id": {
+                "type": "string"
+              },
+              "model": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "modelProvider": {
+                "type": "string"
+              },
+              "name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "originator": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "parentThreadId": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "path": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "preview": {
+                "type": "string"
+              },
+              "projectId": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "reasoningEffort": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "recencyAt": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "format": "int64"
+              },
+              "section": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "required": [
+                      "id",
+                      "name"
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "sectionEnteredAt": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "format": "int64"
+              },
+              "sessionId": {
+                "type": "string"
+              },
+              "source": {},
+              "status": {},
+              "threadSource": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "turns": {
+                "type": "array"
+              },
+              "updatedAt": {
+                "type": "integer",
+                "format": "int64"
+              }
+            }
+          }
+        }
+      },
+      "native_request_type": "ThreadForkParams",
+      "native_response_type": "ThreadForkResponse",
+      "native_request_class": "default",
+      "native_protocol_source": "codex-rs/app-server-protocol/schema/json/ClientRequest.json + codex_app_server_protocol.v2.schemas.json",
+      "native_request_contract_scope": "native-schema"
+    },
+    "thread/goal/clear": {
+      "params": {
+        "type": "object",
+        "required": [
+          "threadId"
+        ],
+        "properties": {
+          "threadId": {
+            "type": "string"
+          }
+        }
+      },
+      "response": {
+        "type": "object",
+        "required": [
+          "cleared"
+        ],
+        "properties": {
+          "cleared": {
+            "type": "boolean"
+          }
+        }
+      },
+      "native_request_type": "ThreadGoalClearParams",
+      "native_response_type": "ThreadGoalClearResponse",
+      "native_request_class": "default",
+      "native_protocol_source": "codex-rs/app-server-protocol/schema/json/ClientRequest.json + codex_app_server_protocol.v2.schemas.json",
+      "native_request_contract_scope": "native-schema"
+    },
+    "thread/goal/get": {
+      "params": {
+        "type": "object",
+        "required": [
+          "threadId"
+        ],
+        "properties": {
+          "threadId": {
+            "type": "string"
+          }
+        }
+      },
+      "response": {
+        "type": "object",
+        "properties": {
+          "goal": {
+            "anyOf": [
+              {
+                "type": "object",
+                "required": [
+                  "createdAt",
+                  "objective",
+                  "status",
+                  "threadId",
+                  "timeUsedSeconds",
+                  "tokensUsed",
+                  "updatedAt"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      },
+      "native_request_type": "ThreadGoalGetParams",
+      "native_response_type": "ThreadGoalGetResponse",
+      "native_request_class": "default",
+      "native_protocol_source": "codex-rs/app-server-protocol/schema/json/ClientRequest.json + codex_app_server_protocol.v2.schemas.json",
+      "native_request_contract_scope": "native-schema"
+    },
+    "thread/goal/set": {
+      "params": {
+        "type": "object",
+        "required": [
+          "threadId"
+        ],
+        "properties": {
+          "objective": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "active",
+                  "paused",
+                  "blocked",
+                  "usageLimited",
+                  "budgetLimited",
+                  "complete"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "threadId": {
+            "type": "string"
+          },
+          "tokenBudget": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64"
+          }
+        }
+      },
+      "response": {
+        "type": "object",
+        "required": [
+          "goal"
+        ],
+        "properties": {
+          "goal": {
+            "type": "object",
+            "required": [
+              "createdAt",
+              "objective",
+              "status",
+              "threadId",
+              "timeUsedSeconds",
+              "tokensUsed",
+              "updatedAt"
+            ],
+            "properties": {
+              "createdAt": {
+                "type": "integer",
+                "format": "int64"
+              },
+              "objective": {
+                "type": "string"
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "active",
+                  "paused",
+                  "blocked",
+                  "usageLimited",
+                  "budgetLimited",
+                  "complete"
+                ]
+              },
+              "threadId": {
+                "type": "string"
+              },
+              "timeUsedSeconds": {
+                "type": "integer",
+                "format": "int64"
+              },
+              "tokenBudget": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "format": "int64"
+              },
+              "tokensUsed": {
+                "type": "integer",
+                "format": "int64"
+              },
+              "updatedAt": {
+                "type": "integer",
+                "format": "int64"
+              }
+            }
+          }
+        }
+      },
+      "native_request_type": "ThreadGoalSetParams",
+      "native_response_type": "ThreadGoalSetResponse",
+      "native_request_class": "default",
+      "native_protocol_source": "codex-rs/app-server-protocol/schema/json/ClientRequest.json + codex_app_server_protocol.v2.schemas.json",
+      "native_request_contract_scope": "native-schema"
+    },
+    "thread/inject_items": {
+      "params": {
+        "type": "object",
+        "required": [
+          "items",
+          "threadId"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "any"
+            }
+          },
+          "threadId": {
+            "type": "string"
+          }
+        }
+      },
+      "response": {
+        "type": "object"
+      },
+      "native_request_type": "ThreadInjectItemsParams",
+      "native_response_type": "ThreadInjectItemsResponse",
+      "native_request_class": "default",
+      "native_protocol_source": "codex-rs/app-server-protocol/schema/json/ClientRequest.json + codex_app_server_protocol.v2.schemas.json",
+      "native_request_contract_scope": "native-schema"
+    },
+    "thread/items/list": {
+      "params": {
+        "type": "object",
+        "required": [
+          "threadId"
+        ],
+        "properties": {
+          "cursor": {
+            "anyOf": [
+              {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "oneOf": [
+                      {
+                        "type": "object",
+                        "required": [
+                          "itemId",
+                          "type"
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "limit": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0,
+            "format": "uint32"
+          },
+          "sortDirection": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "asc",
+                  "desc"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "threadId": {
+            "type": "string"
+          },
+          "turnId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "response": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "backwardsCursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "item",
+                "turnId"
+              ]
+            }
+          },
+          "nextCursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "native_request_type": "ThreadItemsListParams",
+      "native_response_type": "ThreadItemsListResponse",
+      "native_request_class": "default",
+      "native_protocol_source": "codex-rs/app-server-protocol/schema/json/ClientRequest.json + codex_app_server_protocol.v2.schemas.json",
+      "native_request_contract_scope": "native-schema"
+    },
+    "thread/list": {
+      "params": {
+        "type": "object",
+        "properties": {
+          "archived": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "cursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "cwd": {
+            "anyOf": [
+              {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "array"
+                  }
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "limit": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0,
+            "format": "uint32"
+          },
+          "modelProviders": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "string"
+            }
+          },
+          "originators": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "string"
+            }
+          },
+          "searchTerm": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "sectionId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "sortDirection": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "asc",
+                  "desc"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "sortKey": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "created_at",
+                  "updated_at",
+                  "recency_at",
+                  "section_position"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "sourceKinds": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "string",
+              "enum": [
+                "cli",
+                "vscode",
+                "exec",
+                "appServer",
+                "subAgent",
+                "subAgentReview",
+                "subAgentCompact",
+                "subAgentThreadSpawn",
+                "subAgentOther",
+                "unknown"
+              ]
+            }
+          },
+          "useStateDbOnly": {
+            "type": "boolean"
+          }
+        }
+      },
+      "response": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "backwardsCursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "cliVersion",
+                "createdAt",
+                "cwd",
+                "ephemeral",
+                "id",
+                "modelProvider",
+                "preview",
+                "projectId",
+                "sessionId",
+                "source",
+                "status",
+                "turns",
+                "updatedAt"
+              ]
+            }
+          },
+          "nextCursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "native_request_type": "ThreadListParams",
+      "native_response_type": "ThreadListResponse",
+      "native_request_class": "default",
+      "native_protocol_source": "codex-rs/app-server-protocol/schema/json/ClientRequest.json + codex_app_server_protocol.v2.schemas.json",
+      "native_request_contract_scope": "native-schema"
+    },
+    "thread/loaded/list": {
+      "params": {
+        "type": "object",
+        "properties": {
+          "cursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "limit": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0,
+            "format": "uint32"
+          }
+        }
+      },
+      "response": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "nextCursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "native_request_type": "ThreadLoadedListParams",
+      "native_response_type": "ThreadLoadedListResponse",
+      "native_request_class": "default",
+      "native_protocol_source": "codex-rs/app-server-protocol/schema/json/ClientRequest.json + codex_app_server_protocol.v2.schemas.json",
+      "native_request_contract_scope": "native-schema"
+    },
+    "thread/metadata/update": {
+      "params": {
+        "type": "object",
+        "required": [
+          "threadId"
+        ],
+        "properties": {
+          "gitInfo": {
+            "anyOf": [
+              {
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "threadId": {
+            "type": "string"
+          }
+        }
+      },
+      "response": {
+        "type": "object",
+        "required": [
+          "thread"
+        ],
+        "properties": {
+          "thread": {
+            "type": "object",
+            "required": [
+              "cliVersion",
+              "createdAt",
+              "cwd",
+              "ephemeral",
+              "id",
+              "modelProvider",
+              "preview",
+              "projectId",
+              "sessionId",
+              "source",
+              "status",
+              "turns",
+              "updatedAt"
+            ],
+            "properties": {
+              "agentNickname": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "agentRole": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "cliVersion": {
+                "type": "string"
+              },
+              "createdAt": {
+                "type": "integer",
+                "format": "int64"
+              },
+              "cwd": {},
+              "ephemeral": {
+                "type": "boolean"
+              },
+              "forkedFromId": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "gitInfo": {
+                "anyOf": [
+                  {
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "historyMode": {},
+              "id": {
+                "type": "string"
+              },
+              "model": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "modelProvider": {
+                "type": "string"
+              },
+              "name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "originator": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "parentThreadId": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "path": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "preview": {
+                "type": "string"
+              },
+              "projectId": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "reasoningEffort": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "recencyAt": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "format": "int64"
+              },
+              "section": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "required": [
+                      "id",
+                      "name"
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "sectionEnteredAt": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "format": "int64"
+              },
+              "sessionId": {
+                "type": "string"
+              },
+              "source": {},
+              "status": {},
+              "threadSource": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "turns": {
+                "type": "array"
+              },
+              "updatedAt": {
+                "type": "integer",
+                "format": "int64"
+              }
+            }
+          }
+        }
+      },
+      "native_request_type": "ThreadMetadataUpdateParams",
+      "native_response_type": "ThreadMetadataUpdateResponse",
+      "native_request_class": "default",
+      "native_protocol_source": "codex-rs/app-server-protocol/schema/json/ClientRequest.json + codex_app_server_protocol.v2.schemas.json",
+      "native_request_contract_scope": "native-schema"
+    },
+    "thread/name/set": {
+      "params": {
+        "type": "object",
+        "required": [
+          "name",
+          "threadId"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "threadId": {
+            "type": "string"
+          }
+        }
+      },
+      "response": {
+        "type": "object"
+      },
+      "native_request_type": "ThreadSetNameParams",
+      "native_response_type": "ThreadSetNameResponse",
+      "native_request_class": "default",
+      "native_protocol_source": "codex-rs/app-server-protocol/schema/json/ClientRequest.json + codex_app_server_protocol.v2.schemas.json",
+      "native_request_contract_scope": "native-schema"
+    },
+    "thread/queue/add": {
+      "params": {
+        "required": [
+          "threadId",
+          "input",
+          "clientUserMessageId"
+        ],
+        "properties": {
+          "threadId": {
+            "type": "string"
+          },
+          "input": {
+            "type": "array"
+          },
+          "clientUserMessageId": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "response": {
+        "required": [
+          "queuedSubmission"
+        ],
+        "properties": {
+          "queuedSubmission": {
+            "required": [
+              "id",
+              "input",
+              "clientUserMessageId"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "input": {
+                "type": "array"
+              },
+              "clientUserMessageId": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "type": "object"
+      },
+      "native_request_class": "experimental-only",
+      "experimental_api_gate": "native server build 0.160.1",
+      "native_request_type": "ThreadQueueAddParams",
+      "native_response_type": "ThreadQueueAddResponse",
+      "native_protocol_source": "codex-rs/app-server-protocol/src/protocol/v2/thread.rs",
+      "native_request_contract_scope": "native-schema"
+    },
+    "thread/queue/delete": {
+      "params": {
+        "required": [
+          "threadId",
+          "queuedSubmissionId"
+        ],
+        "properties": {
+          "threadId": {
+            "type": "string"
+          },
+          "queuedSubmissionId": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "response": {
+        "required": [
+          "deleted"
+        ],
+        "properties": {
+          "deleted": {
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
+      "native_request_class": "experimental-only",
+      "experimental_api_gate": "native server build 0.160.1",
+      "native_request_type": "ThreadQueueDeleteParams",
+      "native_response_type": "ThreadQueueDeleteResponse",
+      "native_protocol_source": "codex-rs/app-server-protocol/src/protocol/v2/thread.rs",
+      "native_request_contract_scope": "native-schema"
+    },
+    "thread/queue/list": {
+      "params": {
+        "required": [
+          "threadId"
+        ],
+        "properties": {
+          "threadId": {
+            "type": "string"
+          },
+          "cursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "limit": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          }
+        },
+        "type": "object"
+      },
+      "response": {
+        "required": [
+          "data",
+          "nextCursor"
+        ],
+        "properties": {
+          "data": {
+            "type": "array"
+          },
+          "nextCursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "type": "object"
+      },
+      "native_request_class": "experimental-only",
+      "experimental_api_gate": "native server build 0.160.1",
+      "native_request_type": "ThreadQueueListParams",
+      "native_response_type": "ThreadQueueListResponse",
+      "native_protocol_source": "codex-rs/app-server-protocol/src/protocol/v2/thread.rs",
+      "native_request_contract_scope": "native-schema"
+    },
+    "thread/queue/reorder": {
+      "params": {
+        "required": [
+          "threadId",
+          "queuedSubmissionIds"
+        ],
+        "properties": {
+          "threadId": {
+            "type": "string"
+          },
+          "queuedSubmissionIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "type": "object"
+      },
+      "response": {
+        "required": [],
+        "properties": {},
+        "type": "object"
+      },
+      "native_request_class": "experimental-only",
+      "experimental_api_gate": "native server build 0.160.1",
+      "native_request_type": "ThreadQueueReorderParams",
+      "native_response_type": "ThreadQueueReorderResponse",
+      "native_protocol_source": "codex-rs/app-server-protocol/src/protocol/v2/thread.rs",
+      "native_request_contract_scope": "native-schema"
+    },
+    "thread/queue/start": {
+      "params": {
+        "required": [
+          "threadId"
+        ],
+        "properties": {
+          "threadId": {
+            "type": "string"
+          },
+          "queuedSubmissionId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "type": "object"
+      },
+      "response": {
+        "required": [
+          "turn"
+        ],
+        "properties": {
+          "turn": {
+            "type": "object"
+          }
+        },
+        "type": "object"
+      },
+      "native_request_class": "experimental-only",
+      "experimental_api_gate": "native server build 0.160.1",
+      "native_request_type": "ThreadQueueStartParams",
+      "native_response_type": "ThreadQueueStartResponse",
+      "native_protocol_source": "codex-rs/app-server-protocol/src/protocol/v2/thread.rs",
+      "native_request_contract_scope": "native-schema"
+    },
+    "thread/queue/update": {
+      "params": {
+        "required": [
+          "threadId",
+          "queuedSubmissionId",
+          "input"
+        ],
+        "properties": {
+          "threadId": {
+            "type": "string"
+          },
+          "queuedSubmissionId": {
+            "type": "string"
+          },
+          "input": {
+            "type": "array"
+          }
+        },
+        "type": "object"
+      },
+      "response": {
+        "required": [
+          "queuedSubmission"
+        ],
+        "properties": {
+          "queuedSubmission": {
+            "required": [
+              "id",
+              "input",
+              "clientUserMessageId"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "input": {
+                "type": "array"
+              },
+              "clientUserMessageId": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "type": "object"
+      },
+      "native_request_class": "experimental-only",
+      "experimental_api_gate": "native server build 0.160.1",
+      "native_request_type": "ThreadQueueUpdateParams",
+      "native_response_type": "ThreadQueueUpdateResponse",
+      "native_protocol_source": "codex-rs/app-server-protocol/src/protocol/v2/thread.rs",
+      "native_request_contract_scope": "native-schema"
+    },
+    "thread/read": {
+      "params": {
+        "type": "object",
+        "required": [
+          "threadId"
+        ],
+        "properties": {
+          "includeTurns": {
+            "type": "boolean"
+          },
+          "threadId": {
+            "type": "string"
+          }
+        }
+      },
+      "response": {
+        "type": "object",
+        "required": [
+          "thread"
+        ],
+        "properties": {
+          "thread": {
+            "type": "object",
+            "required": [
+              "cliVersion",
+              "createdAt",
+              "cwd",
+              "ephemeral",
+              "id",
+              "modelProvider",
+              "preview",
+              "projectId",
+              "sessionId",
+              "source",
+              "status",
+              "turns",
+              "updatedAt"
+            ],
+            "properties": {
+              "agentNickname": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "agentRole": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "cliVersion": {
+                "type": "string"
+              },
+              "createdAt": {
+                "type": "integer",
+                "format": "int64"
+              },
+              "cwd": {},
+              "ephemeral": {
+                "type": "boolean"
+              },
+              "forkedFromId": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "gitInfo": {
+                "anyOf": [
+                  {
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "historyMode": {},
+              "id": {
+                "type": "string"
+              },
+              "model": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "modelProvider": {
+                "type": "string"
+              },
+              "name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "originator": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "parentThreadId": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "path": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "preview": {
+                "type": "string"
+              },
+              "projectId": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "reasoningEffort": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "recencyAt": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "format": "int64"
+              },
+              "section": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "required": [
+                      "id",
+                      "name"
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "sectionEnteredAt": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "format": "int64"
+              },
+              "sessionId": {
+                "type": "string"
+              },
+              "source": {},
+              "status": {},
+              "threadSource": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "turns": {
+                "type": "array"
+              },
+              "updatedAt": {
+                "type": "integer",
+                "format": "int64"
+              }
+            }
+          }
+        }
+      },
+      "native_request_type": "ThreadReadParams",
+      "native_response_type": "ThreadReadResponse",
+      "native_request_class": "default",
+      "native_protocol_source": "codex-rs/app-server-protocol/schema/json/ClientRequest.json + codex_app_server_protocol.v2.schemas.json",
+      "native_request_contract_scope": "native-schema"
+    },
+    "thread/resume": {
+      "params": {
+        "type": "object",
+        "required": [
+          "threadId"
+        ],
+        "properties": {
+          "approvalPolicy": {
+            "anyOf": [
+              {
+                "oneOf": [
+                  {
+                    "type": "string",
+                    "enum": [
+                      "untrusted",
+                      "on-request",
+                      "never"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "required": [
+                      "granular"
+                    ],
+                    "additionalProperties": false
+                  }
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "approvalsReviewer": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "user",
+                  "auto_review",
+                  "guardian_subagent"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "baseInstructions": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "config": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "additionalProperties": true
+          },
+          "cwd": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "developerInstructions": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "excludeTurns": {
+            "type": "boolean"
+          },
+          "model": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "modelProvider": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "personality": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "none",
+                  "friendly",
+                  "pragmatic"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "sandbox": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "read-only",
+                  "workspace-write",
+                  "danger-full-access"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "serviceTier": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "threadId": {
+            "type": "string"
+          }
+        }
+      },
+      "response": {
+        "type": "object",
+        "required": [
+          "approvalPolicy",
+          "approvalsReviewer",
+          "cwd",
+          "model",
+          "modelProvider",
+          "sandbox",
+          "thread"
+        ],
+        "properties": {
+          "approvalPolicy": {
+            "oneOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "untrusted",
+                  "on-request",
+                  "never"
+                ]
+              },
+              {
+                "type": "object",
+                "required": [
+                  "granular"
+                ],
+                "additionalProperties": false
+              }
+            ]
+          },
+          "approvalsReviewer": {},
+          "collaborationMode": {
+            "anyOf": [
+              {
+                "type": "object",
+                "required": [
+                  "mode",
+                  "settings"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "cwd": {
+            "type": "string"
+          },
+          "disabledPluginIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "instructionSources": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "itemsBackwardsCursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "model": {
+            "type": "string"
+          },
+          "modelProvider": {
+            "type": "string"
+          },
+          "reasoningEffort": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "sandbox": {},
+          "serviceTier": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "thread": {
+            "type": "object",
+            "required": [
+              "cliVersion",
+              "createdAt",
+              "cwd",
+              "ephemeral",
+              "id",
+              "modelProvider",
+              "preview",
+              "projectId",
+              "sessionId",
+              "source",
+              "status",
+              "turns",
+              "updatedAt"
+            ],
+            "properties": {
+              "agentNickname": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "agentRole": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "cliVersion": {
+                "type": "string"
+              },
+              "createdAt": {
+                "type": "integer",
+                "format": "int64"
+              },
+              "cwd": {},
+              "ephemeral": {
+                "type": "boolean"
+              },
+              "forkedFromId": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "gitInfo": {
+                "anyOf": [
+                  {
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "historyMode": {},
+              "id": {
+                "type": "string"
+              },
+              "model": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "modelProvider": {
+                "type": "string"
+              },
+              "name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "originator": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "parentThreadId": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "path": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "preview": {
+                "type": "string"
+              },
+              "projectId": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "reasoningEffort": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "recencyAt": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "format": "int64"
+              },
+              "section": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "required": [
+                      "id",
+                      "name"
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "sectionEnteredAt": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "format": "int64"
+              },
+              "sessionId": {
+                "type": "string"
+              },
+              "source": {},
+              "status": {},
+              "threadSource": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "turns": {
+                "type": "array"
+              },
+              "updatedAt": {
+                "type": "integer",
+                "format": "int64"
+              }
+            }
+          },
+          "turnsBackwardsCursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "native_request_type": "ThreadResumeParams",
+      "native_response_type": "ThreadResumeResponse",
+      "native_request_class": "default",
+      "native_protocol_source": "codex-rs/app-server-protocol/schema/json/ClientRequest.json + codex_app_server_protocol.v2.schemas.json",
+      "native_request_contract_scope": "native-schema"
+    },
+    "thread/revert": {
+      "params": {
+        "type": "object",
+        "required": [
+          "beforeTurnId",
+          "threadId"
+        ],
+        "properties": {
+          "beforeTurnId": {
+            "type": "string"
+          },
+          "threadId": {
+            "type": "string"
+          }
+        }
+      },
+      "response": {
+        "type": "object",
+        "required": [
+          "thread"
+        ],
+        "properties": {
+          "itemsBackwardsCursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "thread": {},
+          "turnsBackwardsCursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "native_request_type": "ThreadRevertParams",
+      "native_response_type": "ThreadRevertResponse",
+      "native_request_class": "default",
+      "native_protocol_source": "codex-rs/app-server-protocol/schema/json/ClientRequest.json + codex_app_server_protocol.v2.schemas.json",
+      "native_request_contract_scope": "native-schema"
+    },
+    "thread/search": {
+      "params": {
+        "required": [
+          "searchTerm"
+        ],
+        "properties": {
+          "cursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "limit": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "sortKey": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "created_at",
+              "updated_at",
+              "recency_at",
+              null
+            ]
+          },
+          "sortDirection": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "asc",
+              "desc",
+              null
+            ]
+          },
+          "sourceKinds": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "string",
+              "enum": [
+                "cli",
+                "vscode",
+                "exec",
+                "appServer",
+                "subAgent",
+                "subAgentReview",
+                "subAgentCompact",
+                "subAgentThreadSpawn",
+                "subAgentOther",
+                "unknown"
+              ]
+            }
+          },
+          "archived": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "searchTerm": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "response": {
+        "required": [
+          "data",
+          "nextCursor",
+          "backwardsCursor"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "required": [
+                "thread",
+                "snippet"
+              ],
+              "properties": {
+                "thread": {
+                  "type": "object"
+                },
+                "snippet": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "nextCursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "backwardsCursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "type": "object"
+      },
+      "native_request_class": "experimental-only",
+      "experimental_api_gate": "native server build 0.160.1",
+      "native_request_type": "ThreadSearchParams",
+      "native_response_type": "ThreadSearchResponse",
+      "native_protocol_source": "codex-rs/app-server-protocol/src/protocol/v2/thread.rs",
+      "native_request_contract_scope": "native-schema"
+    },
+    "thread/searchOccurrences": {
+      "params": {
+        "required": [
+          "threadId",
+          "searchTerm"
+        ],
+        "properties": {
+          "threadId": {
+            "type": "string"
+          },
+          "searchTerm": {
+            "type": "string"
+          },
+          "cursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "limit": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          }
+        },
+        "type": "object"
+      },
+      "response": {
+        "required": [
+          "data",
+          "nextCursor"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "required": [
+                "turnId",
+                "itemId",
+                "snippet",
+                "snippetMatchRange",
+                "turnCursor"
+              ],
+              "properties": {
+                "turnId": {
+                  "type": "string"
+                },
+                "itemId": {
+                  "type": "string"
+                },
+                "snippet": {
+                  "type": "string"
+                },
+                "snippetMatchRange": {
+                  "required": [
+                    "start",
+                    "end"
+                  ],
+                  "properties": {
+                    "start": {
+                      "type": "integer"
+                    },
+                    "end": {
+                      "type": "integer"
+                    }
+                  }
+                },
+                "turnCursor": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "nextCursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "type": "object"
+      },
+      "native_request_class": "experimental-only",
+      "experimental_api_gate": "native server build 0.160.1",
+      "native_request_type": "ThreadSearchOccurrencesParams",
+      "native_response_type": "ThreadSearchOccurrencesResponse",
+      "native_protocol_source": "codex-rs/app-server-protocol/src/protocol/v2/thread.rs",
+      "native_request_contract_scope": "native-schema"
+    },
+    "thread/section/move": {
+      "params": {
+        "required": [
+          "threadId",
+          "sectionId"
+        ],
+        "properties": {
+          "threadId": {
+            "type": "string"
+          },
+          "sectionId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "beforeThreadId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "type": "object"
+      },
+      "response": {
+        "required": [],
+        "properties": {},
+        "type": "object"
+      },
+      "native_request_class": "default",
+      "native_request_type": "ThreadSectionMoveParams",
+      "native_response_type": "ThreadSectionMoveResponse",
+      "native_protocol_source": "codex-rs/app-server-protocol/src/protocol/v2/thread.rs",
+      "native_request_contract_scope": "native-schema"
+    },
+    "thread/settings/update": {
+      "params": {
+        "required": [
+          "threadId"
+        ],
+        "properties": {
+          "threadId": {
+            "type": "string"
+          },
+          "model": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "effort": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "type": "object"
+      },
+      "response": {
+        "required": [],
+        "properties": {},
+        "type": "object"
+      },
+      "native_request_type": "ThreadSettingsUpdateParams",
+      "native_response_type": "ThreadSettingsUpdateResponse",
+      "native_request_class": "experimental-only",
+      "experimental_api_gate": "native server build 0.160.1",
+      "native_protocol_source": "codex-rs/app-server-protocol/src/protocol/v2/thread.rs",
+      "native_request_contract_scope": "cas-safe-subset"
+    },
+    "thread/start": {
+      "params": {
+        "type": "object",
+        "properties": {
+          "approvalPolicy": {
+            "anyOf": [
+              {
+                "oneOf": [
+                  {
+                    "type": "string",
+                    "enum": [
+                      "untrusted",
+                      "on-request",
+                      "never"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "required": [
+                      "granular"
+                    ],
+                    "additionalProperties": false
+                  }
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "approvalsReviewer": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "user",
+                  "auto_review",
+                  "guardian_subagent"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "baseInstructions": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "config": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "additionalProperties": true
+          },
+          "cwd": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "developerInstructions": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "ephemeral": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "model": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "modelProvider": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "personality": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "none",
+                  "friendly",
+                  "pragmatic"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "sandbox": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "read-only",
+                  "workspace-write",
+                  "danger-full-access"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "serviceName": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "serviceTier": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "sessionStartSource": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "startup",
+                  "clear"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "threadSource": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      },
+      "response": {
+        "type": "object",
+        "required": [
+          "approvalPolicy",
+          "approvalsReviewer",
+          "cwd",
+          "model",
+          "modelProvider",
+          "sandbox",
+          "thread"
+        ],
+        "properties": {
+          "approvalPolicy": {
+            "oneOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "untrusted",
+                  "on-request",
+                  "never"
+                ]
+              },
+              {
+                "type": "object",
+                "required": [
+                  "granular"
+                ],
+                "additionalProperties": false
+              }
+            ]
+          },
+          "approvalsReviewer": {},
+          "cwd": {
+            "type": "string"
+          },
+          "disabledPluginIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "instructionSources": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "model": {
+            "type": "string"
+          },
+          "modelProvider": {
+            "type": "string"
+          },
+          "reasoningEffort": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "sandbox": {},
+          "serviceTier": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "thread": {
+            "type": "object",
+            "required": [
+              "cliVersion",
+              "createdAt",
+              "cwd",
+              "ephemeral",
+              "id",
+              "modelProvider",
+              "preview",
+              "projectId",
+              "sessionId",
+              "source",
+              "status",
+              "turns",
+              "updatedAt"
+            ],
+            "properties": {
+              "agentNickname": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "agentRole": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "cliVersion": {
+                "type": "string"
+              },
+              "createdAt": {
+                "type": "integer",
+                "format": "int64"
+              },
+              "cwd": {},
+              "ephemeral": {
+                "type": "boolean"
+              },
+              "forkedFromId": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "gitInfo": {
+                "anyOf": [
+                  {
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "historyMode": {},
+              "id": {
+                "type": "string"
+              },
+              "model": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "modelProvider": {
+                "type": "string"
+              },
+              "name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "originator": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "parentThreadId": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "path": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "preview": {
+                "type": "string"
+              },
+              "projectId": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "reasoningEffort": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "recencyAt": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "format": "int64"
+              },
+              "section": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "required": [
+                      "id",
+                      "name"
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "sectionEnteredAt": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "format": "int64"
+              },
+              "sessionId": {
+                "type": "string"
+              },
+              "source": {},
+              "status": {},
+              "threadSource": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "turns": {
+                "type": "array"
+              },
+              "updatedAt": {
+                "type": "integer",
+                "format": "int64"
+              }
+            }
+          }
+        }
+      },
+      "native_request_type": "ThreadStartParams",
+      "native_response_type": "ThreadStartResponse",
+      "native_request_class": "default",
+      "native_protocol_source": "codex-rs/app-server-protocol/schema/json/ClientRequest.json + codex_app_server_protocol.v2.schemas.json",
+      "native_request_contract_scope": "native-schema"
+    },
+    "thread/timeline/list": {
+      "params": {
+        "required": [
+          "threadId"
+        ],
+        "properties": {
+          "threadId": {
+            "type": "string"
+          },
+          "cursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "limit": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          }
+        },
+        "type": "object"
+      },
+      "response": {
+        "required": [
+          "data",
+          "nextCursor",
+          "activeRealtimeSessionAtPageStart"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "oneOf": [
+                {
+                  "required": [
+                    "type",
+                    "position",
+                    "turnId",
+                    "item"
+                  ],
+                  "properties": {
+                    "type": {
+                      "enum": [
+                        "item"
+                      ]
+                    },
+                    "position": {
+                      "type": "integer"
+                    },
+                    "turnId": {
+                      "type": "string"
+                    },
+                    "item": {
+                      "type": "object"
+                    }
+                  }
+                },
+                {
+                  "required": [
+                    "type",
+                    "position",
+                    "item"
+                  ],
+                  "properties": {
+                    "type": {
+                      "enum": [
+                        "realtime"
+                      ]
+                    },
+                    "position": {
+                      "type": "integer"
+                    },
+                    "item": {
+                      "type": "object"
+                    }
+                  }
+                },
+                {
+                  "required": [
+                    "type",
+                    "position",
+                    "turnId",
+                    "startedAt"
+                  ],
+                  "properties": {
+                    "type": {
+                      "enum": [
+                        "turnStarted"
+                      ]
+                    },
+                    "position": {
+                      "type": "integer"
+                    },
+                    "turnId": {
+                      "type": "string"
+                    },
+                    "startedAt": {
+                      "type": [
+                        "integer",
+                        "null"
+                      ]
+                    }
+                  }
+                },
+                {
+                  "required": [
+                    "type",
+                    "position",
+                    "turnId",
+                    "status",
+                    "error",
+                    "startedAt",
+                    "completedAt",
+                    "durationMs"
+                  ],
+                  "properties": {
+                    "type": {
+                      "enum": [
+                        "turnCompleted"
+                      ]
+                    },
+                    "position": {
+                      "type": "integer"
+                    },
+                    "turnId": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "string"
+                    },
+                    "error": {
+                      "type": [
+                        "object",
+                        "null"
+                      ]
+                    },
+                    "startedAt": {
+                      "type": [
+                        "integer",
+                        "null"
+                      ]
+                    },
+                    "completedAt": {
+                      "type": [
+                        "integer",
+                        "null"
+                      ]
+                    },
+                    "durationMs": {
+                      "type": [
+                        "integer",
+                        "null"
+                      ]
+                    }
+                  }
+                }
+              ]
+            }
+          },
+          "nextCursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "activeRealtimeSessionAtPageStart": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "type": "object"
+      },
+      "native_request_class": "experimental-only",
+      "experimental_api_gate": "native server build 0.160.1",
+      "native_request_type": "ThreadTimelineListParams",
+      "native_response_type": "ThreadTimelineListResponse",
+      "native_protocol_source": "codex-rs/app-server-protocol/src/protocol/v2/thread.rs",
+      "native_request_contract_scope": "native-schema"
+    },
+    "thread/turns/list": {
+      "params": {
+        "type": "object",
+        "required": [
+          "threadId"
+        ],
+        "properties": {
+          "cursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "itemsView": {
+            "anyOf": [
+              {
+                "oneOf": [
+                  {
+                    "type": "string",
+                    "enum": [
+                      "notLoaded"
+                    ]
+                  },
+                  {
+                    "type": "string",
+                    "enum": [
+                      "summary"
+                    ]
+                  },
+                  {
+                    "type": "string",
+                    "enum": [
+                      "full"
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "limit": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0,
+            "format": "uint32"
+          },
+          "sortDirection": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "asc",
+                  "desc"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "threadId": {
+            "type": "string"
+          }
+        }
+      },
+      "response": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "backwardsCursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "id",
+                "items",
+                "status"
+              ]
+            }
+          },
+          "nextCursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "native_request_type": "ThreadTurnsListParams",
+      "native_response_type": "ThreadTurnsListResponse",
+      "native_request_class": "default",
+      "native_protocol_source": "codex-rs/app-server-protocol/schema/json/ClientRequest.json + codex_app_server_protocol.v2.schemas.json",
+      "native_request_contract_scope": "native-schema"
+    },
+    "thread/unarchive": {
+      "params": {
+        "type": "object",
+        "required": [
+          "threadId"
+        ],
+        "properties": {
+          "threadId": {
+            "type": "string"
+          }
+        }
+      },
+      "response": {
+        "type": "object",
+        "required": [
+          "thread"
+        ],
+        "properties": {
+          "thread": {
+            "type": "object",
+            "required": [
+              "cliVersion",
+              "createdAt",
+              "cwd",
+              "ephemeral",
+              "id",
+              "modelProvider",
+              "preview",
+              "projectId",
+              "sessionId",
+              "source",
+              "status",
+              "turns",
+              "updatedAt"
+            ],
+            "properties": {
+              "agentNickname": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "agentRole": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "cliVersion": {
+                "type": "string"
+              },
+              "createdAt": {
+                "type": "integer",
+                "format": "int64"
+              },
+              "cwd": {},
+              "ephemeral": {
+                "type": "boolean"
+              },
+              "forkedFromId": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "gitInfo": {
+                "anyOf": [
+                  {
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "historyMode": {},
+              "id": {
+                "type": "string"
+              },
+              "model": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "modelProvider": {
+                "type": "string"
+              },
+              "name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "originator": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "parentThreadId": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "path": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "preview": {
+                "type": "string"
+              },
+              "projectId": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "reasoningEffort": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "recencyAt": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "format": "int64"
+              },
+              "section": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "required": [
+                      "id",
+                      "name"
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "sectionEnteredAt": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "format": "int64"
+              },
+              "sessionId": {
+                "type": "string"
+              },
+              "source": {},
+              "status": {},
+              "threadSource": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "turns": {
+                "type": "array"
+              },
+              "updatedAt": {
+                "type": "integer",
+                "format": "int64"
+              }
+            }
+          }
+        }
+      },
+      "native_request_type": "ThreadUnarchiveParams",
+      "native_response_type": "ThreadUnarchiveResponse",
+      "native_request_class": "default",
+      "native_protocol_source": "codex-rs/app-server-protocol/schema/json/ClientRequest.json + codex_app_server_protocol.v2.schemas.json",
+      "native_request_contract_scope": "native-schema"
+    },
+    "threadSection/create": {
+      "params": {
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "appearance": {
+            "anyOf": [
+              {
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      },
+      "response": {
+        "type": "object",
+        "required": [
+          "section"
+        ],
+        "properties": {
+          "section": {
+            "type": "object",
+            "required": [
+              "id",
+              "name"
+            ],
+            "properties": {
+              "appearance": {
+                "anyOf": [
+                  {
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "id": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "native_request_type": "ThreadSectionCreateParams",
+      "native_response_type": "ThreadSectionCreateResponse",
+      "native_request_class": "default",
+      "native_protocol_source": "codex-rs/app-server-protocol/schema/json/ClientRequest.json + codex_app_server_protocol.v2.schemas.json",
+      "native_request_contract_scope": "native-schema"
+    },
+    "threadSection/delete": {
+      "params": {
+        "type": "object",
+        "required": [
+          "sectionId"
+        ],
+        "properties": {
+          "sectionId": {
+            "type": "string"
+          }
+        }
+      },
+      "response": {
+        "type": "object"
+      },
+      "native_request_type": "ThreadSectionDeleteParams",
+      "native_response_type": "ThreadSectionDeleteResponse",
+      "native_request_class": "default",
+      "native_protocol_source": "codex-rs/app-server-protocol/schema/json/ClientRequest.json + codex_app_server_protocol.v2.schemas.json",
+      "native_request_contract_scope": "native-schema"
+    },
+    "threadSection/list": {
+      "params": {
+        "type": "object",
+        "properties": {
+          "cursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "limit": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0,
+            "format": "uint32"
+          }
+        }
+      },
+      "response": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "id",
+                "name"
+              ]
+            }
+          },
+          "nextCursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "native_request_type": "ThreadSectionListParams",
+      "native_response_type": "ThreadSectionListResponse",
+      "native_request_class": "default",
+      "native_protocol_source": "codex-rs/app-server-protocol/schema/json/ClientRequest.json + codex_app_server_protocol.v2.schemas.json",
+      "native_request_contract_scope": "native-schema"
+    },
+    "threadSection/update": {
+      "params": {
+        "type": "object",
+        "required": [
+          "name",
+          "sectionId"
+        ],
+        "properties": {
+          "appearance": {
+            "anyOf": [
+              {
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "name": {
+            "type": "string"
+          },
+          "sectionId": {
+            "type": "string"
+          }
+        }
+      },
+      "response": {
+        "type": "object",
+        "required": [
+          "section"
+        ],
+        "properties": {
+          "section": {
+            "type": "object",
+            "required": [
+              "id",
+              "name"
+            ],
+            "properties": {
+              "appearance": {
+                "anyOf": [
+                  {
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "id": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "native_request_type": "ThreadSectionUpdateParams",
+      "native_response_type": "ThreadSectionUpdateResponse",
+      "native_request_class": "default",
+      "native_protocol_source": "codex-rs/app-server-protocol/schema/json/ClientRequest.json + codex_app_server_protocol.v2.schemas.json",
+      "native_request_contract_scope": "native-schema"
+    },
+    "turn/interrupt": {
+      "params": {
+        "type": "object",
+        "required": [
+          "threadId",
+          "turnId"
+        ],
+        "properties": {
+          "threadId": {
+            "type": "string"
+          },
+          "turnId": {
+            "type": "string"
+          }
+        }
+      },
+      "response": {
+        "type": "object"
+      },
+      "native_request_type": "TurnInterruptParams",
+      "native_response_type": "TurnInterruptResponse",
+      "native_request_class": "default",
+      "native_protocol_source": "codex-rs/app-server-protocol/schema/json/ClientRequest.json + codex_app_server_protocol.v2.schemas.json",
+      "native_request_contract_scope": "native-schema"
+    },
+    "turn/settings/update": {
+      "params": {
+        "required": [
+          "threadId",
+          "turnId"
+        ],
+        "properties": {
+          "threadId": {
+            "type": "string"
+          },
+          "turnId": {
+            "type": "string"
+          },
+          "model": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "effort": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "type": "object"
+      },
+      "response": {
+        "required": [
+          "status"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "applied",
+              "targetUnavailable"
+            ]
+          }
+        },
+        "type": "object"
+      },
+      "native_request_type": "TurnSettingsUpdateParams",
+      "native_response_type": "TurnSettingsUpdateResponse",
+      "native_request_class": "experimental-only",
+      "experimental_api_gate": "native server build 0.160.1",
+      "native_protocol_source": "codex-rs/app-server-protocol/src/protocol/v2/turn.rs",
+      "native_request_contract_scope": "cas-safe-subset"
+    },
+    "turn/start": {
+      "params": {
+        "type": "object",
+        "required": [
+          "input",
+          "threadId"
+        ],
+        "properties": {
+          "approvalPolicy": {
+            "anyOf": [
+              {
+                "oneOf": [
+                  {
+                    "type": "string",
+                    "enum": [
+                      "untrusted",
+                      "on-request",
+                      "never"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "required": [
+                      "granular"
+                    ],
+                    "additionalProperties": false
+                  }
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "approvalsReviewer": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "user",
+                  "auto_review",
+                  "guardian_subagent"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "clientUserMessageId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "cwd": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "disabledPluginIds": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "string"
+            }
+          },
+          "effort": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "input": {
+            "type": "array",
+            "items": {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "required": [
+                    "text",
+                    "type"
+                  ]
+                },
+                {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "required": [
+                        "url"
+                      ]
+                    },
+                    {
+                      "type": "object",
+                      "required": [
+                        "fileId"
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "object",
+                  "required": [
+                    "path",
+                    "type"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "required": [
+                    "type",
+                    "url"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "required": [
+                    "path",
+                    "type"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "required": [
+                    "name",
+                    "path",
+                    "type"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "required": [
+                    "name",
+                    "path",
+                    "type"
+                  ]
+                }
+              ]
+            }
+          },
+          "model": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "outputSchema": {},
+          "personality": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "none",
+                  "friendly",
+                  "pragmatic"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "sandboxPolicy": {
+            "anyOf": [
+              {
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "required": [
+                      "type"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "required": [
+                      "type"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "required": [
+                      "type"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "required": [
+                      "type"
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "serviceTier": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "serviceTierForTurn": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "oneOf": [
+                  {
+                    "type": "string",
+                    "enum": [
+                      "auto",
+                      "concise",
+                      "detailed"
+                    ]
+                  },
+                  {
+                    "type": "string",
+                    "enum": [
+                      "none"
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "threadId": {
+            "type": "string"
+          },
+          "toolOutput": {
+            "anyOf": [
+              {
+                "type": "object",
+                "required": [
+                  "name",
+                  "output"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "turnTrigger": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "response": {
+        "type": "object",
+        "required": [
+          "turn"
+        ],
+        "properties": {
+          "turn": {
+            "type": "object",
+            "required": [
+              "id",
+              "items",
+              "status"
+            ],
+            "properties": {
+              "completedAt": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "format": "int64"
+              },
+              "durationMs": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "format": "int64"
+              },
+              "error": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "required": [
+                      "message"
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "id": {
+                "type": "string"
+              },
+              "items": {
+                "type": "array"
+              },
+              "itemsView": {},
+              "startedAt": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "format": "int64"
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "completed",
+                  "interrupted",
+                  "failed",
+                  "inProgress"
+                ]
+              }
+            }
+          }
+        }
+      },
+      "native_request_type": "TurnStartParams",
+      "native_response_type": "TurnStartResponse",
+      "native_request_class": "default",
+      "native_protocol_source": "codex-rs/app-server-protocol/schema/json/ClientRequest.json + codex_app_server_protocol.v2.schemas.json",
+      "native_request_contract_scope": "native-schema"
+    },
+    "turn/steer": {
+      "params": {
+        "type": "object",
+        "required": [
+          "expectedTurnId",
+          "input",
+          "threadId"
+        ],
+        "properties": {
+          "clientUserMessageId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "expectedTurnId": {
+            "type": "string"
+          },
+          "input": {
+            "type": "array",
+            "items": {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "required": [
+                    "text",
+                    "type"
+                  ]
+                },
+                {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "required": [
+                        "url"
+                      ]
+                    },
+                    {
+                      "type": "object",
+                      "required": [
+                        "fileId"
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "object",
+                  "required": [
+                    "path",
+                    "type"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "required": [
+                    "type",
+                    "url"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "required": [
+                    "path",
+                    "type"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "required": [
+                    "name",
+                    "path",
+                    "type"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "required": [
+                    "name",
+                    "path",
+                    "type"
+                  ]
+                }
+              ]
+            }
+          },
+          "threadId": {
+            "type": "string"
+          }
+        }
+      },
+      "response": {
+        "type": "object",
+        "required": [
+          "turnId"
+        ],
+        "properties": {
+          "turnId": {
+            "type": "string"
+          }
+        }
+      },
+      "native_request_type": "TurnSteerParams",
+      "native_response_type": "TurnSteerResponse",
+      "native_request_class": "default",
+      "native_protocol_source": "codex-rs/app-server-protocol/schema/json/ClientRequest.json + codex_app_server_protocol.v2.schemas.json",
+      "native_request_contract_scope": "native-schema"
+    }
+  },
+  "contract_scope_note": "Contracts use full pinned native request/response field shapes where available. thread/settings/update and turn/settings/update are intentionally CAS-safe subsets that expose only model/effort fields and are not full native parameter inventories."
+}

@@ -54,7 +54,14 @@ not enter the worker.
 - Actual creation from the reviewed recipe image and the supplied commit
 - A running native daemon reached through the central logical-target resolver
   and the native `Client`, including a matching initialize `codexHome`
-- Successful read-only `server/diagnostics` and `thread/list` calls
+- Successful read-only `thread/list` call
+- `server/diagnostics` is required and schema-checked when the native server
+  build version parsed from its `InitializeResponse.userAgent` is exactly
+  `0.160.1`. The parser reads the server-generated version slot before the
+  platform details, not the caller-controlled originator or clientInfo suffix.
+  For another or unrecognized build version, the report records an explicit
+  skipped status, observed user agent, parsed version if available, and reason.
+  A skip is not recorded as a diagnostics pass
 - Stop/start preserves the same full container ID, Codex home, and config hash
 - Start does not rerun the create hook. The test replaces the setup script with
   a failure sentinel only inside its disposable worker before stopping it
@@ -66,8 +73,10 @@ not enter the worker.
 - Scoped cleanup leaves no selected worker behind
 
 The report records the source SHA, image reference and ID, engine version,
-installed recipe tool versions, lifecycle identities, stage, and cleanup result.
-It stores counts rather than native thread or diagnostic content.
+installed recipe tool versions, native user agent and parsed server build
+version, diagnostics status, lifecycle identities, stage, and cleanup result. It stores counts rather than native
+thread or diagnostic content. If diagnostics is attempted for the exact pin and
+fails, the failure report preserves the user agent and sanitized failure class.
 
 The test uses the deliberately unreachable, credential-free Headroom address
 `http://127.0.0.1:9/v1`. It never signs in, creates threads, starts model turns,

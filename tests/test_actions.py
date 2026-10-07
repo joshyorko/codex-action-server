@@ -3,14 +3,39 @@
 from __future__ import annotations
 
 import importlib
+from functools import wraps
 from pathlib import Path
 import sys
 import types
 import unittest
 from unittest.mock import patch
 
+from native_wire_contracts import assert_native_request_contract
+
 SRC = Path(__file__).resolve().parents[1] / "src"
 sys.path.insert(0, str(SRC))
+
+
+class ActionTestNamespace:
+    """Exercise public wrappers while patching their actual implementation owners.
+
+    This adapter exists only in tests. Production modules retain ordinary Python
+    globals and imports, with no forwarding hooks or module replacement.
+    """
+
+    def __init__(self, public, shared):
+        object.__setattr__(self, "_modules", [*shared, public])
+        for module in self._modules:
+            for name, value in vars(module).items():
+                if not name.startswith("__"):
+                    object.__setattr__(self, name, value)
+        object.__setattr__(self, "public", public)
+
+    def __setattr__(self, name, value):
+        for module in self._modules:
+            if name in vars(module):
+                setattr(module, name, value)
+        object.__setattr__(self, name, value)
 
 
 def load_actions():
@@ -20,6 +45,14 @@ def load_actions():
         def __init__(self, result):
             self.result = result
 
+        def model_dump(self, mode="python"):
+            result = (
+                self.result.model_dump(mode=mode)
+                if hasattr(self.result, "model_dump")
+                else self.result
+            )
+            return {"result": result}
+
     def action(**_kwargs):
         return lambda function: function
 
@@ -27,11 +60,47 @@ def load_actions():
     fake_actions.Response = FakeResponse
     fake_actions.action = action
     with patch.dict(sys.modules, {"actions": fake_actions}):
-        sys.modules.pop("codex_actions", None)
-        return importlib.import_module("codex_actions")
+        # Reload every module capturing framework classes. Otherwise a preceding
+        # real-runtime import can leak a real Response into transport-double tests.
+        for name in tuple(sys.modules):
+            if name in {
+                "codex_actions",
+                "capability_registration",
+                "codex_shared",
+            } or name.startswith("codex_shared."):
+                sys.modules.pop(name)
+        public = importlib.import_module("codex_actions")
+        shared = [
+            module
+            for name, module in sys.modules.items()
+            if name.startswith("codex_shared.")
+        ]
+        loaded = {
+            name: module
+            for name, module in sys.modules.items()
+            if name in {"codex_actions", "capability_registration", "codex_shared"}
+            or name.startswith("codex_shared.")
+        }
+    # patch.dict restores pre-existing cached modules on exit. Retain the source
+    # modules just loaded so imports and wrapper globals have the same owners.
+    sys.modules.update(loaded)
+    return ActionTestNamespace(public, shared)
 
 
 class FakeClient:
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+        request = cls.__dict__.get("request")
+        if request is None:
+            return
+
+        @wraps(request)
+        def validate_request(self, method, params):
+            assert_native_request_contract(method, params)
+            return request(self, method, params)
+
+        cls.request = validate_request
+
     def __init__(self, _target):
         self.calls = []
         self.events = []
@@ -59,6 +128,7 @@ class FakeClient:
         self.workstreams.append((cwd, thread_id, turn_id))
 
     def request(self, method, params):
+        assert_native_request_contract(method, params)
         self.calls.append((method, params))
         if method == "thread/read":
             return {"thread": {"id": params["threadId"], "cwd": "/trusted"}}

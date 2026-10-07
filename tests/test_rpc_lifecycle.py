@@ -7,6 +7,8 @@ import json
 from pathlib import Path
 import sys
 import unittest
+from unittest.mock import patch
+from native_test_helpers import native_server_user_agent
 
 SRC = Path(__file__).resolve().parents[1] / "src"
 sys.path.insert(0, str(SRC))
@@ -168,6 +170,67 @@ def connected_client(fixture):
 
 
 class NativeLifecycleTests(unittest.TestCase):
+    def test_unhandled_native_callback_fails_on_original_socket_then_action_closes_it(
+        self,
+    ):
+        class CallbackSocket:
+            def __init__(self):
+                self.calls = []
+                self.responses = deque()
+                self.closed = False
+
+            def send(self, raw):
+                message = json.loads(raw)
+                self.calls.append(message)
+                method = message.get("method")
+                if method == "initialize":
+                    self.responses.append(
+                        json.dumps(
+                            {
+                                "id": message["id"],
+                                "result": {
+                                    "codexHome": "/codex",
+                                    "userAgent": native_server_user_agent("0.160.1"),
+                                },
+                            }
+                        )
+                    )
+                elif method == "thread/read":
+                    self.responses.append(
+                        json.dumps(
+                            {
+                                "id": "native-callback-7",
+                                "method": "item/commandExecution/requestApproval",
+                                "params": {
+                                    "threadId": "thread-1",
+                                    "turnId": "turn-1",
+                                    "itemId": "item-1",
+                                },
+                            }
+                        )
+                    )
+
+            def recv(self, timeout=None):
+                return self.responses.popleft()
+
+            def close(self):
+                self.closed = True
+
+        socket = CallbackSocket()
+        client = codex_rpc.Client(codex_rpc.Target("local", socket_path="fixture"))
+        with patch.object(codex_rpc, "unix_connect", return_value=socket):
+            with self.assertRaisesRegex(codex_rpc.RpcError, "requires approval/input"):
+                with client:
+                    client.request("thread/read", {"threadId": "thread-1"})
+
+        callback_response = next(
+            message
+            for message in socket.calls
+            if message.get("id") == "native-callback-7"
+        )
+        self.assertEqual(callback_response["error"]["code"], -32601)
+        self.assertTrue(socket.closed)
+
     def test_created_thread_stays_on_connection_until_first_turn_materializes_rollout(
         self,
     ):
@@ -262,6 +325,7 @@ class NativeLifecycleTests(unittest.TestCase):
         fixture = NativeProtocolFixture(existing=True)
         client = connected_client(fixture)
         try:
+            client.metadata["userAgent"] = native_server_user_agent("0.160.1")
             client.set_workstream("/repo", "existing", "existing-turn")
             calls = {
                 "thread/list": {"cwd": "/repo", "limit": 1},
@@ -312,6 +376,21 @@ class NativeLifecycleTests(unittest.TestCase):
             self.assertEqual(len(fixture.calls), sent_count)
             with self.assertRaisesRegex(ValueError, "outside"):
                 client.request("command/exec", {})
+        finally:
+            client.close()
+
+    def test_experimental_native_methods_require_the_pinned_schema(self):
+        fixture = NativeProtocolFixture(existing=True)
+        client = connected_client(fixture)
+        try:
+            with self.assertRaisesRegex(
+                codex_rpc.RpcError, "pinned experimental Codex 0.160.1 schema"
+            ):
+                client.request("thread/search", {"searchTerm": "x", "limit": 1})
+            self.assertNotIn(
+                "thread/search",
+                [message.get("method") for message in fixture.calls],
+            )
         finally:
             client.close()
 
