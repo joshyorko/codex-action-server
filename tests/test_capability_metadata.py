@@ -2,6 +2,10 @@
 
 from dataclasses import FrozenInstanceError
 import importlib
+import os
+from pathlib import Path
+import subprocess
+import sys
 
 import pytest
 
@@ -101,30 +105,49 @@ def test_control_only_native_projection_retains_guard_reads_but_not_unrelated_re
     assert "account/usage/read" not in methods
 
 
-def test_registration_uses_metadata_and_denies_unselected_package(monkeypatch):
-    from actions import ActionError
-    from actions._hooks import on_action_func_found
+def test_registration_uses_metadata_and_denies_unselected_package():
+    # Transport-double tests retain modules loaded with a fake actions decorator.
+    # A fresh process verifies registration against the real Core hooks and errors.
+    code = """
+from actions import ActionError
+from actions._hooks import on_action_func_found
+from capability_registration import action
+found = []
 
-    monkeypatch.setenv("CODEX_ACTION_PACKAGES", "codex-control")
-    registration = importlib.import_module("capability_registration")
-    found = []
+def list_targets():
+    raise AssertionError("excluded action executed")
 
-    def list_targets():
-        raise AssertionError("excluded action executed")
+def interrupt_turn():
+    return "controlled"
 
-    def interrupt_turn():
-        return "controlled"
-
-    with on_action_func_found.register(
-        lambda func, options: found.append((func.__name__, options))
-    ):
-        denied = registration.action(package="codex-observe")(list_targets)
-        allowed = registration.action(package="codex-control")(interrupt_turn)
-    assert [name for name, _ in found] == ["interrupt_turn"]
-    assert found[0][1]["is_consequential"] is True
-    assert allowed() == "controlled"
-    with pytest.raises(ActionError, match="unavailable"):
-        denied()
+with on_action_func_found.register(lambda func, options: found.append((func.__name__, options))):
+    denied = action(package="codex-observe")(list_targets)
+    allowed = action(package="codex-control")(interrupt_turn)
+assert [name for name, _ in found] == ["interrupt_turn"]
+assert found[0][1]["is_consequential"] is True
+assert allowed() == "controlled"
+try:
+    denied()
+except ActionError as error:
+    assert "unavailable" in str(error)
+else:
+    raise AssertionError("direct invocation escaped package selection")
+"""
+    root = Path(__file__).parents[1]
+    result = subprocess.run(
+        [sys.executable, "-c", code],
+        cwd=root,
+        env={
+            **os.environ,
+            "PYTHONPATH": str(root / "src"),
+            "CODEX_ACTION_PROFILE": "operator",
+            "CODEX_ACTION_PACKAGES": "codex-control",
+        },
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr
 
 
 def test_registration_rejects_action_in_wrong_package(monkeypatch):
