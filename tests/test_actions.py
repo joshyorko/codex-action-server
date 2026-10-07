@@ -16,6 +16,28 @@ SRC = Path(__file__).resolve().parents[1] / "src"
 sys.path.insert(0, str(SRC))
 
 
+class ActionTestNamespace:
+    """Exercise public wrappers while patching their actual implementation owners.
+
+    This adapter exists only in tests. Production modules retain ordinary Python
+    globals and imports, with no forwarding hooks or module replacement.
+    """
+
+    def __init__(self, public, shared):
+        object.__setattr__(self, "_modules", [*shared, public])
+        for module in self._modules:
+            for name, value in vars(module).items():
+                if not name.startswith("__"):
+                    object.__setattr__(self, name, value)
+        object.__setattr__(self, "public", public)
+
+    def __setattr__(self, name, value):
+        for module in self._modules:
+            if name in vars(module):
+                setattr(module, name, value)
+        object.__setattr__(self, name, value)
+
+
 def load_actions():
     fake_actions = types.ModuleType("actions")
 
@@ -38,8 +60,31 @@ def load_actions():
     fake_actions.Response = FakeResponse
     fake_actions.action = action
     with patch.dict(sys.modules, {"actions": fake_actions}):
-        sys.modules.pop("codex_actions", None)
-        return importlib.import_module("codex_actions")
+        # Reload every module capturing framework classes. Otherwise a preceding
+        # real-runtime import can leak a real Response into transport-double tests.
+        for name in tuple(sys.modules):
+            if name in {
+                "codex_actions",
+                "capability_registration",
+                "codex_shared",
+            } or name.startswith("codex_shared."):
+                sys.modules.pop(name)
+        public = importlib.import_module("codex_actions")
+        shared = [
+            module
+            for name, module in sys.modules.items()
+            if name.startswith("codex_shared.")
+        ]
+        loaded = {
+            name: module
+            for name, module in sys.modules.items()
+            if name in {"codex_actions", "capability_registration", "codex_shared"}
+            or name.startswith("codex_shared.")
+        }
+    # patch.dict restores pre-existing cached modules on exit. Retain the source
+    # modules just loaded so imports and wrapper globals have the same owners.
+    sys.modules.update(loaded)
+    return ActionTestNamespace(public, shared)
 
 
 class FakeClient:
