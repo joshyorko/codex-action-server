@@ -15,6 +15,7 @@ import json
 import os
 from pathlib import Path
 import shutil
+import signal
 import socket
 import subprocess
 import sys
@@ -226,9 +227,116 @@ def _runtime_binary():
     return binary
 
 
+def _process_record(pid):
+    try:
+        stat = (Path("/proc") / str(pid) / "stat").read_text()
+    except (FileNotFoundError, ProcessLookupError, PermissionError):
+        return None
+    fields = stat.rsplit(")", 1)[1].split()
+    return fields[0], int(fields[2]), int(fields[3]), int(fields[19])
+
+
+def _fixture_group_members(group):
+    members = {}
+    for entry in Path("/proc").iterdir():
+        if not entry.name.isdecimal():
+            continue
+        record = _process_record(int(entry.name))
+        if record is not None:
+            state, process_group, session, started = record
+            if process_group == group and session == group and state != "Z":
+                try:
+                    owner = entry.stat().st_uid
+                except (FileNotFoundError, ProcessLookupError):
+                    continue
+                assert owner == os.getuid(), "foreign process in fixture group"
+                members[int(entry.name)] = started
+    return members
+
+
+def _port_open(port):
+    try:
+        with socket.create_connection(("127.0.0.1", port), timeout=0.1):
+            return True
+    except OSError:
+        return False
+
+
+def _stop_fixture_group(process, port, leader_started, *, grace_seconds=10):
+    group = process.pid
+
+    def owned_members():
+        leader = _process_record(group)
+        if leader is not None:
+            assert leader[3] == leader_started, "fixture leader PID was reused"
+        return _fixture_group_members(group)
+
+    def signal_owned_group(signum):
+        # Refresh ownership immediately before each signal. The dedicated
+        # session cannot acquire unrelated members while its descendants live.
+        if owned_members():
+            try:
+                os.killpg(group, signum)
+            except ProcessLookupError:
+                pass
+
+    signal_owned_group(signal.SIGTERM)
+    for duration, force in ((grace_seconds, False), (5, True)):
+        if force:
+            signal_owned_group(signal.SIGKILL)
+        deadline = time.monotonic() + duration
+        while time.monotonic() < deadline:
+            process.poll()
+            if not owned_members() and not _port_open(port):
+                process.wait(timeout=1)
+                return
+            time.sleep(0.1)
+    pytest.fail(
+        f"Disposable runtime failed to release group {group}/port {port}: "
+        f"live members={owned_members()}"
+    )
+
+
+def test_cleanup_waits_for_native_style_child_after_bootloader_parent_exits(tmp_path):
+    from test_action_server_validation import _free_port
+
+    port = _free_port()
+    ready = tmp_path / "child-ready"
+    child = (
+        "import signal,socket,time; from pathlib import Path; "
+        "signal.signal(signal.SIGTERM, signal.SIG_IGN); "
+        f"server=socket.socket(); server.bind(('127.0.0.1',{port})); server.listen(); "
+        f"Path({str(ready)!r}).write_text('ready'); time.sleep(60)"
+    )
+    parent = subprocess.Popen(
+        [
+            sys.executable,
+            "-c",
+            f"import subprocess,sys,time; subprocess.Popen([sys.executable,'-c',{child!r}]); time.sleep(60)",
+        ],
+        start_new_session=True,
+    )
+    leader_started = _process_record(parent.pid)[3]
+    try:
+        deadline = time.monotonic() + 5
+        while not ready.exists() and time.monotonic() < deadline:
+            assert parent.poll() is None
+            time.sleep(0.05)
+        assert ready.exists()
+        assert _port_open(port)
+        parent.terminate()
+        parent.wait(timeout=5)
+        assert _fixture_group_members(parent.pid), "child must outlive its bootloader"
+    finally:
+        _stop_fixture_group(parent, port, leader_started, grace_seconds=0.25)
+    assert not _fixture_group_members(parent.pid)
+    assert not _port_open(port)
+
+
 @contextmanager
 def _running(environment, root, phase):
     port = int(environment["CODEX_ACTION_PORT"])
+    assert not _port_open(port), "previous runtime listener survived cleanup"
     log_path = root / f"server-{phase}.log"
     with log_path.open("w") as log:
         process = subprocess.Popen(
@@ -239,6 +347,7 @@ def _running(environment, root, phase):
             stderr=subprocess.STDOUT,
             start_new_session=True,
         )
+    leader_started = _process_record(process.pid)[3]
     try:
         deadline = time.monotonic() + 180
         while time.monotonic() < deadline:
@@ -252,16 +361,7 @@ def _running(environment, root, phase):
             pytest.fail("Runtime readiness deadline exceeded: " + log_path.read_text())
         yield f"http://127.0.0.1:{port}"
     finally:
-        if process.poll() is None:
-            # This process group belongs only to the disposable test launcher.
-            import signal
-
-            os.killpg(process.pid, signal.SIGTERM)
-            try:
-                process.wait(timeout=10)
-            except subprocess.TimeoutExpired:
-                os.killpg(process.pid, signal.SIGKILL)
-                process.wait(timeout=10)
+        _stop_fixture_group(process, port, leader_started)
 
 
 @pytest.fixture
