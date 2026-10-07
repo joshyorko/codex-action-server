@@ -163,18 +163,23 @@ live members and the listener to stop. The next startup must not accept the
 previous process's still-open port as readiness. Cleanup never targets an
 unrelated service.
 
-The local acceptance checkpoint on 2026-10-07 records each delivery path
+The completed local verification on 2026-10-07 records each delivery path
 separately.
 
 | Delivery path | Verified result | Boundary |
 | --- | --- | --- |
 | Unmodified native CLI 1.0.1 | 30 composition tests passed | Includes exact catalogs, HTTP/MCP, restart and changed selection, receipt replay, owned process cleanup, and conservative native hints |
 | Patched wheel Runtime 1.0.2 with Core 1.0.1 and MCP 2.0.0 | 29 composition tests passed | Includes every deployment choice, projected behavioral hints, typed results, HTTP metadata, restart, and retained datadir selection |
-| Built production image | Composition execution pending | Building the image does not prove its selected packages execute |
+| Built production image | 5 composition cases passed | Compatibility with both profiles, observe-only, control-only, and combined deployments; projected hints, typed results, HTTP routes/metadata, snapshots where available, non-root baked artifact readability, restart, and independent persisted receipt/replay checks |
 
 The native receipt is `/tmp/cas-compose-native-acceptance-v2.log`, and the wheel
 receipt is `/tmp/cas-compose-wheel-acceptance-v3.log`. These are local run
-artifacts, not checked-in results. The wheel run used the same production
+artifacts, not checked-in results. The image receipt is
+`/tmp/cas-compose-image-acceptance.log`; it exercises the local
+`codex-action-server:composition-proof` image built from source revision
+`3dacad`, whose production inputs are unchanged by the later test/documentation
+commits. This proves disposable image execution, not publication or a live
+deployment. The wheel run used the same production
 inputs before the later test-only native bootloader cleanup regression was
 added. Native acceptance includes that regression. The unmodified native
 catalog advertises `readOnlyHint=false`, `destructiveHint=true`,
@@ -182,6 +187,7 @@ catalog advertises `readOnlyHint=false`, `destructiveHint=true`,
 patched wheel distinguishes the reviewed read/control classes. Matching
 catalogs and schemas do not imply hint parity.
 
-A skipped opt-in test is not runtime proof. None of these disposable fixtures establishes live daemon, provider,
+A skipped opt-in test is not runtime proof. None of these disposable fixtures
+establishes live daemon, provider,
 deployment, ADMIN, or retained callback acceptance. The required native tranche
 and callback limits remain in [NATIVE_CAPABILITIES.md](NATIVE_CAPABILITIES.md).

@@ -9,7 +9,7 @@ The container uses `actions-runtime==1.0.2`, `actions-core==1.0.1`, and
 `mcp==2.0.0`. The native `action-server` release is separately versioned at
 [1.0.1](https://github.com/joshyorko/actions/releases/tag/actions-runtime-1.0.1);
 the host launcher and host-runtime CI still use that release. The CAS package
-version (`0.1.1`) and CAS protocol contract version (`0.1.0`) are separate again.
+version (`0.2.0`) and CAS protocol contract version (`0.1.0`) are separate again.
 These versions describe different artifacts and must not be substituted for one
 another.
 
