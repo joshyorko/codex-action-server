@@ -76,6 +76,12 @@ ACTUAL_PINNED_SERVER_USER_AGENT = native_server_user_agent("0.160.1")
             None,
         ),
         (
+            native_server_user_agent(
+                "0.160.1", originator="friday-validation-native-fixture"
+            ),
+            "0.160.1",
+        ),
+        (
             native_server_user_agent("0.160.1-beta.1"),
             "0.160.1-beta.1",
         ),

@@ -119,7 +119,12 @@ REVIEWED_EXPERIMENTAL_METHODS_BY_NATIVE_VERSION = {
     ),
 }
 _NATIVE_SERVER_ORIGINATORS = frozenset(
-    {"codex-cli", "codex-tui", "friday-external-codex"}
+    {
+        "codex-cli",
+        "codex-tui",
+        "friday-external-codex",
+        "friday-validation-native-fixture",
+    }
 )
 _NATIVE_BUILD_VERSION_PATTERN = re.compile(
     r"(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)"
