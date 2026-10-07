@@ -3,10 +3,8 @@
 from __future__ import annotations
 
 import json
-import importlib
 from pathlib import Path
 import sys
-import types
 import unittest
 from unittest.mock import patch
 
@@ -138,21 +136,9 @@ class RecordingClient:
 
 def load_actions_with_framework_shim():
     """Load the entrypoint without registering actions in a live server."""
-    fake_actions = types.ModuleType("actions")
+    from test_actions import load_actions
 
-    class FakeResponse:
-        def __init__(self, result):
-            self.result = result
-
-    def action(**_kwargs):
-        return lambda function: function
-
-    fake_actions.ActionError = RuntimeError
-    fake_actions.Response = FakeResponse
-    fake_actions.action = action
-    with patch.dict(sys.modules, {"actions": fake_actions}):
-        sys.modules.pop("codex_actions", None)
-        return importlib.import_module("codex_actions")
+    return load_actions()
 
 
 class NativeProtocolContractTests(unittest.TestCase):
