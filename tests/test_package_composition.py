@@ -457,6 +457,16 @@ async def _exercise(
                             name in OBSERVE
                         ), name
                         assert tool.annotations.open_world_hint is True, name
+                    elif (
+                        os.environ.get("CAS_COMPOSITION_RUNTIME_VERSION", "1.0.1")
+                        == "1.0.1"
+                    ):
+                        # Ordinary actions in the unchanged native adapter carry
+                        # conservative defaults, not the scoped wheel projection.
+                        assert tool.annotations.read_only_hint is False, name
+                        assert tool.annotations.destructive_hint is True, name
+                        assert tool.annotations.idempotent_hint is False, name
+                        assert tool.annotations.open_world_hint is True, name
                 read_payload = {
                     "target": "local",
                     "cwd": native.cwd,
