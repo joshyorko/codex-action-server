@@ -38,6 +38,8 @@ packaging:
     - ./.venv/**
     - ./output/**
     - ./packages/**
+    - ./tests/**
+    - ./scripts/**
     - ./**/*.pyc
     - ./**/__pycache__/**
     - ./**/.env

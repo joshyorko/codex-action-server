@@ -150,3 +150,19 @@ def test_baked_artifacts_are_excluded_from_compatibility_discovery(source):
     discovered = list(FindActionPaths(source, ["*action*.py"], []))
     assert source / "src/codex_actions.py" in discovered
     assert not any("packages" in path.relative_to(source).parts for path in discovered)
+
+
+def test_development_fixtures_and_scripts_are_excluded_from_runtime_discovery(source):
+    from actions._collect_actions import FindActionPaths
+
+    for directory in ["tests", "scripts"]:
+        path = source / directory
+        path.mkdir()
+        (path / "example_action.py").write_text(
+            "@action(package='codex-action-server')\ndef fixture(): pass\n"
+        )
+    discovered = list(FindActionPaths(source, ["*action*.py"], []))
+    assert source / "src/codex_actions.py" in discovered
+    assert not any(
+        path.relative_to(source).parts[0] in {"tests", "scripts"} for path in discovered
+    )
