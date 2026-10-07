@@ -1,0 +1,262 @@
+{
+  "comparison": "Codex 0.160.1 to 0.161.0",
+  "source_commits": {
+    "0.160.1": "d27764b82f7118f674371e6d6e76271d9d606edb",
+    "0.161.0": "979011409de0a60b52f179721948e65531d26144"
+  },
+  "generated_schema_sha256": {
+    "0.160.1": {
+      "codex_app_server_protocol.schemas.json": "7243ba241962af92ca60581f1a81808ebda4212a800f8b205f54703bcfd508c5",
+      "codex_app_server_protocol.v2.schemas.json": "e77b7d1436a78f431a74b2cb263a862e92ae40d70411bc63835b47ab2168827c"
+    },
+    "0.161.0": {
+      "codex_app_server_protocol.schemas.json": "e7eb93e544b11833bd4ac39d14ec6ef26791b5b1ea43db0e451d772d6d27067a",
+      "codex_app_server_protocol.v2.schemas.json": "dc1945f0a8c4ebbe063d2c1533aaa7f9b152fb810ab60e7b389dbac9f9c9c2fa"
+    }
+  },
+  "request_counts": {
+    "0.160.1": {
+      "default": 104,
+      "experimental": 167
+    },
+    "0.161.0": {
+      "default": 104,
+      "experimental": 169
+    }
+  },
+  "new_experimental_only_methods_not_exposed_by_cas": [
+    "account/bedrock/checkGovCloudRequirements",
+    "thread/prediction/request"
+  ],
+  "newly_experimental_methods": [
+    "account/bedrock/checkGovCloudRequirements",
+    "thread/prediction/request"
+  ],
+  "cas_experimental_contracts": [
+    {
+      "method": "app/read",
+      "request_type": "AppsReadParams",
+      "response_type": "AppsReadResponse",
+      "request_contract": "unchanged",
+      "response_contract": "unchanged",
+      "request_sha256": {
+        "0.160.1": "e13ea89cd0dbb148d024a54768cef9cb0d647a98c87d0db70d556712adf6281e",
+        "0.161.0": "e13ea89cd0dbb148d024a54768cef9cb0d647a98c87d0db70d556712adf6281e"
+      },
+      "response_sha256": {
+        "0.160.1": "d957eb5120a66c46746fe3f5485a72a428f57380883a3797234ce3d4adbb21db",
+        "0.161.0": "d957eb5120a66c46746fe3f5485a72a428f57380883a3797234ce3d4adbb21db"
+      }
+    },
+    {
+      "method": "server/diagnostics",
+      "request_type": "ServerDiagnosticsParams",
+      "response_type": "ServerDiagnosticsResponse",
+      "request_contract": "unchanged",
+      "response_contract": "unchanged",
+      "request_sha256": {
+        "0.160.1": "a2c799262a3ce3c19ef5cdd983bf3d12b43ab3c426227091b909dcb7054738c0",
+        "0.161.0": "a2c799262a3ce3c19ef5cdd983bf3d12b43ab3c426227091b909dcb7054738c0"
+      },
+      "response_sha256": {
+        "0.160.1": "a4c35a0973f0b67bd16b23dfa0c32a82e1d7d05c47936244da6f926560dc8122",
+        "0.161.0": "a4c35a0973f0b67bd16b23dfa0c32a82e1d7d05c47936244da6f926560dc8122"
+      }
+    },
+    {
+      "method": "thread/backgroundTerminals/list",
+      "request_type": "ThreadBackgroundTerminalsListParams",
+      "response_type": "ThreadBackgroundTerminalsListResponse",
+      "request_contract": "unchanged",
+      "response_contract": "unchanged",
+      "request_sha256": {
+        "0.160.1": "b54e9f0d7ffb682b44e7412b1103c6b630886f24aafa7e07a0069e1500aaa3a1",
+        "0.161.0": "b54e9f0d7ffb682b44e7412b1103c6b630886f24aafa7e07a0069e1500aaa3a1"
+      },
+      "response_sha256": {
+        "0.160.1": "7376bdb62c82c0f7aa1e354fd375f1b9f3f5a6bff462aad23becc9e93785cb3a",
+        "0.161.0": "7376bdb62c82c0f7aa1e354fd375f1b9f3f5a6bff462aad23becc9e93785cb3a"
+      }
+    },
+    {
+      "method": "thread/backgroundTerminals/terminate",
+      "request_type": "ThreadBackgroundTerminalsTerminateParams",
+      "response_type": "ThreadBackgroundTerminalsTerminateResponse",
+      "request_contract": "unchanged",
+      "response_contract": "unchanged",
+      "request_sha256": {
+        "0.160.1": "5a920f45f4a28e263d3c329837d79d07139c6d5b0241285c858189ae56d97ee1",
+        "0.161.0": "5a920f45f4a28e263d3c329837d79d07139c6d5b0241285c858189ae56d97ee1"
+      },
+      "response_sha256": {
+        "0.160.1": "9a88f6a56fde93b92a2b318585154627886669faf3699ef23f319ece775500cb",
+        "0.161.0": "9a88f6a56fde93b92a2b318585154627886669faf3699ef23f319ece775500cb"
+      }
+    },
+    {
+      "method": "thread/queue/add",
+      "request_type": "ThreadQueueAddParams",
+      "response_type": "ThreadQueueAddResponse",
+      "request_contract": "unchanged",
+      "response_contract": "unchanged",
+      "request_sha256": {
+        "0.160.1": "bf79b0f75ee2ca5b2b660e03dac7807c980e455a30e801e3a1dc64ca1e150299",
+        "0.161.0": "bf79b0f75ee2ca5b2b660e03dac7807c980e455a30e801e3a1dc64ca1e150299"
+      },
+      "response_sha256": {
+        "0.160.1": "fc861eb5f1e044249c0b1af79ccf72e1c8408bf06773a030211a32d3074a7ceb",
+        "0.161.0": "fc861eb5f1e044249c0b1af79ccf72e1c8408bf06773a030211a32d3074a7ceb"
+      }
+    },
+    {
+      "method": "thread/queue/delete",
+      "request_type": "ThreadQueueDeleteParams",
+      "response_type": "ThreadQueueDeleteResponse",
+      "request_contract": "unchanged",
+      "response_contract": "unchanged",
+      "request_sha256": {
+        "0.160.1": "f5d5ec07768bba2d95983c86eb9f6786a1a787f1785c9b20ef1665d50bbad4e3",
+        "0.161.0": "f5d5ec07768bba2d95983c86eb9f6786a1a787f1785c9b20ef1665d50bbad4e3"
+      },
+      "response_sha256": {
+        "0.160.1": "babf503ecbb10dc6ad10094800cefdf311fac92c05b17f15ee63cf5a6a63bf99",
+        "0.161.0": "babf503ecbb10dc6ad10094800cefdf311fac92c05b17f15ee63cf5a6a63bf99"
+      }
+    },
+    {
+      "method": "thread/queue/list",
+      "request_type": "ThreadQueueListParams",
+      "response_type": "ThreadQueueListResponse",
+      "request_contract": "unchanged",
+      "response_contract": "unchanged",
+      "request_sha256": {
+        "0.160.1": "b54e9f0d7ffb682b44e7412b1103c6b630886f24aafa7e07a0069e1500aaa3a1",
+        "0.161.0": "b54e9f0d7ffb682b44e7412b1103c6b630886f24aafa7e07a0069e1500aaa3a1"
+      },
+      "response_sha256": {
+        "0.160.1": "be59bf081e00e88204c7547171ec0f059f816f4f874e8c7302708caaf0562271",
+        "0.161.0": "be59bf081e00e88204c7547171ec0f059f816f4f874e8c7302708caaf0562271"
+      }
+    },
+    {
+      "method": "thread/queue/reorder",
+      "request_type": "ThreadQueueReorderParams",
+      "response_type": "ThreadQueueReorderResponse",
+      "request_contract": "unchanged",
+      "response_contract": "unchanged",
+      "request_sha256": {
+        "0.160.1": "8d26956da9e7489975f585728d035080fd45bc943750c0561d7015cf937d019a",
+        "0.161.0": "8d26956da9e7489975f585728d035080fd45bc943750c0561d7015cf937d019a"
+      },
+      "response_sha256": {
+        "0.160.1": "a2c799262a3ce3c19ef5cdd983bf3d12b43ab3c426227091b909dcb7054738c0",
+        "0.161.0": "a2c799262a3ce3c19ef5cdd983bf3d12b43ab3c426227091b909dcb7054738c0"
+      }
+    },
+    {
+      "method": "thread/queue/start",
+      "request_type": "ThreadQueueStartParams",
+      "response_type": "ThreadQueueStartResponse",
+      "request_contract": "unchanged",
+      "response_contract": "changed",
+      "request_sha256": {
+        "0.160.1": "c7cfb31b1318540b414b71e05f5f46e93a10fa3f1de0907cc9dac38b276b37b5",
+        "0.161.0": "c7cfb31b1318540b414b71e05f5f46e93a10fa3f1de0907cc9dac38b276b37b5"
+      },
+      "response_sha256": {
+        "0.160.1": "0daab685bf69016cdf7e98363ca228a6d8c68e8676f0e076587886eb5b92a5f1",
+        "0.161.0": "0c186869b9256b0f39bd0208394f031d95e2825abb449709004579ffb96f9497"
+      }
+    },
+    {
+      "method": "thread/queue/update",
+      "request_type": "ThreadQueueUpdateParams",
+      "response_type": "ThreadQueueUpdateResponse",
+      "request_contract": "unchanged",
+      "response_contract": "unchanged",
+      "request_sha256": {
+        "0.160.1": "27c5776a520bde8561903cd1469c1229dca3225e77b6454257cd3ed27e450503",
+        "0.161.0": "27c5776a520bde8561903cd1469c1229dca3225e77b6454257cd3ed27e450503"
+      },
+      "response_sha256": {
+        "0.160.1": "fc861eb5f1e044249c0b1af79ccf72e1c8408bf06773a030211a32d3074a7ceb",
+        "0.161.0": "fc861eb5f1e044249c0b1af79ccf72e1c8408bf06773a030211a32d3074a7ceb"
+      }
+    },
+    {
+      "method": "thread/search",
+      "request_type": "ThreadSearchParams",
+      "response_type": "ThreadSearchResponse",
+      "request_contract": "unchanged",
+      "response_contract": "changed",
+      "request_sha256": {
+        "0.160.1": "84b5a1d8479388dff26667de43a0e511cde3285543eec967b92405a651773c95",
+        "0.161.0": "84b5a1d8479388dff26667de43a0e511cde3285543eec967b92405a651773c95"
+      },
+      "response_sha256": {
+        "0.160.1": "6929678ff1448365226a7ee05f0579f66b12e2349d58a60b5d1dd07685536f12",
+        "0.161.0": "23b30dcdb65a99a46300cbfc39fb626d3815139f64e0c5e873b5112489216082"
+      }
+    },
+    {
+      "method": "thread/searchOccurrences",
+      "request_type": "ThreadSearchOccurrencesParams",
+      "response_type": "ThreadSearchOccurrencesResponse",
+      "request_contract": "unchanged",
+      "response_contract": "unchanged",
+      "request_sha256": {
+        "0.160.1": "f0902a19323d89d25ec3b0cfb34bc3b423196c7da69d43c1bb9fa07608db7e4a",
+        "0.161.0": "f0902a19323d89d25ec3b0cfb34bc3b423196c7da69d43c1bb9fa07608db7e4a"
+      },
+      "response_sha256": {
+        "0.160.1": "b9ca23c2b4c17e80de8e80d2d523a0b4b59cfcae432ef9ddfba60f903a6683c7",
+        "0.161.0": "b9ca23c2b4c17e80de8e80d2d523a0b4b59cfcae432ef9ddfba60f903a6683c7"
+      }
+    },
+    {
+      "method": "thread/settings/update",
+      "request_type": "ThreadSettingsUpdateParams",
+      "response_type": "ThreadSettingsUpdateResponse",
+      "request_contract": "unchanged",
+      "response_contract": "unchanged",
+      "request_sha256": {
+        "0.160.1": "007102a0046a83b34fda0ebefa21dc2cdb5425b125ae73052bf14db0432b3c98",
+        "0.161.0": "007102a0046a83b34fda0ebefa21dc2cdb5425b125ae73052bf14db0432b3c98"
+      },
+      "response_sha256": {
+        "0.160.1": "a2c799262a3ce3c19ef5cdd983bf3d12b43ab3c426227091b909dcb7054738c0",
+        "0.161.0": "a2c799262a3ce3c19ef5cdd983bf3d12b43ab3c426227091b909dcb7054738c0"
+      }
+    },
+    {
+      "method": "thread/timeline/list",
+      "request_type": "ThreadTimelineListParams",
+      "response_type": "ThreadTimelineListResponse",
+      "request_contract": "unchanged",
+      "response_contract": "changed",
+      "request_sha256": {
+        "0.160.1": "b54e9f0d7ffb682b44e7412b1103c6b630886f24aafa7e07a0069e1500aaa3a1",
+        "0.161.0": "b54e9f0d7ffb682b44e7412b1103c6b630886f24aafa7e07a0069e1500aaa3a1"
+      },
+      "response_sha256": {
+        "0.160.1": "3ed4792ecc147b582b09a9cfccf6179145850238f4925299b571ce72b0de9167",
+        "0.161.0": "e3c309ccd5d621183ea31a97229db1b2c6a3b8420e71a1470b4e3b163d8e5469"
+      }
+    },
+    {
+      "method": "turn/settings/update",
+      "request_type": "TurnSettingsUpdateParams",
+      "response_type": "TurnSettingsUpdateResponse",
+      "request_contract": "unchanged",
+      "response_contract": "unchanged",
+      "request_sha256": {
+        "0.160.1": "355f32946d863a54f84bd4f328588a9114cad17dbfb33f1e3c7778e66618bbf0",
+        "0.161.0": "355f32946d863a54f84bd4f328588a9114cad17dbfb33f1e3c7778e66618bbf0"
+      },
+      "response_sha256": {
+        "0.160.1": "71ceaa869bc0c99a76a04cf932b999b1ffc5e6fd2d7ed751be03356e7e1c580f",
+        "0.161.0": "71ceaa869bc0c99a76a04cf932b999b1ffc5e6fd2d7ed751be03356e7e1c580f"
+      }
+    }
+  ]
+}
