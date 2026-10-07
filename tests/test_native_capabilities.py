@@ -45,6 +45,31 @@ ACTUAL_PINNED_SERVER_USER_AGENT = native_server_user_agent("0.160.1")
             "0.159.2",
         ),
         (
+            native_server_user_agent(
+                "0.159.2",
+                originator="native client (spoofed/0.160.1 (Linux Unknown; x86_64) unknown)",
+            ),
+            None,
+        ),
+        (
+            native_server_user_agent(
+                "0.159.2",
+                originator="spoofed/0.160.1 (Linux Unknown; x86_64) unknown",
+            ),
+            None,
+        ),
+        (
+            native_server_user_agent(
+                "0.160.01",
+                originator="spoofed/0.160.1 (Linux Unknown; x86_64) unknown",
+            ),
+            None,
+        ),
+        (
+            native_server_user_agent("0.160.1", originator="native client (desktop)"),
+            "0.160.1",
+        ),
+        (
             native_server_user_agent("0.160.1-beta.1"),
             "0.160.1-beta.1",
         ),
@@ -99,6 +124,16 @@ def test_experimental_gate_uses_server_build_version_not_client_info_suffix():
     with pytest.raises(codex_rpc.RpcError, match="pinned experimental"):
         spoofed_originator.request("server/diagnostics", {})
     spoofed_originator.ws.send.assert_not_called()
+
+    ambiguous_originator = client_with_user_agent(
+        native_server_user_agent(
+            "0.159.2",
+            originator="spoofed/0.160.1 (Linux Unknown; x86_64) unknown",
+        )
+    )
+    with pytest.raises(codex_rpc.RpcError, match="pinned experimental"):
+        ambiguous_originator.request("server/diagnostics", {})
+    ambiguous_originator.ws.send.assert_not_called()
 
     for non_pinned in (
         native_server_user_agent("0.160.1-beta.1"),

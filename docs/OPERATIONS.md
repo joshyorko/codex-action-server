@@ -85,9 +85,10 @@ Only after that passes, Ctrl-C the OLD foreground tunnel-client, then run:
 
 Equivalent kit command: CODEX_MCP_URL=http://127.0.0.1:8088/mcp
 `"$CUTOVER/tunnel-kit/launch-codex.zsh"`. Run only one client for this tunnel ID.
-Reconnect/refresh the ChatGPT app to replace the old tool catalog. Expect 63 tools,
-including list_targets, inspect_target and read_dispatch_receipt. Old enum-only
-remote target schemas mean the catalog is stale.
+Reconnect/refresh the ChatGPT app to replace the old tool catalog. Confirm the
+catalog matches the current operator profile and includes list_targets,
+inspect_target, and read_dispatch_receipt. Old enum-only remote target schemas
+mean the catalog is stale.
 
 ## 4. Read-only ChatGPT MCP workflow
 
@@ -110,8 +111,9 @@ never create a replacement.
 Keep the exact target and cwd when following `nextCursor`. Discovery no longer
 accepts omitted or null cwd, so refresh the MCP catalog after upgrading. Known
 thread IDs can still be read directly with their exact cwd. Loaded-thread IDs
-do not replace persisted discovery. Read-only annotations remain unchanged;
-this contract does not bypass any client approval or safety decision.
+do not replace persisted discovery. In the patched container, read-only actions
+also advertise idempotency; this contract does not bypass any client approval
+or safety decision.
 
 Then list_models with `{"payload":{"target":"local"}}` for the actual model and
 reasoning catalog. Do not infer provider inheritance from a model name.

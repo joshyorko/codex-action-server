@@ -2,7 +2,7 @@ spec-version: v2
 
 name: codex-action-server
 description: Typed MCP actions for an existing Codex App Server daemon.
-version: 0.1.0
+version: 0.1.1
 
 dependencies:
   conda-forge:
@@ -27,8 +27,9 @@ dev-dependencies:
 dev-tasks:
   test: pytest tests -v
   lint: |
-    ruff check src tests
-    ruff format --check src tests
+    ruff check src tests scripts/preflight.py
+    ruff format --check src tests scripts/preflight.py
+  prettify: ruff format src tests scripts/preflight.py
 
 packaging:
   exclude:

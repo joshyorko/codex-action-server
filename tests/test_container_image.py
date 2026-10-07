@@ -129,6 +129,8 @@ def test_production_image_mcp_native_socket_and_persistent_receipt(tmp_path):
                         assert tool.annotations.destructive_hint is (
                             tool.name in controls
                         )
+                        assert tool.annotations.idempotent_hint is (tool.name in reads)
+                        assert tool.annotations.open_world_hint is True
                     await assert_scoped_mcp_discovery(
                         session, {tool.name: tool for tool in catalog.tools}, native
                     )

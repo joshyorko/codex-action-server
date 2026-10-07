@@ -103,7 +103,11 @@ def annotation_options(package_name, file, name, options):
         return options
     projected = dict(options)
     read_only = name in READ_ONLY_TOOLS
-    projected.update(read_only_hint=read_only, destructive_hint=not read_only)
+    projected.update(
+        read_only_hint=read_only,
+        destructive_hint=not read_only,
+        idempotent_hint=read_only,
+    )
     return projected
 
 

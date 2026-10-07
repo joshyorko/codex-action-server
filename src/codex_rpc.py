@@ -119,7 +119,8 @@ def native_server_build_version(user_agent: object) -> str | None:
     ``<originator>/<CARGO_PKG_VERSION> (<platform>) <product UA>``. The
     originator and trailing clientInfo suffix vary by connecting client; only
     the slash-delimited version immediately before the platform block is the
-    app-server build slot. Unknown or malformed formats fail closed.
+    app-server build slot. Exactly one unambiguous build/platform boundary is
+    accepted; unknown or malformed formats fail closed.
     """
     if (
         not isinstance(user_agent, str)
@@ -128,18 +129,20 @@ def native_server_build_version(user_agent: object) -> str | None:
         or any(character in user_agent for character in "\r\n\x00")
     ):
         return None
-    prefix, separator, details = user_agent.partition(" (")
-    if not separator or not details:
+    candidates = list(re.finditer(r"/([^/() ]+) \(", user_agent))
+    if len(candidates) != 1:
+        return None
+    candidate = candidates[0]
+    version = candidate.group(1)
+    if not _NATIVE_BUILD_VERSION_PATTERN.fullmatch(version):
+        return None
+    build_slot_start = candidate.start()
+    prefix = user_agent[:build_slot_start]
+    details = user_agent[candidate.end() :]
+    if not prefix.strip():
         return None
     platform, closing_parenthesis, product_details = details.partition(")")
     if not closing_parenthesis or not platform.strip() or not product_details.strip():
-        return None
-    originator, version_separator, version = prefix.rpartition("/")
-    if (
-        not version_separator
-        or not originator.strip()
-        or not _NATIVE_BUILD_VERSION_PATTERN.fullmatch(version)
-    ):
         return None
     return version
 

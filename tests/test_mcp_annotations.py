@@ -115,17 +115,23 @@ def test_policy_preserves_action_metadata_and_classifies_every_tool(name):
         "is_consequential": name in CONTROLS,
         "title": "Preserve title",
         "_meta": {"fixture": "preserve"},
+        "open_world_hint": True,
+        "idempotent_hint": name in CONTROLS,
     }
     projected = POLICY["annotation_options"](
         "codex-action-server", "src/codex_actions.py", name, original
     )
     assert projected["read_only_hint"] is (name in READS)
     assert projected["destructive_hint"] is (name in CONTROLS)
-    assert {
+    assert projected["idempotent_hint"] is (name in READS)
+    assert projected.get("open_world_hint", True) is True
+    projected_metadata = {
         k: v
         for k, v in projected.items()
-        if k not in {"read_only_hint", "destructive_hint"}
-    } == original
+        if k not in {"read_only_hint", "destructive_hint", "idempotent_hint"}
+    }
+    original_metadata = {k: v for k, v in original.items() if k != "idempotent_hint"}
+    assert projected_metadata == original_metadata
     assert "read_only_hint" not in original
 
 
@@ -134,10 +140,16 @@ def test_unknown_codex_action_remains_conservative():
         "codex-action-server",
         "src/codex_actions.py",
         "future_worker_lifecycle",
-        {"read_only_hint": True, "destructive_hint": False},
+        {
+            "read_only_hint": True,
+            "destructive_hint": False,
+            "idempotent_hint": True,
+        },
     )
     assert projected["read_only_hint"] is False
     assert projected["destructive_hint"] is True
+    assert projected["idempotent_hint"] is False
+    assert projected.get("open_world_hint", True) is True
 
 
 @pytest.mark.parametrize(
