@@ -7,4 +7,4 @@ root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 : "${CODEX_ACTION_DATA:?Set a separate Action Server data directory}"
 umask 077
 port="$(python3 "$root/scripts/preflight.py")"
-exec "${ACTION_SERVER_BIN:-action-server}" start --dir "$root" --datadir "$CODEX_ACTION_DATA" --address 127.0.0.1 --port "$port" --actions-sync=true --min-processes 1 --max-processes 1
+exec python3 "$root/scripts/start_packages.py" --address "127.0.0.1" --port "$port"

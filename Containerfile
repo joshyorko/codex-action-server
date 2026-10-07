@@ -25,6 +25,7 @@ ENV CODEX_ACTION_TARGETS=/run/codex-action-server/targets.json \
     CODEX_ACTION_DATA=/var/lib/codex-action-server/runtime \
     ACTIONS_HOME=/var/lib/codex-action-server/actions \
     CODEX_ACTION_PREPARED_CACHE=/opt/codex-action-server-cache \
+    CODEX_ACTION_PACKAGE_ROOT=/opt/codex-action-packages \
     ROBOTS_HOME=/var/lib/codex-action-server/robots \
     DEVSY_HOME=/run/operator-devsy \
     DEVSY_DISABLE_TELEMETRY=true \
@@ -34,16 +35,21 @@ ENV CODEX_ACTION_TARGETS=/run/codex-action-server/targets.json \
 WORKDIR /opt/codex-action-server
 COPY package.yaml ./
 COPY src/ ./src/
-COPY scripts/run-container.sh scripts/preflight.py scripts/container_health.py ./scripts/
+COPY scripts/run.sh scripts/run-packages.sh scripts/run-container.sh scripts/start_packages.py scripts/assemble_packages.py scripts/preflight.py scripts/container_health.py ./scripts/
 COPY scripts/install_runtime_transport_patch.py ./scripts/
 RUN python3 scripts/install_runtime_transport_patch.py
 COPY scripts/install_runtime_annotation_patch.py ./scripts/
 RUN python3 scripts/install_runtime_annotation_patch.py
 
+# Both split packages carry the complete shared source and exact entrypoint policy.
+RUN python3 scripts/assemble_packages.py --output /opt/codex-action-packages
+
 USER 1000:1000
 FROM base AS prepared
 # Warm the exact package environment at build time; no daemon is started.
 RUN action-server import --dir /opt/codex-action-server --datadir /tmp/cas-image-import \
+    && CODEX_ACTION_PACKAGES=codex-observe,codex-control action-server import --dir /opt/codex-action-packages/codex-observe --datadir /tmp/cas-image-import \
+    && CODEX_ACTION_PACKAGES=codex-observe,codex-control action-server import --dir /opt/codex-action-packages/codex-control --datadir /tmp/cas-image-import \
     && rm -rf /tmp/cas-image-import
 RUN rm -rf "$ACTIONS_HOME/pkgs" "$ACTIONS_HOME/uvcache" "$ACTIONS_HOME/temp"
 
