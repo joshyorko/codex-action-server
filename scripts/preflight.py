@@ -27,7 +27,8 @@ def main():
         if (
             not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.-]{0,127}", name)
             or not isinstance(config, dict)
-            or config.get("transport") not in {"local", "ssh", "devsy", "container"}
+            or config.get("transport")
+            not in {"local", "ssh", "devsy", "devsy-kubernetes", "container"}
         ):
             raise ValueError("invalid_target_configuration")
     paths = [
