@@ -24,6 +24,7 @@ import time
 from websockets.sync.client import connect, unix_connect
 from websockets.exceptions import ConnectionClosed
 from worker_containers import Worker
+from worker_kubernetes import KubernetesWorker
 
 METHODS = {
     "mcpServerStatus/list",
@@ -232,7 +233,7 @@ class Target:
     ssh_options: tuple[str, ...] = ()
     workspace_uid: str | None = None
     workspace_id: str | None = None
-    container: Worker | None = None
+    container: Worker | KubernetesWorker | None = None
 
     def __post_init__(self):
         if (

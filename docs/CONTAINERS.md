@@ -1,7 +1,8 @@
 # Container deployment
 
 The image controls existing native Codex daemons. It installs the PyPI packages
-`actions-runtime==1.0.2` and `actions-core==1.0.1`, Devsy 1.19.0, and an SSH client.
+`actions-runtime==1.0.2` and `actions-core==1.0.1`, Devsy 1.23.0, kubectl 1.36.3,
+and an SSH client.
 It does not contain Codex or start a native daemon. Runtime 1.0.2 publishes Linux
 x86-64 wheels only, so this image
 does not claim arm64 support.
@@ -9,13 +10,24 @@ The existing host launcher and host-runtime CI checks retain their separate 1.0.
 pin; this image does not upgrade the installed host runtime.
 
 Production images are published to `ghcr.io/joshyorko/codex-action-server` as
-`sha-<full-commit-SHA>`. Source tags starting with `v` retest and alias the already
-published commit image. A release requires its immutable commit image to exist
-first. Publication is serialized and refuses to overwrite a tag with different image content.
-Use the digest reported by that job for deployment. Pull requests build and test
-without registry authentication or publication. The focused
-`feat/container-control-plane` branch can publish a tested candidate before merge.
-These candidates are checkpoints, not release or runtime acceptance claims.
+`sha-<full-commit-SHA>`. The `container-image` workflow verifies and publishes the
+same local image in one job, without saving an image archive or using Actions
+artifact storage. Publication is serialized and refuses to overwrite an existing
+commit or release tag with different image content. Registry lookup errors fail
+publication unless the destination manifest is absent.
+
+Pushes to `main`, `feat/container-control-plane`, and source tags starting with
+`v` can publish only in `joshyorko/codex-action-server`. Release tags pull, check
+the source revision, and retest the existing immutable commit image before adding
+the release alias. That commit image must exist first; releases never rebuild it.
+The release pull requires registry authentication. Other publication jobs build
+and test before registry authentication.
+
+Pull requests and fork repositories build and test without registry
+authentication or publication. Manual dispatch defaults to verification only;
+publication requires the explicit boolean input `publish=true` in the canonical
+repository. Use the digest reported by a publication job for deployment. Branch
+candidates are checkpoints, not release or runtime acceptance claims.
 
 ## Network and host dependencies
 
