@@ -1,7 +1,8 @@
 # Container deployment
 
 The image controls existing native Codex daemons. It installs the PyPI packages
-`actions-runtime==1.0.2` and `actions-core==1.0.1`, Devsy 1.19.0, and an SSH client.
+`actions-runtime==1.0.2` and `actions-core==1.0.1`, Devsy 1.23.0, kubectl 1.36.3,
+and an SSH client.
 It does not contain Codex or start a native daemon. Runtime 1.0.2 publishes Linux
 x86-64 wheels only, so this image
 does not claim arm64 support.
