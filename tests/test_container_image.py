@@ -65,17 +65,24 @@ class SnapshotNativeFixture(NativeFixture):
 
 
 @pytest.mark.parametrize(
-    "packages,profile,expected",
+    "packages,profile,expected,include_kubernetes_target",
     [
-        (("codex-action-server",), "operator", OBSERVE | CONTROL),
-        (("codex-action-server",), "observe", OBSERVE),
-        (("codex-observe",), "operator", OBSERVE),
-        (("codex-control",), "operator", CONTROL),
-        (("codex-observe", "codex-control"), "operator", OBSERVE | CONTROL),
+        (("codex-action-server",), "operator", OBSERVE | CONTROL, False),
+        (("codex-action-server",), "observe", OBSERVE, False),
+        (("codex-observe",), "operator", OBSERVE, False),
+        (("codex-control",), "operator", CONTROL, False),
+        (("codex-observe", "codex-control"), "operator", OBSERVE | CONTROL, False),
+        pytest.param(
+            ("codex-action-server",),
+            "observe",
+            OBSERVE,
+            True,
+            id="kubernetes-target-startup",
+        ),
     ],
 )
 def test_production_image_mcp_native_socket_and_persistent_receipt(
-    tmp_path, packages, profile, expected
+    tmp_path, packages, profile, expected, include_kubernetes_target
 ):
     import httpx
     from mcp import ClientSession
@@ -104,24 +111,60 @@ def test_production_image_mcp_native_socket_and_persistent_receipt(
     )
     native_socket.chmod(0o660)
     target = tmp_path / "targets.json"
-    target.write_text(
-        json.dumps(
-            {
-                "targets": {
-                    "local": {
-                        "transport": "local",
-                        "codex_bin": "/not-installed/codex",
-                        "socket_path": "/run/native-codex/native.sock",
-                    }
-                }
-            }
-        )
-    )
+    targets = {
+        "local": {
+            "transport": "local",
+            "codex_bin": "/not-installed/codex",
+            "socket_path": "/run/native-codex/native.sock",
+        }
+    }
+    transport_args = []
+    if include_kubernetes_target:
+        targets["devsy"] = {
+            "transport": "devsy-kubernetes",
+            "context": "default",
+            "provider": "kubernetes",
+            "workspace": "codex-action-server",
+            "workspace_uid": "default-co-f715f",
+            "user": "vscode",
+            "codex_bin": "/home/vscode/.local/bin/codex",
+        }
+        # No operator state or cluster credentials are mounted. Any remote
+        # resolution during actual entrypoint startup must fail this proof.
+        forbidden = tmp_path / "no-remote-preflight"
+        forbidden.mkdir(mode=0o755)
+        for name in ("devsy", "kubectl"):
+            binary = forbidden / name
+            binary.write_text(
+                "#!/bin/sh\n"
+                "printf '%s\\n' attempted > /tmp/remote-preflight-attempted\n"
+                "exit 97\n"
+            )
+            binary.chmod(0o755)
+        transport_args = [
+            "--mount",
+            f"type=bind,src={forbidden},dst=/run/no-remote-preflight,readonly",
+            "--env",
+            "PATH=/run/no-remote-preflight:/usr/local/bin:/usr/local/sbin:/usr/sbin:/usr/bin:/sbin:/bin",
+        ]
+    target.write_text(json.dumps({"targets": targets}))
     target.chmod(0o644)
     network_created = volume_created = False
 
     def assert_baked_artifacts():
         assert docker("exec", identity, "id", "-u").stdout.strip() == "1000"
+        if include_kubernetes_target:
+            assert (
+                docker(
+                    "exec",
+                    identity,
+                    "test",
+                    "!",
+                    "-e",
+                    "/tmp/remote-preflight-attempted",
+                ).returncode
+                == 0
+            )
         result = docker(
             "exec",
             identity,
@@ -367,6 +410,7 @@ def test_production_image_mcp_native_socket_and_persistent_receipt(
             f"CODEX_ACTION_PACKAGES={','.join(packages)}",
             "--env",
             f"CODEX_ACTION_PROFILE={profile}",
+            *transport_args,
             IMAGE,
         )
         wait_for_catalog()
