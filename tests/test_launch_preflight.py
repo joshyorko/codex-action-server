@@ -97,3 +97,49 @@ def test_direct_preflight_creates_private_ancestors(tmp_path):
     )
     assert result.returncode == 0, result.stderr
     assert (tmp_path / "new").stat().st_mode & 0o077 == 0
+
+
+def test_preflight_accepts_pinned_devsy_kubernetes_target_offline(
+    tmp_path, monkeypatch, capsys
+):
+    import runpy
+
+    target = tmp_path / "targets.json"
+    target.write_text(
+        json.dumps(
+            {
+                "targets": {
+                    "devsy": {
+                        "transport": "devsy-kubernetes",
+                        "context": "default",
+                        "provider": "kubernetes",
+                        "workspace": "worker",
+                        "workspace_uid": "uid-1",
+                        "user": "vscode",
+                    }
+                }
+            }
+        )
+    )
+    for key, value in {
+        "CODEX_ACTION_TARGETS": target,
+        "CODEX_ACTION_RECEIPTS": tmp_path / "receipts",
+        "CODEX_ACTION_DATA": tmp_path / "runtime",
+        "CODEX_ACTION_PORT": "8088",
+    }.items():
+        monkeypatch.setenv(key, str(value))
+
+    def reject_process(*args, **kwargs):
+        pytest.fail("Offline preflight must not launch remote processes")
+
+    monkeypatch.setattr(subprocess, "Popen", reject_process)
+    preflight = runpy.run_path(str(ROOT / "scripts/preflight.py"))
+    previous_umask = os.umask(0o077)
+    try:
+        preflight["main"]()
+    finally:
+        os.umask(previous_umask)
+    assert capsys.readouterr().out == "8088\n"
+    for name in ["runtime", "receipts"]:
+        assert (tmp_path / name).is_dir()
+        assert (tmp_path / name).stat().st_mode & 0o077 == 0
