@@ -12,6 +12,7 @@ import subprocess
 
 from codex_rpc import Target
 from worker_containers import ContainerProvider
+from worker_kubernetes import KubernetesWorker
 
 _NAME = re.compile(r"^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,127}$")
 _IDENTIFIER = re.compile(r"^[^\s\r\n]+$")
@@ -82,7 +83,7 @@ def _run(args, json_output=False):
         raise ResolutionError("target_resolution_probe_failed") from None
 
 
-def _devsy(config):
+def _devsy_workspace(config):
     context = _name(config.get("context", "default"))
     workspace = config.get("workspace")
     source = config.get("source")
@@ -124,6 +125,12 @@ def _devsy(config):
     workspace = _name(row.get("id"))
     if config.get("workspace_uid") and row.get("uid") != config["workspace_uid"]:
         raise ResolutionError("workspace_identity_changed")
+    return row, workspace, prefix
+
+
+def _devsy(config):
+    row, workspace, prefix = _devsy_workspace(config)
+    context = _name(config.get("context", "default"))
     state = _run([*prefix, "status", workspace, "--timeout", "10s"], True)
     if (
         not isinstance(state, dict)
@@ -250,6 +257,24 @@ def resolve_target(name: str) -> Target:
             raise ResolutionError("invalid_ssh_destination")
     elif transport == "devsy":
         destination, options, uid, workspace = _devsy(config)
+    elif transport == "devsy-kubernetes":
+        if not config.get("workspace_uid"):
+            raise ResolutionError("workspace_uid_required")
+        if config.get("provider") != "kubernetes" or not config.get("workspace"):
+            raise ResolutionError("pinned_kubernetes_workspace_required")
+        if config.get("user", "vscode") != "vscode":
+            raise ResolutionError("kubernetes_worker_user_must_be_vscode")
+        row, workspace, _ = _devsy_workspace(config)
+        worker = KubernetesWorker.resolve(row, binary)
+        return Target(
+            "kubernetes:" + worker.namespace + "/" + worker.pod,
+            binary,
+            socket,
+            name,
+            workspace_uid=worker.workspace_uid,
+            workspace_id=workspace,
+            container=worker,
+        )
     else:
         raise ResolutionError("unsupported_target_transport")
     return Target(destination, binary, socket, name, options, uid, workspace)

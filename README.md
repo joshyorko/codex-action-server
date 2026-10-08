@@ -9,7 +9,7 @@ or agent framework. Codex remains responsible for execution and authorization.
 ## Run independently
 
 Requires Linux/Python3.12, Actions Runtime1.0.1 (`action-server`), and a running
-native Codex daemon. SSH is needed for SSH/Devsy targets; Devsy1.19 is needed
+native Codex daemon. SSH is needed for SSH/Devsy TCP targets; Devsy1.23 is needed
 only for Devsy targets. Container targets use an explicitly selected Docker or
 Podman CLI and local engine socket. Local-only configuration needs no provider CLI.
 
@@ -52,6 +52,15 @@ Multiple matches fail closed. No latest-workspace heuristic.
 Devsy list/status JSON is authoritative for workspace identity/readiness. Devsy's
 generated SSH config supplies its route. This release accepts existing loopback
 TCP routes only and expected user `vscode` by default; missing routes and
+For an existing Kubernetes workspace, `transport:devsy-kubernetes` selects
+direct pod execution through the provider's configured kubeconfig, context and
+namespace. It requires an explicit workspace name, provider `kubernetes`, a
+`workspace_uid` pin and user `vscode`. The adapter requires exactly one Ready
+pod with the matching workspace label, revalidates its pod UID before each
+command and checks the workspace identity inside the pod. It connects only to
+the existing native daemon and does not provision, forward ports, restart or
+authenticate a worker. The production image pins Devsy 1.23.0 and kubectl 1.36.3.
+
 ProxyCommand/ProxyJump fail closed. Keep the operator's Devsy desktop/workspace
 connection running. Selected workspace SSH configuration is honored and its route is pinned across
 probe/proxy. Each SSH command checks the remote workspace UID/ID before invoking

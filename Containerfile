@@ -10,9 +10,12 @@ RUN test "$TARGETARCH" = amd64 \
     && echo '9aef9ec55c17d90ec11a32d8d4da694def92502ba46a73621c35267f230873d3  /tmp/runtime-wheel/actions_runtime-1.0.2-cp312-cp312-manylinux_2_17_x86_64.manylinux_2_5_x86_64.manylinux1_x86_64.manylinux2014_x86_64.whl' | sha256sum -c - \
     && python -m pip install --no-cache-dir /tmp/runtime-wheel/*.whl actions-core==1.0.1 mcp==2.0.0 \
     && rm -rf /tmp/runtime-wheel \
-    && curl -fL --max-time 120 --retry 2 https://github.com/devsy-org/devsy/releases/download/v1.19.0/devsy-linux-amd64 -o /usr/local/bin/devsy \
-    && echo '2f43f28ab5b399b379091aeb09628ec6b70dc82212a64d30de8e2a4a18a49ef5  /usr/local/bin/devsy' | sha256sum -c - \
+    && curl -fL --max-time 120 --retry 2 https://github.com/devsy-org/devsy/releases/download/v1.23.0/devsy-linux-amd64 -o /usr/local/bin/devsy \
+    && echo 'bf6e00b498a09ed614670ce24bd7cf46830b31218e773961f6c267c1a25b8186  /usr/local/bin/devsy' | sha256sum -c - \
     && chmod 0755 /usr/local/bin/devsy \
+    && curl -fL --max-time 120 --retry 2 https://dl.k8s.io/release/v1.36.3/bin/linux/amd64/kubectl -o /usr/local/bin/kubectl \
+    && echo 'ebbd080e7c2e275093b55915722043257eb24004363e20acb3c4d71919f88336  /usr/local/bin/kubectl' | sha256sum -c - \
+    && chmod 0755 /usr/local/bin/kubectl \
     && groupadd --gid 1000 codex-actions \
     && useradd --uid 1000 --gid 1000 --create-home codex-actions \
     && mkdir -p /var/lib/codex-action-server/actions /var/lib/codex-action-server/receipts /var/lib/codex-action-server/runtime /var/lib/codex-action-server/launcher /var/lib/codex-action-server/robots /run/operator-devsy/contexts/default \
