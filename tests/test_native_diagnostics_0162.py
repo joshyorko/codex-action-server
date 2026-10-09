@@ -56,8 +56,9 @@ def test_01620_generated_diagnostics_request_and_consumed_response_shapes():
     assert gauge["properties"]["value"]["type"] == "integer"
 
 
-def test_01620_allows_only_reviewed_diagnostics_contract():
-    native = client("0.162.0")
+@pytest.mark.parametrize("version", ["0.162.0", "0.162.1"])
+def test_0162_allows_only_reviewed_diagnostics_contract(version):
+    native = client(version)
     result = {
         "process": {"id": 1234, "residentMemoryBytes": None},
         "gauges": [{"name": "threads", "value": 0}],
@@ -69,7 +70,7 @@ def test_01620_allows_only_reviewed_diagnostics_contract():
         "method": "server/diagnostics",
         "params": {},
     }
-    assert codex_rpc.REVIEWED_EXPERIMENTAL_METHODS_BY_NATIVE_VERSION["0.162.0"] == {
+    assert codex_rpc.REVIEWED_EXPERIMENTAL_METHODS_BY_NATIVE_VERSION[version] == {
         "server/diagnostics"
     }
 
@@ -77,18 +78,32 @@ def test_01620_allows_only_reviewed_diagnostics_contract():
 @pytest.mark.parametrize(
     "method", sorted(codex_rpc.EXPERIMENTAL_METHODS - {"server/diagnostics"})
 )
-def test_01620_other_experimental_methods_remain_rejected_before_send(method):
-    native = client("0.162.0")
+@pytest.mark.parametrize("version", ["0.162.0", "0.162.1"])
+def test_0162_other_experimental_methods_remain_rejected_before_send(method, version):
+    native = client(version)
     with pytest.raises(codex_rpc.RpcError, match="pinned experimental"):
         native.request(method, {})
     native.ws.send.assert_not_called()
 
 
 @pytest.mark.parametrize(
-    "version", ["0.162.1", "0.163.0", "0.162.0-beta.1", "0.162.0+build.1"]
+    "version", ["0.162.2", "0.163.0", "0.162.0-beta.1", "0.162.0+build.1"]
 )
 def test_01620_review_does_not_authorize_unreviewed_future_builds(version):
     native = client(version)
     with pytest.raises(codex_rpc.RpcError, match="pinned experimental"):
         native.request("server/diagnostics", {})
     native.ws.send.assert_not_called()
+
+
+def test_01621_generated_contract_matches_reviewed_01620():
+    newer = json.loads(
+        (
+            Path(__file__).parent
+            / "fixtures/protocol/codex_0.162.1_server_diagnostics.json"
+        ).read_text()
+    )
+    assert newer["native_version"] == "0.162.1"
+    assert newer["schemas"] == FIXTURE["schemas"]
+    assert newer["request_variant"] == FIXTURE["request_variant"]
+    assert newer["generated_files_sha256"] == FIXTURE["generated_files_sha256"]

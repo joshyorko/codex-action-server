@@ -1,0 +1,110 @@
+{
+  "binary_sha256": "628e35487d888a28f0427fc37501da529dd3d81fcbad7a2c3421c1e8670d92e1",
+  "generated_files_sha256": {
+    "ServerDiagnosticsParams.json": "5a4235de371d1a58a45300e14fbfbc9ab0a3ecef3078ae35d60f1470b6e4e4f1",
+    "ServerDiagnosticsResponse.json": "0b3b35e623761a05bcd4a20085be8395986d2b98037c8ebda4dcda2204689d1d"
+  },
+  "generation_command": "codex app-server generate-json-schema --experimental --out <private-temporary-directory>",
+  "method": "server/diagnostics",
+  "native_version": "0.162.1",
+  "request_variant": {
+    "description": "Read content-free, process-local diagnostics.",
+    "properties": {
+      "id": {
+        "$ref": "#/definitions/RequestId"
+      },
+      "method": {
+        "enum": [
+          "server/diagnostics"
+        ],
+        "title": "Server/diagnosticsRequestMethod",
+        "type": "string"
+      },
+      "params": {
+        "$ref": "#/definitions/ServerDiagnosticsParams"
+      }
+    },
+    "required": [
+      "id",
+      "method",
+      "params"
+    ],
+    "title": "Server/diagnosticsRequest",
+    "type": "object"
+  },
+  "schemas": {
+    "ServerDiagnosticsParams": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "ServerDiagnosticsParams",
+      "type": "object"
+    },
+    "ServerDiagnosticsResponse": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "definitions": {
+        "ServerDiagnosticsGauge": {
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "value": {
+              "format": "uint64",
+              "minimum": 0.0,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "name",
+            "value"
+          ],
+          "type": "object"
+        },
+        "ServerDiagnosticsProcess": {
+          "properties": {
+            "id": {
+              "format": "uint32",
+              "minimum": 0.0,
+              "type": "integer"
+            },
+            "physicalFootprintBytes": {
+              "format": "uint64",
+              "minimum": 0.0,
+              "type": [
+                "integer",
+                "null"
+              ]
+            },
+            "residentMemoryBytes": {
+              "format": "uint64",
+              "minimum": 0.0,
+              "type": [
+                "integer",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "type": "object"
+        }
+      },
+      "properties": {
+        "gauges": {
+          "items": {
+            "$ref": "#/definitions/ServerDiagnosticsGauge"
+          },
+          "type": "array"
+        },
+        "process": {
+          "$ref": "#/definitions/ServerDiagnosticsProcess"
+        }
+      },
+      "required": [
+        "gauges",
+        "process"
+      ],
+      "title": "ServerDiagnosticsResponse",
+      "type": "object"
+    }
+  }
+}

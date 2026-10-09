@@ -119,6 +119,7 @@ REVIEWED_EXPERIMENTAL_METHODS_BY_NATIVE_VERSION = {
         }
     ),
     "0.162.0": frozenset({"server/diagnostics"}),
+    "0.162.1": frozenset({"server/diagnostics"}),
 }
 _NATIVE_SERVER_ORIGINATORS = frozenset(
     {
