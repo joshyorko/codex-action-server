@@ -42,7 +42,8 @@ flowchart LR
     Server --> Remote["Remote Codex"]
 ```
 
-ChatGPT and Friday are clients of this API. The companion
+Use any compatible MCP client, such as Codex, Claude Code, ChatGPT, or Claude
+Desktop. These are examples, not required dependencies. The companion
 [mcp-tunnel-kit](https://github.com/joshyorko/mcp-tunnel-kit) handles the tunnel
 and Executor deployment. Workers run native Codex; they do not need their own
 Action Server.
