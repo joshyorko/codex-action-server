@@ -1,201 +1,137 @@
-# Codex Action Server
+<p align="center">
+  <img src="docs/assets/logo.png" alt="Action Server for Codex" width="720">
+</p>
 
-A small typed MCP/API control surface for **existing native Codex app-server
- daemons**. Trusted client → Action Server → native Codex. Friday is a consumer.
+<h1 align="center">Codex Action Server</h1>
 
-This is not a model runtime, shell endpoint, scheduler, workspace provisioner,
-or agent framework. Codex remains responsible for execution and authorization.
+<p align="center">
+  Give your MCP client the tools to work with Codex.
+</p>
+
+<p align="center">
+  Built with <a href="https://github.com/joshyorko/actions">joshyorko/actions</a>
+  · <a href="docs/USAGE.md">Get started</a>
+  · <a href="docs/CONTAINERS.md">Deploy</a>
+  · <a href="docs/NATIVE_CAPABILITIES.md">Explore the tools</a>
+</p>
+
+Ask your assistant to find a coding session, check its progress, or start work in
+one of your projects. Codex Action Server gives it the MCP tools to do that,
+using Codex already running on your workstation or a remote worker.
+
+You choose the machines it can reach and whether it can only read or also take
+action. Your client gets a consistent API. Codex keeps doing the coding.
+
+## Built with Actions
+
+This project uses the **actions-core framework from
+[joshyorko/actions](https://github.com/joshyorko/actions)** to define typed Python
+actions. **actions-runtime** turns those actions into MCP tools and an HTTP API,
+with schemas clients can discover. RCC manages the package's pinned Python
+environment.
+
+Codex Action Server adds the Codex-specific pieces: connecting to the right
+worker, checking requests, and keeping receipts so a lost response does not have
+to mean starting the same job twice.
+
+```mermaid
+flowchart LR
+    Client["Your MCP client"] --> Access["Authorized tunnel access"]
+    Access --> Server["Codex Action Server<br/>actions-core + actions-runtime"]
+    Server --> Local["Local Codex"]
+    Server --> Remote["Remote Codex"]
+```
+
+ChatGPT and Friday are clients of this API. The companion
+[mcp-tunnel-kit](https://github.com/joshyorko/mcp-tunnel-kit) handles the tunnel
+and Executor deployment. Workers run native Codex; they do not need their own
+Action Server.
+
+## What can I do with it?
+
+| You want to… | The tools let you… |
+| --- | --- |
+| Pick up where you left off | Find saved threads in a project and read the conversation. |
+| Hand off coding work | Create a thread, start a turn, and choose a supported model and reasoning effort. |
+| Check or change direction | Read progress, steer a running turn, or interrupt it. |
+| Keep sessions organized | Name, archive, fork, and organize threads into sections. |
+| See what a worker can use | Inspect its models, skills, plugins, apps, and MCP servers. |
+| Recover after a lost response | Look up a dispatch receipt before deciding what to do next. |
+
+The default package includes 64 actions. For a read-only connection, select the
+`observe` profile. You can also deploy the `codex-observe` and `codex-control`
+packages separately or together. See [package selection](docs/PACKAGE_COMPOSITION.md)
+and the [full tool reference](docs/NATIVE_CAPABILITIES.md).
 
 ## Run independently
 
-Requires Linux/Python3.12, Actions Runtime1.0.1 (`action-server`), and a running
-native Codex daemon. SSH is needed for SSH/Devsy TCP targets; Devsy1.23 is needed
-only for Devsy targets. Container targets use an explicitly selected Docker or
-Podman CLI and local engine socket. Local-only configuration needs no provider CLI.
+On Linux, you need Python 3.12 or newer, Actions Runtime 1.0.1 on your `PATH`,
+and an existing authenticated native Codex daemon.
+
+Create `config/targets.local.json` from the
+[example configuration](config/targets.example.json), keeping only the workers
+you want to expose and replacing the example paths with your own. Preserve any
+existing configuration. Then run from the repository root:
 
 ```sh
-cp config/targets.example.json config/targets.local.json
-# Edit the operator-owned workspace selector, never a client-supplied hostname.
 export CODEX_ACTION_TARGETS="$PWD/config/targets.local.json"
 export CODEX_ACTION_RECEIPTS="$HOME/.local/state/codex-action-server/receipts"
 export CODEX_ACTION_DATA="$HOME/.local/state/codex-action-server/runtime"
-./scripts/run.sh
+bash scripts/run.sh
 ```
 
-Defaults to loopback port8088 to avoid the existing Friday service on8087.
-MCP is `/mcp`, OpenAPI is `/openapi.json`. The launcher starts only this API.
-It never starts, restarts or authenticates Codex or Devsy.
+Your local MCP endpoint is **`http://127.0.0.1:8088/mcp`**. The HTTP schema is at
+`http://127.0.0.1:8088/openapi.json`. Start with `list_targets`, then
+`read_server_diagnostics` for your selected target.
 
-The default `codex-action-server` package retains the compatibility catalog and
-HTTP routes. `CODEX_ACTION_PACKAGES` can explicitly select `codex-observe`,
-`codex-control`, or both. See [package composition](docs/PACKAGE_COMPOSITION.md)
-for profile compatibility, assembly, retained state, and HTTP migration.
+The launcher starts the API, not Codex. Keep the private state directories across
+restarts. Follow the [setup and first-call guide](docs/USAGE.md) for target
+configuration, read-only mode, and dispatch receipts. For containers, use the
+[container deployment guide](docs/CONTAINERS.md), which pins Runtime 1.0.2.
 
-## Targets
+## Access stays under your control
 
-For the production API image and Linux Compose mount/network contract, see
-[container deployment](docs/CONTAINERS.md). The tunnel kit owns the composed
-Executor and tunnel-client deployment.
+Clients select worker names you configured, not arbitrary hosts or sockets.
+Thread requests are checked against the requested project and thread. Codex's
+own sandbox and approval policy still apply.
 
-`list_targets` lists configured logical names. `inspect_target({payload:{target:
-"devsy"}})` resolves without connecting to native Codex. Then call
-`read_server_diagnostics` for connectivity and native home/socket identity.
+The supplied launchers do not enable API-key authentication. Keep the backend
+private: loopback on the host, or the prescribed private gateway in containers.
+Use Secure MCP Tunnel's authorized access for remote clients. Do not expose the
+backend directly to the internet.
 
-Target configuration is local operator JSON, pointed to by CODEX_ACTION_TARGETS.
-Without configuration only `local` is available. `transport:local` supports an
-operator-selected codex_bin/socket_path. `transport:ssh` supports an explicit
-operator-selected destination. `transport:devsy` requires context and either an
-exact workspace or exact HTTPS Git source selector; optional provider and
-workspace_uid narrow it. Exact selectors are preferable for tonight's migration.
-Multiple matches fail closed. No latest-workspace heuristic.
+Authorized clients share the API's authority. This is not tenant isolation, and
+read-only mode is a deployment setting, not a separate permission for each user.
+See [deployment boundaries](docs/CONTAINERS.md) before connecting remote clients.
 
-Devsy list/status JSON is authoritative for workspace identity/readiness. Devsy's
-generated SSH config supplies its route. This release accepts existing loopback
-TCP routes only and expected user `vscode` by default; missing routes and
-For an existing Kubernetes workspace, `transport:devsy-kubernetes` selects
-direct pod execution through the provider's configured kubeconfig, context and
-namespace. It requires an explicit workspace name, provider `kubernetes`, a
-`workspace_uid` pin and user `vscode`. The adapter requires exactly one Ready
-pod with the matching workspace label, revalidates its pod UID before each
-command and checks the workspace identity inside the pod. It connects only to
-the existing native daemon and does not provision, forward ports, restart or
-authenticate a worker. The production image pins Devsy 1.23.0 and kubectl 1.36.3.
+## Dig deeper
 
-ProxyCommand/ProxyJump fail closed. Keep the operator's Devsy desktop/workspace
-connection running. Selected workspace SSH configuration is honored and its route is pinned across
-probe/proxy. Each SSH command checks the remote workspace UID/ID before invoking
-Codex, rejecting stale or wrong-context aliases. Remote socket identity is discovered using native daemon
-version, then the native proxy carries WebSocket RPC over SSH.
+| Guide | What's in it |
+| --- | --- |
+| [Setup and usage](docs/USAGE.md) | Connect a worker, read a thread, and handle retries. |
+| [Remote workers](docs/REMOTE_WORKERS.md) | Set up Devsy and Kubernetes workers. |
+| [Local container workers](docs/LOCAL_WORKER_PROVIDER.md) | Use Docker or Podman workers. |
+| [Package selection](docs/PACKAGE_COMPOSITION.md) | Choose read and control tools. |
+| [Native capabilities](docs/NATIVE_CAPABILITIES.md) | Supported methods and Codex version requirements. |
+| [Supervision](docs/SUPERVISION.md) | Run as a service and plan rollback. |
 
-## Typed surface
+<details>
+<summary>Development and testing</summary>
 
-The original 23 actions remain compatible: discover/read/loaded threads, turn/item pages,
-models, provider capabilities, MCP inventory, diagnostics; start/create+turn,
-resume/start/steer/interrupt, supported model/effort settings and coordinator
-goals. Model/provider omissions preserve native configuration. New actions:
-`list_targets`, `inspect_target`, `read_dispatch_receipt`, and
-`list_native_capabilities`.
-`list_native_capabilities` reports the selected daemon version, pinned schema
-inventory, and methods intentionally absent from the current operator profile;
-it does not grant methods merely because the daemon supports them. See
-[native capabilities](docs/NATIVE_CAPABILITIES.md).
-
-Additional typed native methods include thread fork/archive/unarchive/delete,
-name/metadata updates, revert/compact, section listing and exact section moves,
-CWD-filtered thread search, bounded search-occurrence/timeline reads, native
-queue controls, inline review, account usage reads, skills/hooks/plugin/app
-inventory and app metadata reads, MCP resource/tool calls, thread attachments,
-and background-terminal observation/termination. Mutations require a request
-ID and verify exact thread/CWD identity before dispatch.
-
-The API accepts stable logical target strings; the runtime allowlist rejects any
-unconfigured name before connection. Thread mutations require exact cwd/thread
-and turn identity where relevant. Native protocol mapping remains explicit.
-
-### Persisted thread discovery
-
-`discover_threads` requires an exact absolute `cwd` on every call, including
-cursor pages. For example:
-
-```json
-{"payload":{"target":"local","cwd":"/absolute/worktree","limit":50}}
-```
-
-Discovery returns persisted native thread records for that worktree, including
-their existing metadata and `nextCursor`. Pass the same target and cwd with the
-returned cursor for the next page. Call separately for another known worktree.
-An omitted, null, empty, or invalid cwd fails before native access. There is no
-default cross-worktree history search or new global navigation action.
-
-This tightens the previous optional-cwd contract: clients that omitted cwd or
-sent null must supply it and refresh their MCP catalog. Existing exact-cwd
-discovery and `read_thread` calls keep their response format. `read_thread`
-continues to require an exact cwd and thread ID and checks both in the result.
-`list_loaded_threads` remains a list of currently loaded IDs; it is not a
-replacement for persisted discovery. See the [read-only workflow](docs/OPERATIONS.md#4-read-only-chatgpt-mcp-workflow)
-for the Review and Josh Room worktrees.
-
-Discovery remains read-only. Requiring scope does not grant approval or change
-client safety policy; a client may still decline a call.
-
-## Dispatch and retry
-
-Persist your own unique request_id before calling `create_thread_and_start_turn`
-or `start_turn`. Reuse it only for an identical payload. The response includes
-`result.dispatch`: native thread_id/turn_id when acknowledged, state, wait mode,
-replayed flag and retry semantics. After response loss call read_dispatch_receipt
-with the same request_id. A repeated call returns the receipt without reconnecting
-or executing again. Query the native thread/turn for current execution state.
-
-`wait_for_completion:false` returns after native acceptance. `true` observes up
-to wait_seconds (default15,max30); a wait timeout preserves accepted IDs rather
-than claiming the turn failed. `unknown` means acceptance could not be established:
-never switch to a new key or resubmit blindly. The native operation may have run.
-Legacy calls without a key are accepted but explicitly have unsafe retry semantics.
-A create-only start_thread may be ephemeral until its first turn; prefer the
-combined action. Separate resume calls do not preserve a connection for later calls.
-
-Receipts are not a task database: they contain no prompts or native results and
-never drive execution. Keep the private directory persistent across upgrades and
-all worker processes. Deleting a receipt removes its replay protection. No automatic
-expiry or retry. Network-shared filesystems are not supported for file-lock safety.
-
-Closing an API call closes its native subscription; it does not interrupt a turn.
-Do not assume detached client tools or approvals will be answered. Native Codex
-remains authoritative for execution, completion and authorization.
-
-## Security / threat model
-
-Clients are trusted operators with this API's authority, not mutually isolated
-tenants. Any authorized turn can ask native Codex to work within its own sandbox
-and approval policy. This interface does not provide a per-client cwd ACL.
-
-Untrusted callers must never reach the API directly: bind loopback and use Secure
-MCP Tunnel's authorized exposure. Do not bind to0.0.0.0. There is no generic shell,
-filesystem, raw RPC, approval-policy or credential action. SSH argv is constructed
-without a local shell; the fixed remote executable/arguments are shlex-quoted.
-Callers cannot supply SSH options, destinations, config files, sockets or paths
-to host executables. Operator config, PATH, SSH config and receipt directory are
-trusted and must be protected by OS ownership. Native auth errors do not trigger
-provider or credential fallback. Diagnostics expose selected nonsecret identity,
-not raw subprocess stderr. Native thread contents are sensitive and should only
-be exposed to the intended authorized client.
-
-## Tests
+The [package manifest](package.yaml) pins the action environment and defines test
+and lint tasks. For a project virtual environment:
 
 ```sh
-uv venv .venv
-uv pip install --python .venv/bin/python -e '.[test]'
-.venv/bin/pytest
-.venv/bin/ruff check src tests
-.venv/bin/ruff format --check src tests
+uv venv --python 3.12 .venv
+uv pip install --python .venv/bin/python --editable '.[test]'
+.venv/bin/pytest -q -rs
+.venv/bin/ruff check src tests scripts/preflight.py
+.venv/bin/ruff format --check src tests scripts/preflight.py
 ```
 
-The real loopback MCP test requires action-server on PATH. It uses a disposable
-Unix WebSocket native fixture and random loopback port, never production threads.
-Mocks/fixtures prove mapping and safety, not live Devsy/ChatGPT acceptance.
-See [design and evidence](docs/DESIGN.md) and [operator sequence](docs/OPERATIONS.md).
+HTTP and MCP tests need `action-server` on `PATH` and use disposable native
+fixtures. Passing fixtures does not prove a live worker or client connection.
+See [provider acceptance](docs/PROVIDER_ACCEPTANCE.md) for that verification and
+[design notes](docs/DESIGN.md) for implementation details.
 
-## Integration and ownership
-
-mcp-tunnel-kit forwards native HTTP to this `/mcp` endpoint; it does not translate
-Codex actions into agent messages. Set CODEX_MCP_URL to the selected loopback port.
-Friday can use that same MCP URL. This repository owns the typed implementation;
-Friday removes its private copy and keeps only a standalone-client compatibility shim. No live cutover or merge
-is implied by a passing test or a draft PR.
-
-## Durable process supervision
-
-After proving the foreground path, see [SUPERVISION.md](docs/SUPERVISION.md) for
-separate user-service templates, private persistent state, read-only acceptance,
-and rollback. Templates are not automatically installed or activated.
-
-
-## Remote native Codex worker recipe
-
-[Remote workers](docs/REMOTE_WORKERS.md) covers Devsy create/resume and explicit
-local Podman/Docker worker lifecycle,
-`.devcontainer/remote-worker/devcontainer.json`, setup/verification, Headroom/RTK,
-plugins, and native daemon startup. Friday only consumes the central typed API.
-The worker does not run another Codex Action Server. Source-based discovery keeps
-logical targets stable across workspace recreation; ambiguous matches fail closed.
+</details>
