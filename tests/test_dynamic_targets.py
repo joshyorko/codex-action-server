@@ -432,3 +432,77 @@ def test_dynamic_authority_loopback_source_only_for_managed_gateway(
     request = urllib.request.Request(f"http://{host}:8089/worker-authorized")
     assert handler.http_open(request) == "response"
     assert calls == [expected]
+
+
+def image_target():
+    return {
+        **scoped_target(),
+        "source_kind": "image",
+        "image_ref": "ghcr.io/joshyorko/codex-action-server",
+        "image_digest": "sha256:" + "b" * 64,
+    }
+
+
+@pytest.mark.parametrize(
+    "changed", [None, "image", "git", "cluster", "recipe_override", "image_override"]
+)
+def test_image_worker_binds_exact_live_source(
+    authority, registry, monkeypatch, changed
+):
+    data = json.loads(registry.read_text())
+    data["targets"]["worker"] = image_target()
+    registry.write_text(json.dumps(data))
+    row = workspace_row()
+    row["source"] = {
+        "image": image_target()["image_ref"] + "@" + image_target()["image_digest"]
+    }
+    row.pop("devContainerPath", None)
+    if changed == "image":
+        row["source"]["image"] = "ghcr.io/example/other:latest"
+    elif changed == "git":
+        row["source"]["gitRepository"] = "https://github.com/example/project"
+    elif changed == "recipe_override":
+        row["devContainerPath"] = ".devcontainer/other.json"
+    elif changed == "image_override":
+        row["devContainerImage"] = "other:latest"
+    elif changed == "cluster":
+        row["provider"]["options"]["KUBERNETES_CONTEXT"]["value"] = "other"
+
+    def run(args, **kwargs):
+        if changed:
+            assert args[0] == "devsy"
+        value = [row] if args[0] == "devsy" else {"items": [pod()]}
+        return subprocess.CompletedProcess(args, 0, json.dumps(value), "")
+
+    monkeypatch.setattr(subprocess, "run", run)
+    if changed:
+        with pytest.raises(boundary.ResolutionError, match="workspace_binding_changed"):
+            boundary.resolve_target("worker")
+    else:
+        assert boundary.resolve_target("worker").workspace_uid == "uid-1"
+        assert authority["calls"]
+
+
+@pytest.mark.parametrize(
+    "field,value",
+    [
+        ("source_kind", "git"),
+        ("image_ref", "https://secret@host/image"),
+        ("image_digest", "sha256:bad"),
+        ("image_digest", None),
+        ("source_kind", None),
+    ],
+)
+def test_image_bindings_reject_partial_or_invalid_configuration(
+    authority, registry, field, value
+):
+    data = json.loads(registry.read_text())
+    config = image_target()
+    if value is None:
+        config.pop(field)
+    else:
+        config[field] = value
+    data["targets"]["worker"] = config
+    registry.write_text(json.dumps(data))
+    assert set(boundary.configurations()) == {"local"}
+    assert not authority["calls"]

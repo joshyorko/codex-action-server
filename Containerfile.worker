@@ -1,0 +1,8 @@
+# Runtime-only worker: never copy the CAS checkout into the project workspace.
+FROM ghcr.io/joshyorko/room-of-requirement:secure@sha256:de48bf9e2c93f8e358fcb5ac13e3159473245f5f271456c8f7d4dcc2ab881338
+USER root
+COPY --chmod=0755 scripts/remote/setup.sh scripts/remote/verify.sh scripts/remote/start.sh /opt/codex-worker/
+RUN install -d -o vscode -g vscode /workspaces
+LABEL devcontainer.metadata="[{\"name\":\"Blank Codex worker\",\"remoteUser\":\"vscode\",\"waitFor\":\"postCreateCommand\",\"postCreateCommand\":\"set -eu; test -x /bin/bash; /bin/bash /opt/codex-worker/setup.sh\",\"postStartCommand\":\"/bin/bash /opt/codex-worker/start.sh\",\"workspaceFolder\":\"/workspaces\"}]"
+USER vscode
+WORKDIR /workspaces

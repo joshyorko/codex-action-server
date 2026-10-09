@@ -21,6 +21,7 @@ from worker_kubernetes import KubernetesWorker
 
 _NAME = re.compile(r"^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,127}$")
 _IDENTIFIER = re.compile(r"^[^\s\r\n]+$")
+_IMAGE_BINDINGS = {"source_kind", "image_ref", "image_digest"}
 _WORKSPACE_BINDINGS = {
     "kubernetes_context",
     "namespace",
@@ -164,6 +165,20 @@ def _authorize_worker(url, config, owner):
 
 
 def _validate_workspace_bindings(config):
+    if _IMAGE_BINDINGS & set(config):
+        if not (_IMAGE_BINDINGS | _WORKSPACE_BINDINGS) <= set(config):
+            raise ValueError()
+        if (
+            config["source_kind"] != "image"
+            or not isinstance(config["image_ref"], str)
+            or not re.fullmatch(
+                r"[a-z0-9][a-z0-9.-]*(?::[0-9]+)?/[a-z0-9._/-]+", config["image_ref"]
+            )
+            or ".." in config["image_ref"].split("/")
+            or not isinstance(config["image_digest"], str)
+            or not re.fullmatch(r"sha256:[a-f0-9]{64}", config["image_digest"])
+        ):
+            raise ValueError()
     if not _WORKSPACE_BINDINGS & set(config):
         return
     if not _WORKSPACE_BINDINGS <= set(config):
@@ -232,7 +247,12 @@ def _dynamic_configurations(static, requested_name=None):
             raise ValueError()
         authority = _authority_url()
         required = {"transport", "context", "workspace", "workspace_uid", "provider"}
-        allowed = required | {"codex_bin", "socket_path", "user"} | _WORKSPACE_BINDINGS
+        allowed = (
+            required
+            | {"codex_bin", "socket_path", "user"}
+            | _WORKSPACE_BINDINGS
+            | _IMAGE_BINDINGS
+        )
         if authority:
             required |= _WORKSPACE_BINDINGS
         for name, config in data["targets"].items():
@@ -358,11 +378,35 @@ def _devsy_workspace(config):
                 "kubernetes_context": options["KUBERNETES_CONTEXT"]["value"],
                 "namespace": options["KUBERNETES_NAMESPACE"]["value"],
                 "kubeconfig": options["KUBERNETES_CONFIG"]["value"],
-                "repository": row["source"]["gitRepository"],
-                "revision": row["source"]["gitCommit"],
-                "recipe": row["devContainerPath"],
             }
-            if any(config[field] != actual[field] for field in _WORKSPACE_BINDINGS):
+            if config.get("source_kind") == "image":
+                expected_image = config["image_ref"] + "@" + config["image_digest"]
+                if row["source"].get("image") != expected_image:
+                    raise ValueError()
+                if any(
+                    row.get(key)
+                    for key in (
+                        "devContainerPath",
+                        "devContainerImage",
+                        "devContainerSource",
+                        "devContainerID",
+                    )
+                ):
+                    raise ValueError()
+                if any(
+                    row["source"].get(key)
+                    for key in ("gitRepository", "gitCommit", "localFolder")
+                ):
+                    raise ValueError()
+            else:
+                actual.update(
+                    {
+                        "repository": row["source"]["gitRepository"],
+                        "revision": row["source"]["gitCommit"],
+                        "recipe": row["devContainerPath"],
+                    }
+                )
+            if any(config[field] != value for field, value in actual.items()):
                 raise ValueError()
         except (KeyError, ValueError, TypeError):
             raise ResolutionError("workspace_binding_changed") from None
@@ -462,18 +506,22 @@ def resolve_target(name: str) -> Target:
             logical_name=name,
             container=worker,
         )
-    allowed = {
-        "transport",
-        "codex_bin",
-        "socket_path",
-        "destination",
-        "context",
-        "workspace",
-        "source",
-        "provider",
-        "workspace_uid",
-        "user",
-    } | _WORKSPACE_BINDINGS
+    allowed = (
+        {
+            "transport",
+            "codex_bin",
+            "socket_path",
+            "destination",
+            "context",
+            "workspace",
+            "source",
+            "provider",
+            "workspace_uid",
+            "user",
+        }
+        | _WORKSPACE_BINDINGS
+        | _IMAGE_BINDINGS
+    )
     if set(config) - allowed:
         raise ResolutionError("invalid_target_configuration")
     transport = config.get("transport")
