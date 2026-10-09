@@ -14,17 +14,14 @@ This Python package exposes typed MCP/API actions for existing native Codex app-
 
 ## Build, test, and development commands
 
-Run from the repository root on Linux with Python 3.12 or newer. Use a project virtual environment:
+Run from the repository root on Linux with `action-server` on `PATH`. Use the development tasks in `package.yaml`; Action Server resolves the pinned Python environment and development dependencies through RCC:
 
 ```sh
-uv venv --python 3.12 .venv
-uv pip install --python .venv/bin/python --editable '.[test]'
-.venv/bin/pytest -q -rs
-.venv/bin/ruff check src tests scripts/preflight.py
-.venv/bin/ruff format --check src tests scripts/preflight.py
+action-server devenv task test
+action-server devenv task lint
 ```
 
-These commands install development dependencies, run tests with skip reasons, and match CI lint/format checks. To format changes, omit `--check` from the format command.
+These tasks run tests with skip reasons and match CI lint/format checks. To format changes, run `action-server devenv task prettify`.
 
 For local API startup, follow `README.md` under "Run independently" to configure `CODEX_ACTION_TARGETS`, `CODEX_ACTION_RECEIPTS`, and `CODEX_ACTION_DATA`, then run `bash scripts/run.sh`. Startup requires Actions Runtime 1.0.1 and an existing native daemon.
 

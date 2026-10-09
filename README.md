@@ -36,17 +36,16 @@ to mean starting the same job twice.
 
 ```mermaid
 flowchart LR
-    Client["Your MCP client"] --> Access["Authorized tunnel access"]
+    Client["Your MCP client"] --> Access["Authenticated tunnel or reverse proxy"]
     Access --> Server["Codex Action Server<br/>actions-core + actions-runtime"]
     Server --> Local["Local Codex"]
     Server --> Remote["Remote Codex"]
 ```
 
 Use any compatible MCP client, such as Codex, Claude Code, ChatGPT, or Claude
-Desktop. These are examples, not required dependencies. The companion
-[mcp-tunnel-kit](https://github.com/joshyorko/mcp-tunnel-kit) handles the tunnel
-and Executor deployment. Workers run native Codex; they do not need their own
-Action Server.
+Desktop. These are examples, not required dependencies. Remote clients can connect
+through any authenticated tunnel or reverse proxy that supports MCP over HTTP.
+Workers run native Codex; they do not need their own Action Server.
 
 ## What can I do with it?
 
@@ -66,8 +65,33 @@ and the [full tool reference](docs/NATIVE_CAPABILITIES.md).
 
 ## Run independently
 
-On Linux, you need Python 3.12 or newer, Actions Runtime 1.0.1 on your `PATH`,
-and an existing authenticated native Codex daemon.
+### Install Action Server
+
+Install the `action-server` CLI from [joshyorko/actions](https://github.com/joshyorko/actions).
+With Homebrew, use the [joshyorko/tools tap](https://github.com/joshyorko/homebrew-tools):
+
+```sh
+brew install --cask joshyorko/tools/action-server
+action-server version
+```
+
+Without Homebrew, install the pinned runtime into a tool environment with
+[uv](https://docs.astral.sh/uv/getting-started/installation/):
+
+```sh
+uv tool install --python 3.12 'actions-runtime==1.0.1'
+action-server version
+```
+
+This package's Linux host setup is tested with Actions Runtime 1.0.1. The runtime
+provides the CLI and RCC; `package.yaml` supplies the action package's Python
+environment. The [upstream releases](https://github.com/joshyorko/actions/releases)
+also provide standalone executables.
+
+### Connect Codex
+
+You need an existing authenticated native Codex daemon and Python 3.12 or newer
+on your Linux host for the launcher scripts.
 
 Create `config/targets.local.json` from the
 [example configuration](config/targets.example.json), keeping only the workers
@@ -98,8 +122,8 @@ own sandbox and approval policy still apply.
 
 The supplied launchers do not enable API-key authentication. Keep the backend
 private: loopback on the host, or the prescribed private gateway in containers.
-Use Secure MCP Tunnel's authorized access for remote clients. Do not expose the
-backend directly to the internet.
+For remote clients, put the API behind an authenticated tunnel or reverse proxy
+that supports MCP over HTTP. Do not expose the backend directly to the internet.
 
 Authorized clients share the API's authority. This is not tenant isolation, and
 read-only mode is a deployment setting, not a separate permission for each user.
@@ -119,19 +143,22 @@ See [deployment boundaries](docs/CONTAINERS.md) before connecting remote clients
 <details>
 <summary>Development and testing</summary>
 
-The [package manifest](package.yaml) pins the action environment and defines test
-and lint tasks. For a project virtual environment:
+Run the development tasks through Action Server from the repository root.
+It uses RCC to prepare the pinned environment and development dependencies from
+[package.yaml](package.yaml), so you do not need to create a virtual environment
+or install pytest and Ruff yourself.
 
 ```sh
-uv venv --python 3.12 .venv
-uv pip install --python .venv/bin/python --editable '.[test]'
-.venv/bin/pytest -q -rs
-.venv/bin/ruff check src tests scripts/preflight.py
-.venv/bin/ruff format --check src tests scripts/preflight.py
+action-server devenv task test
+action-server devenv task lint
 ```
 
-HTTP and MCP tests need `action-server` on `PATH` and use disposable native
-fixtures. Passing fixtures does not prove a live worker or client connection.
+The `test` task runs pytest and reports skip reasons. The `lint` task checks Ruff
+rules and formatting. To apply formatting, run `action-server devenv task prettify`.
+
+Keep `action-server` on `PATH` for the HTTP and MCP tests, which start disposable
+servers and native fixtures. These development tasks do not expose tests as MCP
+tools. Passing fixtures does not prove a live worker or client connection.
 See [provider acceptance](docs/PROVIDER_ACCEPTANCE.md) for that verification and
 [design notes](docs/DESIGN.md) for implementation details.
 
