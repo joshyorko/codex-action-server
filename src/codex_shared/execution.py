@@ -25,6 +25,7 @@ from codex_shared.common import _action_id
 from codex_shared.common import _dispatch_run
 from codex_shared.common import _guard_cwd
 from codex_shared.common import _optional_thread_settings
+from codex_shared.common import _optional_turn_policy
 from codex_shared.common import _read_guarded_thread
 from codex_shared.common import _run
 
@@ -338,11 +339,11 @@ def resume_thread(payload: ThreadResumeRequest) -> Response[RpcEnvelope]:
 def start_turn(payload: TurnStartRequest) -> Response[RpcEnvelope]:
     """Resume, then start a text turn on the same native connection.
 
-    Optional model and effort override native turn settings; the provider and
-    execution policy are preserved. Omit them to retain the existing settings.
+    Optional model, effort, approval policy and sandbox override native turn
+    settings. Omitted fields preserve existing settings.
 
     Args:
-        payload: Target, exact cwd, thread, text, and optional model/effort.
+        payload: Target, exact cwd, thread, text, and optional execution settings.
     """
     cwd = _action_cwd(payload.cwd)
     thread_id = _action_id(payload.thread_id, "thread_id")
@@ -361,6 +362,7 @@ def start_turn(payload: TurnStartRequest) -> Response[RpcEnvelope]:
             params["model"] = payload.model
         if payload.effort is not None:
             params["effort"] = payload.effort
+        params.update(_optional_turn_policy(payload))
         accepted = client.request("turn/start", params)
         turn_id = accepted.get("turn", {}).get("id")
         if not isinstance(turn_id, str) or not turn_id:

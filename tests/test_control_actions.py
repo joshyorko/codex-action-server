@@ -296,7 +296,7 @@ def test_callback_is_default_off_strict_and_not_a_raw_registration_surface():
         {"dynamicTools": []},
         {"method": "thread/start"},
         {"approvalPolicy": "never"},
-        {"sandbox": "danger-full-access"},
+        {"sandbox": "invalid-mode"},
         {"enable_list_threads_callback": "true"},
         {"enable_list_threads_callback": 1},
     ):

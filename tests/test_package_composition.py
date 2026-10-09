@@ -97,16 +97,30 @@ def test_compatibility_signatures_and_payload_schemas_are_unchanged(monkeypatch)
     _assert_signatures(ROOT / "src/codex_actions.py", OBSERVE | CONTROL)
     for name, fixed in CONTRACT["actions"].items():
         output_model = eval(fixed["return"], {**vars(module), "Response": Response})
+        output_schema = output_model.model_json_schema()
+        effective = (
+            output_schema.get("$defs", {})
+            .get("EffectiveConfiguration", {})
+            .get("properties", {})
+        )
+        for field in ("approval_policy", "sandbox_policy"):
+            effective.pop(field, None)
         output_digest = hashlib.sha256(
-            json.dumps(
-                output_model.model_json_schema(), sort_keys=True, separators=(",", ":")
-            ).encode()
+            json.dumps(output_schema, sort_keys=True, separators=(",", ":")).encode()
         ).hexdigest()
         assert output_digest == fixed["output_schema_sha256"], name
         model_name = fixed["arguments"].get("payload")
         if model_name is None:
             continue
         schema = getattr(module, model_name).model_json_schema()
+        if model_name in {
+            "ThreadStartRequest",
+            "ThreadResumeRequest",
+            "CreateThreadAndStartTurnRequest",
+            "TurnStartRequest",
+        }:
+            for field in ("approval_policy", "sandbox"):
+                schema["properties"].pop(field, None)
         digest = hashlib.sha256(
             json.dumps(schema, sort_keys=True, separators=(",", ":")).encode()
         ).hexdigest()

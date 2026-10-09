@@ -64,6 +64,25 @@ def _optional_thread_settings(payload) -> dict[str, Any]:
         params["model"] = payload.model
     if payload.model_provider is not None:
         params["modelProvider"] = payload.model_provider
+    if payload.approval_policy is not None:
+        params["approvalPolicy"] = payload.approval_policy
+    if payload.sandbox is not None:
+        params["sandbox"] = payload.sandbox
+    return params
+
+
+def _optional_turn_policy(payload) -> dict[str, Any]:
+    params: dict[str, Any] = {}
+    if payload.approval_policy is not None:
+        params["approvalPolicy"] = payload.approval_policy
+    if payload.sandbox is not None:
+        params["sandboxPolicy"] = {
+            "type": {
+                "read-only": "readOnly",
+                "workspace-write": "workspaceWrite",
+                "danger-full-access": "dangerFullAccess",
+            }[payload.sandbox]
+        }
     return params
 
 
@@ -95,12 +114,19 @@ def _effective_configuration(result: dict[str, Any]) -> EffectiveConfiguration |
     sources = [result]
     if isinstance(thread, dict):
         sources.append(thread)
+    created = result.get("created")
+    if isinstance(created, dict):
+        sources.append(created)
     native = result.get("native")
     if isinstance(native, dict):
         # The effort-only update cannot change model/provider. Retain those
         # observations, but never promote pre-update effort to current effort.
         sources.append(
-            {key: native[key] for key in ("model", "modelProvider") if key in native}
+            {
+                key: native[key]
+                for key in ("model", "modelProvider", "approvalPolicy", "sandbox")
+                if key in native
+            }
         )
     values = {
         "model": next(
@@ -123,6 +149,13 @@ def _effective_configuration(result: dict[str, Any]) -> EffectiveConfiguration |
             None,
         ),
     }
+    for field, native_key in (
+        ("approval_policy", "approvalPolicy"),
+        ("sandbox_policy", "sandbox"),
+    ):
+        values[field] = next(
+            (source[native_key] for source in sources if native_key in source), None
+        )
     return (
         EffectiveConfiguration(**values)
         if any(value is not None for value in values.values())
@@ -231,11 +264,16 @@ def _receipt_root():
 
 def _dispatch_run(operation, payload, callback):
     # Reserve before connecting. A transport failure cannot trigger implicit replay.
+    receipt_payload = payload.model_dump()
+    # Preserve fingerprints written before optional execution-policy fields existed.
+    for field in ("approval_policy", "sandbox"):
+        if receipt_payload.get(field) is None:
+            receipt_payload.pop(field, None)
     scope = (
         dispatch_receipts.reserve(
             _receipt_root(),
             payload.request_id,
-            {"operation": operation, **payload.model_dump()},
+            {"operation": operation, **receipt_payload},
         )
         if payload.request_id
         else nullcontext(_UnkeyedReceipt())

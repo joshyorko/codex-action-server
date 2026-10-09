@@ -1,0 +1,102 @@
+{
+  "source": "codex 0.162.0 app-server generate-json-schema v2/TurnStartParams.json",
+  "SandboxPolicy": {
+    "oneOf": [
+      {
+        "properties": {
+          "type": {
+            "enum": [
+              "dangerFullAccess"
+            ],
+            "title": "DangerFullAccessSandboxPolicyType",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type"
+        ],
+        "title": "DangerFullAccessSandboxPolicy",
+        "type": "object"
+      },
+      {
+        "properties": {
+          "networkAccess": {
+            "default": false,
+            "type": "boolean"
+          },
+          "type": {
+            "enum": [
+              "readOnly"
+            ],
+            "title": "ReadOnlySandboxPolicyType",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type"
+        ],
+        "title": "ReadOnlySandboxPolicy",
+        "type": "object"
+      },
+      {
+        "properties": {
+          "networkAccess": {
+            "allOf": [
+              {
+                "$ref": "#/definitions/NetworkAccess"
+              }
+            ],
+            "default": "restricted"
+          },
+          "type": {
+            "enum": [
+              "externalSandbox"
+            ],
+            "title": "ExternalSandboxSandboxPolicyType",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type"
+        ],
+        "title": "ExternalSandboxSandboxPolicy",
+        "type": "object"
+      },
+      {
+        "properties": {
+          "excludeSlashTmp": {
+            "default": false,
+            "type": "boolean"
+          },
+          "excludeTmpdirEnvVar": {
+            "default": false,
+            "type": "boolean"
+          },
+          "networkAccess": {
+            "default": false,
+            "type": "boolean"
+          },
+          "type": {
+            "enum": [
+              "workspaceWrite"
+            ],
+            "title": "WorkspaceWriteSandboxPolicyType",
+            "type": "string"
+          },
+          "writableRoots": {
+            "default": [],
+            "items": {
+              "$ref": "#/definitions/AbsolutePathBuf"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "type"
+        ],
+        "title": "WorkspaceWriteSandboxPolicy",
+        "type": "object"
+      }
+    ]
+  }
+}

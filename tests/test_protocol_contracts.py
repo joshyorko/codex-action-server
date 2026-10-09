@@ -74,7 +74,7 @@ class RecordingClient:
                 "model": params.get("model", "gpt-6-luna"),
                 "modelProvider": params.get("modelProvider", "headroom"),
                 "reasoningEffort": "high",
-                "sandbox": "workspace-write",
+                "sandbox": {"type": "workspaceWrite"},
                 "thread": {"id": NEW_THREAD_ID, "cwd": CWD},
             }
         if method == "thread/resume":
@@ -85,7 +85,7 @@ class RecordingClient:
                 "model": params.get("model", "gpt-6-luna"),
                 "modelProvider": params.get("modelProvider", "headroom"),
                 "reasoningEffort": "high",
-                "sandbox": "workspace-write",
+                "sandbox": {"type": "workspaceWrite"},
                 "thread": {"id": THREAD_ID, "cwd": CWD},
             }
         if method == "turn/start":
@@ -471,7 +471,15 @@ class NativeProtocolContractTests(unittest.TestCase):
                 properties = getattr(module, model_name).model_json_schema()[
                     "properties"
                 ]
-                self.assertEqual(set(properties), set(fields))
+                expected = set(fields)
+                if model_name in {
+                    "ThreadStartRequest",
+                    "ThreadResumeRequest",
+                    "CreateThreadAndStartTurnRequest",
+                    "TurnStartRequest",
+                }:
+                    expected.update({"approval_policy", "sandbox"})
+                self.assertEqual(set(properties), expected)
 
     def test_public_models_do_not_offer_unsupported_provider_or_steer_overrides(self):
         module = load_actions_with_framework_shim()

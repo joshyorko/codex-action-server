@@ -69,7 +69,20 @@ class ThreadSnapshotRequest(StrictModel):
     revision: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
 
 
-class ThreadSettingsFields(StrictModel):
+class ExecutionPolicyFields(StrictModel):
+    approval_policy: Literal["untrusted", "on-request", "never"] | None = Field(
+        default=None,
+        description="Optional native approval policy for this thread/turn and subsequent turns. Omission preserves native settings. Does not bypass Executor approvals or operator restrictions.",
+    )
+    sandbox: Literal["read-only", "workspace-write", "danger-full-access"] | None = (
+        Field(
+            default=None,
+            description="Optional native sandbox mode. danger-full-access removes the native sandbox; use only for explicitly authorized workers. Omission preserves native settings.",
+        )
+    )
+
+
+class ThreadSettingsFields(ExecutionPolicyFields):
     model: str | None = Field(
         default=None,
         min_length=1,
@@ -141,7 +154,7 @@ class ThreadResumeRequest(ThreadSettingsFields):
     thread_id: str
 
 
-class TurnStartRequest(StrictModel):
+class TurnStartRequest(ExecutionPolicyFields):
     request_id: str | None = Field(
         default=None,
         pattern=r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$",
@@ -636,6 +649,8 @@ class LoadedThreadListRequest(StrictModel):
 
 
 class EffectiveConfiguration(StrictModel):
+    approval_policy: str | dict[str, Any] | None = None
+    sandbox_policy: dict[str, Any] | None = None
     model: str | None = None
     model_provider: str | None = None
     effort: str | None = None

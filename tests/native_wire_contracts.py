@@ -78,6 +78,17 @@ def assert_contract_value(schema, value):
 
 
 def assert_native_request_contract(method, params):
+    if method == "turn/start" and params.get("sandboxPolicy") is not None:
+        # The older reduced fixture lost discriminators and made every object
+        # match all four oneOf branches. Validate the exact current native shape.
+        policy_schema = json.loads(
+            (
+                Path(__file__).parent
+                / "fixtures/protocol/codex_0.162.0_execution_policy.json"
+            ).read_text()
+        )["SandboxPolicy"]
+        assert_contract_value(policy_schema, params["sandboxPolicy"])
+        params = {key: value for key, value in params.items() if key != "sandboxPolicy"}
     contract = CONTRACTS[method]
     if contract["native_request_contract_scope"] == "cas-safe-subset":
         assert isinstance(params, dict)

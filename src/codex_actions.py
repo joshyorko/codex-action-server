@@ -764,11 +764,11 @@ def resume_thread(payload: ThreadResumeRequest) -> Response[RpcEnvelope]:
 def start_turn(payload: TurnStartRequest) -> Response[RpcEnvelope]:
     """Resume, then start a text turn on the same native connection.
 
-    Optional model and effort override native turn settings; the provider and
-    execution policy are preserved. Omit them to retain the existing settings.
+    Optional model, effort, approval policy and sandbox override native turn
+    settings. Omitted fields preserve existing settings.
 
     Args:
-        payload: Target, exact cwd, thread, text, and optional model/effort.
+        payload: Target, exact cwd, thread, text, and optional execution settings.
     """
     return execution.start_turn(payload)
 

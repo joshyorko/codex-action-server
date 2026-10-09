@@ -134,6 +134,7 @@ See [deployment boundaries](docs/CONTAINERS.md) before connecting remote clients
 | Guide | What's in it |
 | --- | --- |
 | [Setup and usage](docs/USAGE.md) | Connect a worker, read a thread, and handle retries. |
+| [Execution policy](docs/EXECUTION_POLICY.md) | Set per-worker approval and sandbox modes for creation, resume, and later turns. |
 | [Remote workers](docs/REMOTE_WORKERS.md) | Set up Devsy and Kubernetes workers. |
 | [Local container workers](docs/LOCAL_WORKER_PROVIDER.md) | Use Docker or Podman workers. |
 | [Package selection](docs/PACKAGE_COMPOSITION.md) | Choose read and control tools. |

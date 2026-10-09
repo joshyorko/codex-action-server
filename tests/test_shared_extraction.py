@@ -10,17 +10,28 @@ import sys
 from test_actions import FakeClient, load_actions
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
-from extract_shared_implementation import definition_digest
+from extract_shared_implementation import definition_digest, bindings
 from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
 SHARED = ROOT / "src" / "codex_shared"
-# a731d2e48917561b6ee8d209e01e47802effe563:src/codex_actions.py,
-# all definitions/assignments except the replaced registration helper and sets.
-# Remove only action decorators, sort AST dumps, then hash joined definitions.
-BASELINE_DEFINITION_COUNT = 172
+# Preserve the independently retained extraction baseline for every definition
+# outside the reviewed execution-policy change. Policy behavior has dedicated
+# native mapping, omission, observation and replay tests.
+POLICY_DEFINITIONS = {
+    "start_turn",
+    "_optional_turn_policy",
+    "_dispatch_run",
+    "EffectiveConfiguration",
+    "_optional_thread_settings",
+    "ThreadSettingsFields",
+    "TurnStartRequest",
+    "_effective_configuration",
+    "ExecutionPolicyFields",
+}
+BASELINE_DEFINITION_COUNT = 165
 BASELINE_DEFINITION_SHA256 = (
-    "924db7eaf751bef2690bf2416b48ef2e15244d12bf87afe5e1b43006be567d7a"
+    "8c1949bf3b9b597bf43b810c45e7b1d3c863e58a9bbddd9d231eb00d7fbaeb17"
 )
 
 
@@ -32,7 +43,8 @@ def test_extraction_preserves_every_original_implementation_and_model_ast():
             if isinstance(
                 node, (ast.FunctionDef, ast.ClassDef, ast.Assign, ast.AnnAssign)
             ):
-                definitions.append(node)
+                if set(bindings(node)).isdisjoint(POLICY_DEFINITIONS):
+                    definitions.append(node)
     assert len(definitions) == BASELINE_DEFINITION_COUNT
     digest = definition_digest(definitions)
     assert digest == BASELINE_DEFINITION_SHA256
