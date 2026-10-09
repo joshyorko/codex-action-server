@@ -118,6 +118,7 @@ REVIEWED_EXPERIMENTAL_METHODS_BY_NATIVE_VERSION = {
             "thread/queue/update",
         }
     ),
+    "0.162.0": frozenset({"server/diagnostics"}),
 }
 _NATIVE_SERVER_ORIGINATORS = frozenset(
     {
