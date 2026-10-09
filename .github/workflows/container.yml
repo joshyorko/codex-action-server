@@ -128,6 +128,15 @@ jobs:
           if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
             publish_tag "${GITHUB_REF#refs/tags/}"
           fi
+          if [[ "$GITHUB_REF" == refs/heads/main ]]; then
+            main_sha="$(git ls-remote origin refs/heads/main | cut -f1)"
+            if [[ "$main_sha" == "$GITHUB_SHA" ]]; then
+              docker tag codex-action-server:verified "$image:latest"
+              docker push "$image:latest"
+            else
+              printf 'Skipping latest publication: main has advanced.\n'
+            fi
+          fi
           digest="$(docker buildx imagetools inspect "$image:sha-$GITHUB_SHA" --format '{{.Manifest.Digest}}')"
           # shellcheck disable=SC2016 # Literal Markdown backticks in the summary.
           printf 'Verified production pin: `%s@%s`\n' "$image" "$digest" >> "$GITHUB_STEP_SUMMARY"

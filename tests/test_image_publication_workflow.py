@@ -150,17 +150,19 @@ def test_only_publication_has_registry_write_permission():
 
 
 @pytest.mark.parametrize(
-    "state,ref,success,pushes",
+    "state,ref,current_head,success,pushes",
     [
-        ("same", "refs/heads/main", True, 0),
-        ("different", "refs/heads/main", False, 0),
-        ("missing", "refs/heads/main", True, 1),
-        ("missing", "refs/tags/v0.2.1", True, 2),
-        ("denied", "refs/heads/main", False, 0),
+        ("same", "refs/heads/main", "abc123", True, 1),
+        ("different", "refs/heads/main", "abc123", False, 0),
+        ("missing", "refs/heads/main", "abc123", True, 2),
+        ("missing", "refs/heads/main", "newer", True, 1),
+        ("missing", "refs/heads/feat/container-control-plane", "abc123", True, 1),
+        ("missing", "refs/tags/v0.2.1", "abc123", True, 2),
+        ("denied", "refs/heads/main", "abc123", False, 0),
     ],
 )
 def test_actual_publication_script_preserves_immutable_tags(
-    tmp_path, monkeypatch, state, ref, success, pushes
+    tmp_path, monkeypatch, state, ref, current_head, success, pushes
 ):
     executable = tmp_path / "docker"
     executable.write_text(
@@ -185,6 +187,12 @@ esac
 """
     )
     executable.chmod(0o755)
+    git = tmp_path / "git"
+    git.write_text(
+        '#!/usr/bin/env bash\nprintf "%s\\trefs/heads/main\\n" "$MOCK_MAIN_SHA"\n'
+    )
+    git.chmod(0o755)
+    monkeypatch.setenv("MOCK_MAIN_SHA", current_head)
     calls = tmp_path / "calls"
     summary = tmp_path / "summary"
     monkeypatch.setenv("PATH", str(tmp_path) + ":" + os.environ["PATH"])
@@ -207,6 +215,9 @@ esac
         "codex-action-server:verified" in line
         for line in recorded
         if line.startswith("tag ")
+    )
+    assert ("push ghcr.io/joshyorko/codex-action-server:latest" in recorded) is (
+        success and ref == "refs/heads/main" and current_head == "abc123"
     )
     assert not any(line.startswith("build ") for line in recorded)
     assert summary.exists() is success
