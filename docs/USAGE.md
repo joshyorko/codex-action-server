@@ -58,6 +58,40 @@ The API connects to existing workers. Provisioning and native daemon startup are
 separate, explicit operations described in [remote workers](REMOTE_WORKERS.md)
 and [local worker providers](LOCAL_WORKER_PROVIDER.md).
 
+For operator-managed workspace provisioning, `CODEX_ACTION_DYNAMIC_TARGETS` can
+select an additional registry file. It is disabled when unset. The file must be
+a regular, non-symlink file owned by the server user, with no group or other
+permissions, and contain `{"version":1,"targets":{...}}`. Each entry requires
+`transport: "devsy-kubernetes"`, `provider: "kubernetes"`, `context`, `workspace`,
+and `workspace_uid`. Optional fields are `codex_bin`, `socket_path`, and
+`user: "vscode"`. The provisioning operator must establish workspace ownership
+before publishing an entry; CAS still checks the UID and pod identity on use.
+Optional top-level `owners` (object) and `history` (array) retain publisher
+provenance; CAS reads routing configuration only from `targets`.
+
+Registry targets appear in `list_targets` and are reread on each request. Publish
+updates by atomic replacement inside a mounted directory, not a single-file bind
+mount. Names cannot collide with static targets. An unavailable or invalid
+registry contributes no targets and never overrides or disables static routes;
+resolving an absent target then returns a safe `dynamic_target_registry_*` error.
+Enabling the environment setting requires one server rollout; later registry
+updates need no restart. This feature does not provision workers or start daemons.
+
+Scoped provisioning additionally sets `CODEX_ACTION_WORKER_AUTHORITY` to the
+operator's private HTTP `/worker-authorized` endpoint. CAS then requires an
+`owners[name].operation_id` and checks current authorization before listing or
+resolving each dynamic target. Requests contain only the workspace name, UID,
+and operation ID; they disable proxies and redirects and time out after three
+seconds. Revoked or unreachable authorization excludes the dynamic target;
+static target resolution makes no authorization request.
+
+With this authority configured, every entry also requires `kubernetes_context`,
+`namespace`, `kubeconfig`, `repository`, `revision`, and `recipe`. CAS compares
+these bindings to the native Devsy row before contacting Kubernetes, so a
+matching workspace UID cannot silently move to another cluster or source. The
+authority is responsible for current scope expiry, revocation, and ownership;
+the registry is not a copy of that authority or its credentials.
+
 ### Check the connection and read a thread
 
 In your MCP client:

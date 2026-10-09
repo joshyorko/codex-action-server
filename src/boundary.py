@@ -8,7 +8,11 @@ import json
 import os
 from pathlib import Path, PurePosixPath
 import re
+import stat
 import subprocess
+import urllib.error
+import urllib.parse
+import urllib.request
 
 from codex_rpc import Target
 from worker_containers import ContainerProvider
@@ -16,6 +20,14 @@ from worker_kubernetes import KubernetesWorker
 
 _NAME = re.compile(r"^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,127}$")
 _IDENTIFIER = re.compile(r"^[^\s\r\n]+$")
+_WORKSPACE_BINDINGS = {
+    "kubernetes_context",
+    "namespace",
+    "kubeconfig",
+    "repository",
+    "revision",
+    "recipe",
+}
 
 
 class ResolutionError(ValueError):
@@ -43,7 +55,7 @@ def _name(value):
     return value
 
 
-def configurations():
+def _static_configurations():
     file = os.environ.get("CODEX_ACTION_TARGETS")
     if not file:
         return {
@@ -69,6 +81,207 @@ def configurations():
         return data["targets"]
     except (OSError, ValueError, TypeError):
         raise ResolutionError("invalid_target_configuration") from None
+
+
+class _NoAuthorityRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
+
+def _authority_opener():
+    return urllib.request.build_opener(
+        urllib.request.ProxyHandler({}), _NoAuthorityRedirect()
+    )
+
+
+def _authority_url():
+    raw = os.environ.get("CODEX_ACTION_WORKER_AUTHORITY")
+    if not raw:
+        return None
+    try:
+        url = urllib.parse.urlsplit(raw)
+        host = url.hostname
+        private = host == "localhost"
+        if not private:
+            address = ipaddress.IPv4Address(host)
+            private = address.is_loopback or any(
+                address in ipaddress.IPv4Network(network)
+                for network in ("10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16")
+            )
+        if (
+            not private
+            or url.scheme != "http"
+            or url.username is not None
+            or url.password is not None
+            or url.path != "/worker-authorized"
+            or "?" in raw
+            or "#" in raw
+            or not 1 <= (80 if url.port is None else url.port) <= 65535
+            or any(c.isspace() or ord(c) < 32 for c in raw)
+        ):
+            raise ValueError()
+        return raw
+    except (ValueError, TypeError):
+        raise ResolutionError("dynamic_target_authority_invalid") from None
+
+
+def _authorize_worker(url, config, owner):
+    if not isinstance(owner, dict):
+        raise ResolutionError("dynamic_target_registry_invalid")
+    operation = owner.get("operation_id")
+    _name(operation)
+    query = urllib.parse.urlencode(
+        {
+            "name": config["workspace"],
+            "uid": config["workspace_uid"],
+            "operation_id": operation,
+        }
+    )
+    try:
+        with _authority_opener().open(url + "?" + query, timeout=3) as response:
+            raw = response.read(4097)
+        if len(raw) > 4096:
+            raise ValueError()
+        result = json.loads(raw)
+        if not isinstance(result, dict) or type(result.get("authorized")) is not bool:
+            raise ValueError()
+    except (OSError, ValueError, TypeError, RecursionError, urllib.error.URLError):
+        raise ResolutionError("dynamic_target_authority_unavailable") from None
+    if not result["authorized"]:
+        raise ResolutionError("dynamic_target_unauthorized")
+
+
+def _validate_workspace_bindings(config):
+    if not _WORKSPACE_BINDINGS & set(config):
+        return
+    if not _WORKSPACE_BINDINGS <= set(config):
+        raise ValueError()
+    for field in ("kubernetes_context", "namespace"):
+        _name(config[field])
+    validate_cwd(config["kubeconfig"])
+    if not isinstance(config["repository"], str):
+        raise ValueError()
+    repository = urllib.parse.urlsplit(config["repository"])
+    if (
+        repository.scheme != "https"
+        or not repository.hostname
+        or repository.username is not None
+        or repository.password is not None
+        or repository.query
+        or repository.fragment
+        or not re.fullmatch(r"[a-fA-F0-9]{40}", config["revision"])
+    ):
+        raise ValueError()
+    recipe = config["recipe"]
+    if (
+        not isinstance(recipe, str)
+        or not recipe
+        or recipe.startswith("/")
+        or ".." in PurePosixPath(recipe).parts
+        or "\\" in recipe
+        or any(c.isspace() or ord(c) < 32 for c in recipe)
+    ):
+        raise ValueError()
+
+
+def _dynamic_configurations(static, requested_name=None):
+    file = os.environ.get("CODEX_ACTION_DYNAMIC_TARGETS")
+    if not file:
+        return {}
+    try:
+        # Open once: atomic replacement cannot swap the checked file underneath
+        # this read. NONBLOCK also prevents a configured FIFO from hanging calls.
+        descriptor = os.open(file, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+        with os.fdopen(descriptor, "r") as stream:
+            info = os.fstat(stream.fileno())
+            if (
+                not stat.S_ISREG(info.st_mode)
+                or info.st_uid != os.geteuid()
+                or info.st_mode & 0o077
+                or info.st_nlink != 1
+                or info.st_size > 2 * 1024 * 1024
+            ):
+                raise ValueError()
+            raw = stream.read(2 * 1024 * 1024 + 1)
+            if len(raw) > 2 * 1024 * 1024:
+                raise ValueError()
+            data = json.loads(raw)
+        if (
+            not isinstance(data, dict)
+            or not {"version", "targets"}
+            <= set(data)
+            <= {"version", "targets", "owners", "history"}
+            or type(data["version"]) is not int
+            or data["version"] != 1
+            or not isinstance(data["targets"], dict)
+            or not isinstance(data.get("owners", {}), dict)
+            or not isinstance(data.get("history", []), list)
+        ):
+            raise ValueError()
+        authority = _authority_url()
+        required = {"transport", "context", "workspace", "workspace_uid", "provider"}
+        allowed = required | {"codex_bin", "socket_path", "user"} | _WORKSPACE_BINDINGS
+        if authority:
+            required |= _WORKSPACE_BINDINGS
+        for name, config in data["targets"].items():
+            _name(name)
+            if name in static:
+                raise ResolutionError("dynamic_target_registry_collision")
+            if (
+                not isinstance(config, dict)
+                or not required <= set(config) <= allowed
+                or config["transport"] != "devsy-kubernetes"
+                or config["provider"] != "kubernetes"
+                or config.get("user", "vscode") != "vscode"
+            ):
+                raise ValueError()
+            for field in ("context", "workspace", "workspace_uid"):
+                _name(config[field])
+            if "socket_path" in config:
+                validate_cwd(config["socket_path"])
+            if "codex_bin" in config:
+                binary = validate_cwd(config["codex_bin"])
+                if any(c.isspace() for c in binary):
+                    raise ValueError()
+            _validate_workspace_bindings(config)
+        if not authority:
+            return data["targets"]
+        authorized = {}
+        for name, config in data["targets"].items():
+            if requested_name is not None and name != requested_name:
+                continue
+            try:
+                _authorize_worker(authority, config, data.get("owners", {}).get(name))
+            except ResolutionError:
+                if requested_name is not None:
+                    raise
+                continue
+            authorized[name] = config
+        return authorized
+    except ResolutionError as error:
+        if str(error).startswith("dynamic_target_"):
+            raise
+        raise ResolutionError("dynamic_target_registry_invalid") from None
+    except OSError:
+        raise ResolutionError("dynamic_target_registry_unavailable") from None
+    except (ValueError, TypeError, RecursionError):
+        raise ResolutionError("dynamic_target_registry_invalid") from None
+
+
+def _configuration_snapshot(requested_name=None):
+    static = _static_configurations()
+    if isinstance(requested_name, str) and requested_name in static:
+        return static, None
+    try:
+        return {**static, **_dynamic_configurations(static, requested_name)}, None
+    except ResolutionError as error:
+        # A broken generated registry must never take existing workers offline.
+        return static, error
+
+
+def configurations():
+    """List valid targets; a rejected dynamic registry never masks static routes."""
+    return _configuration_snapshot()[0]
 
 
 def _run(args, json_output=False):
@@ -125,6 +338,22 @@ def _devsy_workspace(config):
     workspace = _name(row.get("id"))
     if config.get("workspace_uid") and row.get("uid") != config["workspace_uid"]:
         raise ResolutionError("workspace_identity_changed")
+    if _WORKSPACE_BINDINGS & set(config):
+        try:
+            _validate_workspace_bindings(config)
+            options = row["provider"]["options"]
+            actual = {
+                "kubernetes_context": options["KUBERNETES_CONTEXT"]["value"],
+                "namespace": options["KUBERNETES_NAMESPACE"]["value"],
+                "kubeconfig": options["KUBERNETES_CONFIG"]["value"],
+                "repository": row["source"]["gitRepository"],
+                "revision": row["source"]["gitCommit"],
+                "recipe": row["devContainerPath"],
+            }
+            if any(config[field] != actual[field] for field in _WORKSPACE_BINDINGS):
+                raise ValueError()
+        except (KeyError, ValueError, TypeError):
+            raise ResolutionError("workspace_binding_changed") from None
     return row, workspace, prefix
 
 
@@ -203,8 +432,10 @@ def _devsy(config):
 
 
 def resolve_target(name: str) -> Target:
-    configs = configurations()
+    configs, dynamic_error = _configuration_snapshot(name)
     if not isinstance(name, str) or name not in configs:
+        if dynamic_error is not None:
+            raise dynamic_error
         raise ResolutionError("Target is not configured")
     config = configs[name]
     if config.get("transport") == "container":
@@ -230,7 +461,7 @@ def resolve_target(name: str) -> Target:
         "provider",
         "workspace_uid",
         "user",
-    }
+    } | _WORKSPACE_BINDINGS
     if set(config) - allowed:
         raise ResolutionError("invalid_target_configuration")
     transport = config.get("transport")
