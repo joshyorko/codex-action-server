@@ -398,3 +398,37 @@ def test_dynamic_authority_ignores_proxy_and_refuses_http_redirect(
         server.shutdown()
         server.server_close()
         thread.join(timeout=2)
+
+
+@pytest.mark.parametrize(
+    "gateway,host,expected",
+    [
+        ("172.30.86.1", "172.30.86.1", {"source_address": ("127.0.0.1", 0)}),
+        ("172.30.86.1", "192.168.1.20", {}),
+        (None, "172.30.86.1", {}),
+    ],
+)
+def test_dynamic_authority_loopback_source_only_for_managed_gateway(
+    monkeypatch, gateway, host, expected
+):
+    import urllib.request
+
+    if gateway is None:
+        monkeypatch.delenv("CODEX_ACTION_BRIDGE_GATEWAY", raising=False)
+    else:
+        monkeypatch.setenv("CODEX_ACTION_BRIDGE_GATEWAY", gateway)
+    calls = []
+
+    def do_open(self, connection, request, **kwargs):
+        calls.append(kwargs)
+        return "response"
+
+    monkeypatch.setattr(urllib.request.HTTPHandler, "do_open", do_open)
+    handler = next(
+        item
+        for item in boundary._authority_opener().handlers
+        if isinstance(item, urllib.request.HTTPHandler)
+    )
+    request = urllib.request.Request(f"http://{host}:8089/worker-authorized")
+    assert handler.http_open(request) == "response"
+    assert calls == [expected]

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from http.client import HTTPConnection
 import ipaddress
 import json
 import os
@@ -88,9 +89,20 @@ class _NoAuthorityRedirect(urllib.request.HTTPRedirectHandler):
         return None
 
 
+class _AuthorityHTTPHandler(urllib.request.HTTPHandler):
+    def http_open(self, request):
+        # Host-network CAS must retain loopback identity when contacting its
+        # managed bridge; unrelated private authorities retain normal routing.
+        options = {}
+        gateway = os.environ.get("CODEX_ACTION_BRIDGE_GATEWAY")
+        if gateway and urllib.parse.urlsplit(request.full_url).hostname == gateway:
+            options["source_address"] = ("127.0.0.1", 0)
+        return self.do_open(HTTPConnection, request, **options)
+
+
 def _authority_opener():
     return urllib.request.build_opener(
-        urllib.request.ProxyHandler({}), _NoAuthorityRedirect()
+        urllib.request.ProxyHandler({}), _AuthorityHTTPHandler(), _NoAuthorityRedirect()
     )
 
 
