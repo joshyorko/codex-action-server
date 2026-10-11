@@ -8,7 +8,7 @@ ROOT = Path(__file__).parents[1]
 DEFINITION = ROOT / ".devcontainer/remote-worker/devcontainer.json"
 SETUP = ROOT / "scripts/remote/setup.sh"
 VERIFY = ROOT / "scripts/remote/verify.sh"
-IMAGE = "ghcr.io/joshyorko/room-of-requirement:secure@sha256:de48bf9e2c93f8e358fcb5ac13e3159473245f5f271456c8f7d4dcc2ab881338"
+IMAGE = "ghcr.io/joshyorko/room-of-requirement:secure@sha256:0a71d1bf0a0debdad0a728d2f018a46192fe980eb321e5e8e67f1747a8ebcb6f"
 
 
 def _artifacts() -> str:
