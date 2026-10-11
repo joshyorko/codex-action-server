@@ -512,6 +512,8 @@ def resolve_target(name: str) -> Target:
             "codex_bin",
             "socket_path",
             "destination",
+            "ssh_config",
+            "known_hosts",
             "context",
             "workspace",
             "source",
@@ -540,6 +542,15 @@ def resolve_target(name: str) -> Target:
     if socket is not None:
         validate_cwd(socket)
     options, uid, workspace = (), None, None
+    ssh_config = config.get("ssh_config")
+    known_hosts = config.get("known_hosts")
+    if transport != "ssh" and (ssh_config is not None or known_hosts is not None):
+        raise ResolutionError("pinned_ssh_configuration_requires_ssh_transport")
+    if (ssh_config is None) != (known_hosts is None):
+        raise ResolutionError("incomplete_pinned_ssh_configuration")
+    if ssh_config is not None:
+        ssh_config = _validate_ssh_file(ssh_config)
+        known_hosts = _validate_ssh_file(known_hosts)
     if transport == "local":
         destination = "local"
     elif transport == "ssh":
@@ -568,7 +579,28 @@ def resolve_target(name: str) -> Target:
         )
     else:
         raise ResolutionError("unsupported_target_transport")
-    return Target(destination, binary, socket, name, options, uid, workspace)
+    return Target(
+        destination,
+        binary,
+        socket,
+        name,
+        options,
+        uid,
+        workspace,
+        ssh_config=ssh_config if transport == "ssh" else None,
+        known_hosts=known_hosts if transport == "ssh" else None,
+    )
+
+
+def _validate_ssh_file(path):
+    try:
+        path = validate_cwd(path)
+        info = os.stat(path, follow_symlinks=False)
+        if not stat.S_ISREG(info.st_mode) or not os.access(path, os.R_OK):
+            raise ValueError()
+        return path
+    except (OSError, ValueError, TypeError):
+        raise ResolutionError("invalid_pinned_ssh_file") from None
 
 
 def validate_cwd(cwd: str) -> str:

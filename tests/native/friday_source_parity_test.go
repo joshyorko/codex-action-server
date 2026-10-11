@@ -12,7 +12,7 @@ import (
 )
 
 func TestFridaySourceParity(t *testing.T) {
-    const image = "ghcr.io/joshyorko/room-of-requirement:secure@sha256:de48bf9e2c93f8e358fcb5ac13e3159473245f5f271456c8f7d4dcc2ab881338"
+    const image = "ghcr.io/joshyorko/room-of-requirement:secure@sha256:0a71d1bf0a0debdad0a728d2f018a46192fe980eb321e5e8e67f1747a8ebcb6f"
     sources := map[string]provider.WorkspaceSource{
         "git": {GitRepository: "https://github.com/example/unrelated.git"},
         "local": {LocalFolder: "/controller/project with spaces"},

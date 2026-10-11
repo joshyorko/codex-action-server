@@ -31,6 +31,24 @@ def main():
             not in {"local", "ssh", "devsy", "devsy-kubernetes", "container"}
         ):
             raise ValueError("invalid_target_configuration")
+        if config.get("transport") == "ssh":
+            ssh_config = config.get("ssh_config")
+            known_hosts = config.get("known_hosts")
+            if (ssh_config is None) != (known_hosts is None):
+                raise ValueError("incomplete_pinned_ssh_configuration")
+            if ssh_config is not None:
+                for path in (ssh_config, known_hosts):
+                    candidate = Path(path)
+                    if (
+                        not candidate.is_absolute()
+                        or ".." in candidate.parts
+                        or candidate.is_symlink()
+                        or not candidate.is_file()
+                        or not os.access(candidate, os.R_OK)
+                    ):
+                        raise ValueError("invalid_pinned_ssh_file")
+        elif "ssh_config" in config or "known_hosts" in config:
+            raise ValueError("pinned_ssh_configuration_requires_ssh_transport")
     paths = [
         Path(os.environ[key]) for key in ["CODEX_ACTION_RECEIPTS", "CODEX_ACTION_DATA"]
     ]
