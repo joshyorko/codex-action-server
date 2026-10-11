@@ -236,6 +236,8 @@ class Target:
     workspace_uid: str | None = None
     workspace_id: str | None = None
     container: Worker | KubernetesWorker | None = None
+    ssh_config: str | None = None
+    known_hosts: str | None = None
 
     def __post_init__(self):
         if (
@@ -263,17 +265,31 @@ class Target:
                 + " && exec "
                 + remote
             )
-        return [
+        command = [
             "ssh",
             "-T",
             "-o",
             "BatchMode=yes",
             "-o",
             "ForwardAgent=no",
-            *self.ssh_options,
-            self.target,
-            remote,
         ]
+        if self.ssh_config is not None and self.known_hosts is not None:
+            command.extend(
+                [
+                    "-F",
+                    self.ssh_config,
+                    "-o",
+                    "StrictHostKeyChecking=yes",
+                    "-o",
+                    "UserKnownHostsFile=" + self.known_hosts,
+                    "-o",
+                    "GlobalKnownHostsFile=/dev/null",
+                    "-o",
+                    "UpdateHostKeys=no",
+                ]
+            )
+        command.extend([*self.ssh_options, self.target, remote])
+        return command
 
 
 class ApprovalBridge:

@@ -54,6 +54,18 @@ CLI. SSH targets need an SSH client; Devsy targets also need Devsy, and direct
 Kubernetes targets need kubectl. Container targets need the selected engine CLI
 and access to its local socket.
 
+Static SSH targets can opt into pinned host verification by setting both
+`ssh_config` and `known_hosts` to absolute paths for readable regular files
+available to the Action Server. CAS passes the selected SSH config with `-F` and
+forces `StrictHostKeyChecking=yes`, that per-target known-hosts file, and no
+global known-hosts file. Existing SSH targets without these fields keep using
+the caller's normal SSH configuration. For a container deployment, mount the
+SSH config and known-hosts file read-only at the paths in the target config, and
+mount only the key files referenced by that SSH config. Set `codex_bin` and
+`socket_path` from the remote host's verified running daemon; CAS uses them for
+`app-server proxy --sock` and does not start the daemon. Startup checks these
+local files but does not prove that the SSH host or remote socket is reachable.
+
 The API connects to existing workers. Provisioning and native daemon startup are
 separate, explicit operations described in [remote workers](REMOTE_WORKERS.md)
 and [local worker providers](LOCAL_WORKER_PROVIDER.md).

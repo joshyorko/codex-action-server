@@ -24,6 +24,64 @@ def test_operator_local_socket_is_resolved(tmp_path, monkeypatch):
     assert boundary.resolve_target("local").socket_path == "/tmp/isolated.sock"
 
 
+def test_ssh_target_uses_explicit_pinned_host_files_without_probing_remote(
+    tmp_path, monkeypatch
+):
+    ssh_config = tmp_path / "ssh_config"
+    known_hosts = tmp_path / "known_hosts"
+    ssh_config.write_text("Host dakota\n  HostName 192.0.2.1\n")
+    known_hosts.write_text("dakota ssh-ed25519 AAAAexample\n")
+    configure(
+        tmp_path,
+        monkeypatch,
+        {
+            "local": {
+                "transport": "ssh",
+                "destination": "dakota",
+                "codex_bin": "/opt/codex/bin/codex",
+                "socket_path": "/run/user/1000/codex.sock",
+                "ssh_config": str(ssh_config),
+                "known_hosts": str(known_hosts),
+            }
+        },
+    )
+    monkeypatch.setattr(
+        subprocess, "run", lambda *a, **k: pytest.fail("resolution must stay offline")
+    )
+
+    target = boundary.resolve_target("local")
+    command = target.command(["app-server", "proxy", "--sock", target.socket_path])
+    assert target.target == "dakota"
+    assert command[0:2] == ["ssh", "-T"]
+    assert "BatchMode=yes" in command
+    assert "ForwardAgent=no" in command
+    assert command[command.index("-F") + 1] == str(ssh_config)
+    assert "StrictHostKeyChecking=yes" in command
+    assert "UserKnownHostsFile=" + str(known_hosts) in command
+    assert "GlobalKnownHostsFile=/dev/null" in command
+    assert "UpdateHostKeys=no" in command
+    assert command[-2] == "dakota"
+    assert command[-1].startswith("/opt/codex/bin/codex app-server proxy --sock")
+
+
+def test_ssh_pinned_host_files_must_be_configured_as_a_pair(tmp_path, monkeypatch):
+    known_hosts = tmp_path / "known_hosts"
+    known_hosts.write_text("dakota ssh-ed25519 AAAAexample\n")
+    configure(
+        tmp_path,
+        monkeypatch,
+        {
+            "local": {
+                "transport": "ssh",
+                "destination": "dakota",
+                "known_hosts": str(known_hosts),
+            }
+        },
+    )
+    with pytest.raises(ValueError, match="incomplete_pinned_ssh_configuration"):
+        boundary.resolve_target("local")
+
+
 def test_devsy_uses_authoritative_json_then_generated_ssh_config(tmp_path, monkeypatch):
     configure(
         tmp_path,

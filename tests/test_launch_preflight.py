@@ -143,3 +143,50 @@ def test_preflight_accepts_pinned_devsy_kubernetes_target_offline(
     for name in ["runtime", "receipts"]:
         assert (tmp_path / name).is_dir()
         assert (tmp_path / name).stat().st_mode & 0o077 == 0
+
+
+def test_preflight_accepts_unreachable_ssh_target_with_pinned_files_offline(
+    tmp_path, monkeypatch, capsys
+):
+    import runpy
+
+    ssh_config = tmp_path / "ssh_config"
+    known_hosts = tmp_path / "known_hosts"
+    ssh_config.write_text("Host dakota\n  HostName 192.0.2.1\n")
+    known_hosts.write_text("dakota ssh-ed25519 AAAAexample\n")
+    target = tmp_path / "targets.json"
+    target.write_text(
+        json.dumps(
+            {
+                "targets": {
+                    "local": {
+                        "transport": "ssh",
+                        "destination": "dakota",
+                        "codex_bin": "/home/josh/.local/bin/codex",
+                        "socket_path": "/tmp/codex-daemon.sock",
+                        "ssh_config": str(ssh_config),
+                        "known_hosts": str(known_hosts),
+                    }
+                }
+            }
+        )
+    )
+    for key, value in {
+        "CODEX_ACTION_TARGETS": target,
+        "CODEX_ACTION_RECEIPTS": tmp_path / "receipts",
+        "CODEX_ACTION_DATA": tmp_path / "runtime",
+        "CODEX_ACTION_PORT": "8088",
+    }.items():
+        monkeypatch.setenv(key, str(value))
+
+    def reject_process(*args, **kwargs):
+        pytest.fail("Offline preflight must not contact the remote target")
+
+    monkeypatch.setattr(subprocess, "run", reject_process)
+    preflight = runpy.run_path(str(ROOT / "scripts/preflight.py"))
+    previous_umask = os.umask(0o077)
+    try:
+        preflight["main"]()
+    finally:
+        os.umask(previous_umask)
+    assert capsys.readouterr().out == "8088\n"
