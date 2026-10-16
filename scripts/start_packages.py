@@ -2,6 +2,7 @@
 """Launch one Runtime with exact source-owned package/action selection."""
 
 import argparse
+import hashlib
 import os
 from pathlib import Path
 import runpy
@@ -11,6 +12,24 @@ import subprocess
 from assemble_packages import assemble, source_fingerprint, verify_artifacts
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def source_files_match(left: Path, right: Path) -> bool:
+    def hashes(root: Path) -> dict[str, str] | None:
+        if root.is_symlink() or not root.is_dir():
+            return None
+        result = {}
+        for path in root.rglob("*"):
+            if path.is_symlink():
+                return None
+            if path.is_file() and path.name != ".cas-assembly.json":
+                result[path.relative_to(root).as_posix()] = hashlib.sha256(
+                    path.read_bytes()
+                ).hexdigest()
+        return result
+
+    left_hashes = hashes(left)
+    return left_hashes is not None and left_hashes == hashes(right)
 
 
 def assert_imported_catalog(
@@ -34,11 +53,17 @@ def assert_imported_catalog(
         location = Path(directory)
         if not location.is_absolute():
             location = data / location
-        if (
-            file != "src/codex_actions.py"
-            or location.resolve() != directories[package].resolve()
-        ):
+        if file != "src/codex_actions.py":
             raise ValueError("imported_catalog_entrypoint_mismatch")
+        expected_source = directories[package]
+        if location.resolve() != expected_source.resolve():
+            snapshot_root = data / ".rcc-runtime-sources"
+            if (
+                location.parent != snapshot_root
+                or snapshot_root.is_symlink()
+                or not source_files_match(expected_source, location)
+            ):
+                raise ValueError("imported_catalog_entrypoint_mismatch")
         actual.append((package, name))
     wanted = {(package, name) for package, names in expected.items() for name in names}
     if set(actual) != wanted or len(actual) != len(wanted):

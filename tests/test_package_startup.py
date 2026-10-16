@@ -6,6 +6,8 @@ from pathlib import Path
 import shutil
 import sqlite3
 import subprocess
+import sys
+import runpy
 
 import pytest
 
@@ -50,7 +52,7 @@ def launcher(tmp_path):
     target.write_text('{"targets":{"local":{"transport":"local"}}}')
     binary = tmp_path / "action-server"
     binary.write_text("""#!/usr/bin/env python3
-import json, os, pathlib, sqlite3, sys
+import json, os, pathlib, shutil, sqlite3, sys
 args=sys.argv[1:]
 with open(os.environ['COMMAND_LOG'],'a') as f: f.write(json.dumps(args)+'\\n')
 with open(os.environ['CWD_LOG'],'a') as f: f.write(str(pathlib.Path.cwd())+'\\n')
@@ -63,6 +65,15 @@ if args[0]=='import':
   import importlib
   importlib.import_module('codex_shared')
  stored_directory=str(directory)
+ if os.environ.get('FAKE_RUNTIME_SNAPSHOT'):
+  snapshot=data/'.rcc-runtime-sources'/package
+  snapshot.mkdir(parents=True,exist_ok=True)
+  for source in directory.rglob('*'):
+   if source.is_file() and source.name!='.cas-assembly.json':
+    target=snapshot/source.relative_to(directory)
+    target.parent.mkdir(parents=True,exist_ok=True)
+    shutil.copyfile(source,target)
+  stored_directory=str(snapshot)
  if os.environ.get('FAKE_RELATIVE_PATHS'):
   relative=directory.relative_to(data)
   assert directory.samefile(relative)
@@ -225,3 +236,40 @@ def test_split_runtime_keeps_assembled_sources_unchanged_on_restart(launcher):
     assert len(commands) == 6
     data = Path(launcher[1]["CODEX_ACTION_DATA"])
     assert not list((data / "packages").rglob("__pycache__"))
+
+
+def test_runtime_source_snapshot_is_verified_before_start(launcher):
+    result, commands = run(
+        launcher,
+        CODEX_ACTION_PACKAGES="codex-observe,codex-control",
+        FAKE_RUNTIME_SNAPSHOT="1",
+    )
+    assert result.returncode == 0, result.stderr
+    assert [command[0] for command in commands] == ["import", "import", "start"]
+
+    data = Path(launcher[1]["CODEX_ACTION_DATA"])
+    with sqlite3.connect(data / "server.db") as db:
+        snapshot = Path(
+            db.execute(
+                "SELECT directory FROM action_package WHERE name='codex-control'"
+            ).fetchone()[0]
+        )
+    (snapshot / "src/codex_actions.py").write_text("tampered")
+    sys.path.insert(0, str(ROOT / "scripts"))
+    try:
+        startup = runpy.run_path(str(ROOT / "scripts/start_packages.py"))
+    finally:
+        sys.path.remove(str(ROOT / "scripts"))
+    with pytest.raises(ValueError, match="imported_catalog_entrypoint_mismatch"):
+        startup["assert_imported_catalog"](
+            data,
+            {
+                "codex-observe": frozenset({"read"}),
+                "codex-control": frozenset({"write"}),
+            },
+            {
+                package: Path(commands[0][commands[0].index("--dir") + 1]).parent
+                / package
+                for package in ("codex-observe", "codex-control")
+            },
+        )
