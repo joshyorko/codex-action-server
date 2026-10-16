@@ -35,7 +35,7 @@ ACTION_SERVER_ENV = "FRIDAY_ACTIONS_PYTHON"
 def _runtime_import_code() -> str:
     return (
         "import actions; "
-        "assert actions.__version__ == '1.0.1'; "
+        "assert actions.__version__ == '1.0.3'; "
         "import codex_actions; "
         "assert callable(codex_actions.start_thread); "
         "assert callable(codex_actions.start_turn); "
@@ -53,7 +53,7 @@ def _actions_runtime_python() -> str | None:
         result = subprocess.run(
             # Discover the framework only; package imports belong to the
             # assertion below and must fail, not masquerade as missing runtime.
-            [candidate, "-c", "import actions; assert actions.__version__ == '1.0.1'"],
+            [candidate, "-c", "import actions; assert actions.__version__ == '1.0.3'"],
             cwd=PACKAGE,
             env={**os.environ, "PYTHONPATH": str(SRC)},
             capture_output=True,
@@ -281,7 +281,7 @@ class ActionServerValidationTests(unittest.TestCase):
         runtime = _actions_runtime_python()
         if runtime is None:
             self.skipTest(
-                "Actions Runtime 1.0.1 interpreter unavailable; set "
+                "Actions Runtime 1.0.3 interpreter unavailable; set "
                 f"{ACTION_SERVER_ENV} or run the package dev task"
             )
         result = subprocess.run(
@@ -312,6 +312,14 @@ class ActionServerValidationTests(unittest.TestCase):
             root = Path(raw)
             worktree = root / "worktree"
             codex_home = root / "codex-home"
+            runtime_package = root / "package"
+            shutil.copytree(
+                PACKAGE,
+                runtime_package,
+                ignore=shutil.ignore_patterns(
+                    ".git", ".venv", ".action-server", "output", "packages", "tests"
+                ),
+            )
             worktree.mkdir()
             codex_home.mkdir()
             native_socket = root / "native.sock"
@@ -335,7 +343,7 @@ class ActionServerValidationTests(unittest.TestCase):
                         action_server,
                         "start",
                         "--dir",
-                        str(PACKAGE),
+                        str(runtime_package),
                         "--datadir",
                         str(root / "action-server-data"),
                         "--address",
@@ -350,7 +358,7 @@ class ActionServerValidationTests(unittest.TestCase):
                         "--parent-pid",
                         str(os.getpid()),
                     ],
-                    cwd=PACKAGE,
+                    cwd=runtime_package,
                     env=environment,
                     stdout=server_output,
                     stderr=subprocess.STDOUT,

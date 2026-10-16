@@ -16,7 +16,9 @@ exec(PATCH["TRANSPORT_POLICY"], namespace)
 policy = namespace["_cas_transport_security"]
 
 
-@pytest.mark.parametrize("runtime,sdk", [("1.0.3", "2.0.0"), ("1.0.2", "2.0.1")])
+@pytest.mark.parametrize(
+    "runtime,sdk", [("1.0.2", "2.0.0"), ("1.0.4", "2.0.0"), ("1.0.3", "2.0.1")]
+)
 def test_patch_rejects_unreviewed_runtime_or_sdk(runtime, sdk):
     with pytest.raises(RuntimeError, match="unsupported_runtime_or_sdk_version"):
         PATCH["patch_source"]("untrusted source", runtime, sdk)
@@ -24,7 +26,7 @@ def test_patch_rejects_unreviewed_runtime_or_sdk(runtime, sdk):
 
 def test_patch_rejects_changed_upstream_source():
     with pytest.raises(RuntimeError, match="unexpected_runtime_adapter_source"):
-        PATCH["patch_source"]("untrusted source", "1.0.2", "2.0.0")
+        PATCH["patch_source"]("untrusted source", "1.0.3", "2.0.0")
 
 
 @pytest.mark.parametrize("address", ["127.0.0.1", "172.30.86.1"])

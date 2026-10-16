@@ -26,6 +26,14 @@ def test_standalone_http_boot_catalog_and_safe_diagnostics(tmp_path, profile):
     from mcp.shared.exceptions import MCPError
 
     package = Path(__file__).parents[1]
+    runtime_package = tmp_path / "package"
+    shutil.copytree(
+        package,
+        runtime_package,
+        ignore=shutil.ignore_patterns(
+            ".git", ".venv", ".action-server", "output", "packages", "tests"
+        ),
+    )
     native = None
     thread_id = "thread-1"
     cwd = "/work"
@@ -67,7 +75,7 @@ def test_standalone_http_boot_catalog_and_safe_diagnostics(tmp_path, profile):
     }
     with (tmp_path / "server.log").open("w") as log:
         proc = subprocess.Popen(
-            ["bash", str(package / "scripts/run.sh")],
+            ["bash", str(runtime_package / "scripts/run.sh")],
             env=env,
             stdout=log,
             stderr=subprocess.STDOUT,

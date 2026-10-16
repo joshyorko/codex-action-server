@@ -1,4 +1,4 @@
-# PyPI Actions Runtime 1.0.2 has Linux x86-64 wheels only.
+# PyPI Actions Runtime 1.0.3 has Linux x86-64 wheels only.
 FROM python:3.12.11-slim-bookworm@sha256:519591d6871b7bc437060736b9f7456b8731f1499a57e22e6c285135ae657bf7 AS base
 
 ARG TARGETARCH
@@ -6,9 +6,9 @@ RUN test "$TARGETARCH" = amd64 \
     && apt-get update \
     && apt-get install -y --no-install-recommends ca-certificates curl openssh-client procps \
     && rm -rf /var/lib/apt/lists/* \
-    && python -m pip download --no-deps --only-binary=:all: --dest /tmp/runtime-wheel actions-runtime==1.0.2 \
-    && echo '9aef9ec55c17d90ec11a32d8d4da694def92502ba46a73621c35267f230873d3  /tmp/runtime-wheel/actions_runtime-1.0.2-cp312-cp312-manylinux_2_17_x86_64.manylinux_2_5_x86_64.manylinux1_x86_64.manylinux2014_x86_64.whl' | sha256sum -c - \
-    && python -m pip install --no-cache-dir /tmp/runtime-wheel/*.whl actions-core==1.0.1 mcp==2.0.0 \
+    && python -m pip download --no-deps --only-binary=:all: --dest /tmp/runtime-wheel actions-runtime==1.0.3 \
+    && echo 'ab72039801663deffa24a25725fc4ce86710d9d7cc7be8132d5f40a23a502390  /tmp/runtime-wheel/actions_runtime-1.0.3-cp312-cp312-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl' | sha256sum -c - \
+    && python -m pip install --no-cache-dir /tmp/runtime-wheel/*.whl actions-core==1.0.3 mcp==2.0.0 \
     && rm -rf /tmp/runtime-wheel \
     && curl -fL --max-time 120 --retry 2 https://github.com/devsy-org/devsy/releases/download/v1.23.0/devsy-linux-amd64 -o /usr/local/bin/devsy \
     && echo 'bf6e00b498a09ed614670ce24bd7cf46830b31218e773961f6c267c1a25b8186  /usr/local/bin/devsy' | sha256sum -c - \

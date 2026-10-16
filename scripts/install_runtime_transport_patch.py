@@ -6,9 +6,9 @@ import hashlib
 from importlib.metadata import distribution, version
 
 
-RUNTIME_VERSION = "1.0.2"
+RUNTIME_VERSION = "1.0.3"
 SDK_VERSION = "2.0.0"
-SOURCE_SHA256 = "9fa379f62dcec1e3a4e7ca5eeeedaf7a00f338ed5eaa4f66d24804132b2cd864"
+SOURCE_SHA256 = "9f8135a8bdb238bb1c83e91a1612d0814cec7309d7b32075157db719194540e3"
 
 ORIGINAL = """        from starlette.routing import Route
 
@@ -17,6 +17,7 @@ ORIGINAL = """        from starlette.routing import Route
                 streamable_http_path="/mcp",
                 json_response=True,
                 stateless_http=True,
+                transport_security=self.mcp_server_setup_helper.transport_security,
             )
         )
 """
@@ -76,7 +77,7 @@ def main():
     path = runtime.locate_file("actions/server/_api_action_routes.py")
     patched = patch_source(path.read_text(), runtime.version, version("mcp"))
     path.write_text(patched)
-    print("Installed exact-listener MCP protection for actions-runtime 1.0.2")
+    print("Installed exact-listener MCP protection for actions-runtime 1.0.3")
 
 
 if __name__ == "__main__":

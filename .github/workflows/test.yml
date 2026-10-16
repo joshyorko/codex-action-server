@@ -15,8 +15,8 @@ jobs:
       - name: Install pinned Actions Runtime
         run: |
           mkdir -p "$RUNNER_TEMP/codex-action-test-bin"
-          curl -fL --max-time 120 --retry 2 https://github.com/joshyorko/actions/releases/download/actions-runtime-1.0.1/actions-runtime-1.0.1-linux64 -o "$RUNNER_TEMP/codex-action-test-bin/action-server"
-          echo "191f40cfebcadbd53bf7b14988098b983b99b4efc1aa8d8ac9e8ada6ad37ab3b  $RUNNER_TEMP/codex-action-test-bin/action-server" | sha256sum -c -
+          curl -fL --max-time 120 --retry 2 https://github.com/joshyorko/actions/releases/download/actions-runtime-1.0.3/actions-runtime-1.0.3-linux64 -o "$RUNNER_TEMP/codex-action-test-bin/action-server"
+          echo "8d07146f7e0ed3be8c7d9e7f7042907b86ad899a4c47d1a755edb98975dc6579  $RUNNER_TEMP/codex-action-test-bin/action-server" | sha256sum -c -
           chmod +x "$RUNNER_TEMP/codex-action-test-bin/action-server"
           echo "$RUNNER_TEMP/codex-action-test-bin" >> "$GITHUB_PATH"
       - run: pytest -q -rs
