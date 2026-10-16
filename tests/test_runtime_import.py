@@ -14,7 +14,7 @@ class RuntimeImportTests(unittest.TestCase):
             [
                 sys.executable,
                 "-c",
-                "import actions; assert actions.__version__ == '1.0.1'; "
+                "import actions; assert actions.__version__ == '1.0.3'; "
                 "import codex_actions; "
                 "assert callable(codex_actions.discover_threads)",
             ],

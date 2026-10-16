@@ -29,7 +29,8 @@ command -v action-server
 ```
 
 If a checkout directory already exists, stop and inspect it; do not overwrite an
-active worktree. Actions Runtime1.0.1 is already installed on Dakota. Reuse it.
+active worktree. Verify `action-server version` against the current released
+Actions Runtime pin before using it.
 
 ## 2. Configure Dakota explicitly, remote separately
 

@@ -1,5 +1,23 @@
 # Runtime capability audit
 
+## Current released pins (2026-10-16)
+
+CAS now targets Actions Core 1.0.3 and Actions Runtime 1.0.3. The authoritative
+Runtime release is [actions-runtime-1.0.3](https://github.com/joshyorko/actions/releases/tag/actions-runtime-1.0.3);
+its Linux binary SHA-256 is `8d07146f7e0ed3be8c7d9e7f7042907b86ad899a4c47d1a755edb98975dc6579`.
+The PyPI Runtime 1.0.3 Linux x86-64 wheel SHA-256 is
+`ab72039801663deffa24a25725fc4ce86710d9d7cc7be8132d5f40a23a502390`, and the
+Core 1.0.3 wheel SHA-256 is
+`8e088b40c39fa3badf581e584e466d0aef3371aed220f6dc7dce130fd11c1265`.
+Runtime 1.0.3 requires Core `>=1.0.2,<2.0.0`, so Core 1.0.3 satisfies its
+published compatibility range. Its adapter now owns transport-security defaults;
+CAS still applies its exact configured listener and origin because the defaults
+admit only localhost. Both adapter patches fail closed on the exact Runtime 1.0.3
+source hashes.
+
+The following 2026-10-07 audit records the prior 1.0.2/1.0.1 validation and is
+historical evidence; it is not the current deployed-version claim.
+
 Audited 2026-10-07 against the immutable community source snapshot at
 [joshyorko/actions commit `8bdce09944c9e370917a8222243cd1a239ea7060`](https://github.com/joshyorko/actions/tree/8bdce09944c9e370917a8222243cd1a239ea7060),
 the published [`actions-runtime` 1.0.2](https://pypi.org/project/actions-runtime/1.0.2/)

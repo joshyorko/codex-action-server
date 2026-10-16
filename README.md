@@ -79,11 +79,11 @@ Without Homebrew, install the pinned runtime into a tool environment with
 [uv](https://docs.astral.sh/uv/getting-started/installation/):
 
 ```sh
-uv tool install --python 3.12 'actions-runtime==1.0.1'
+uv tool install --python 3.12 'actions-runtime==1.0.3'
 action-server version
 ```
 
-This package's Linux host setup is tested with Actions Runtime 1.0.1. The runtime
+This package's Linux host setup is tested with Actions Runtime 1.0.3. The runtime
 provides the CLI and RCC; `package.yaml` supplies the action package's Python
 environment. The [upstream releases](https://github.com/joshyorko/actions/releases)
 also provide standalone executables.
@@ -112,7 +112,7 @@ Your local MCP endpoint is **`http://127.0.0.1:8088/mcp`**. The HTTP schema is a
 The launcher starts the API, not Codex. Keep the private state directories across
 restarts. Follow the [setup and first-call guide](docs/USAGE.md) for target
 configuration, read-only mode, and dispatch receipts. For containers, use the
-[container deployment guide](docs/CONTAINERS.md), which pins Runtime 1.0.2.
+[container deployment guide](docs/CONTAINERS.md), which pins Runtime 1.0.3.
 
 ## Access stays under your control
 

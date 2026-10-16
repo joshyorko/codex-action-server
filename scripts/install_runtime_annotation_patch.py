@@ -9,9 +9,9 @@ import sys
 from importlib.metadata import distribution, version
 
 
-RUNTIME_VERSION = "1.0.2"
+RUNTIME_VERSION = "1.0.3"
 SDK_VERSION = "2.0.0"
-SOURCE_SHA256 = "d8d8cf0914419c3e2037b81339d089b3cbdc1900f7dd3027dc8751d19ac73898"
+SOURCE_SHA256 = "953c99a1c67cb8cc508bd0079fb0869161b5f9192a724964562e90f34254701b"
 
 # Import only the standard-library metadata at build/install time. The injected
 # adapter policy below contains serialized records and no CAS/Core imports.
@@ -88,7 +88,7 @@ def main():
     path = runtime.locate_file("actions/server/mcp/setup_mcp_server_v2.py")
     patched = patch_source(path.read_text(), runtime.version, version("mcp"))
     path.write_text(patched)
-    print("Installed scoped CAS MCP annotations for actions-runtime 1.0.2")
+    print("Installed scoped CAS MCP annotations for actions-runtime 1.0.3")
 
 
 if __name__ == "__main__":
