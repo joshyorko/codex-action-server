@@ -1,6 +1,6 @@
 {
   "name": "Codex worker remote runtime",
-  "image": "ghcr.io/joshyorko/room-of-requirement:secure@sha256:0a71d1bf0a0debdad0a728d2f018a46192fe980eb321e5e8e67f1747a8ebcb6f",
+  "image": "ghcr.io/joshyorko/room-of-requirement:secure@sha256:ef50c0f689f258d45843abbee830988c74a60f6874e6c7ed9b0ed5c6cef24386",
   "remoteUser": "vscode",
   "waitFor": "postCreateCommand",
   "postCreateCommand": "set -eu; test -x /bin/bash; /bin/bash scripts/remote/setup.sh",

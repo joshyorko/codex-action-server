@@ -24,7 +24,9 @@ the reviewed recipe commit; an unmerged recipe branch must be selected explicitl
 using the installed Devsy version's supported source/ref configuration. Do not
 claim main contains an unmerged PR. Verify `git rev-parse HEAD` inside the workspace.
 
-The definition retains the pinned room-of-requirement secure image from Friday.
+The definition pins the room-of-requirement secure image to the published
+2026-10-28 digest `sha256:ef50c0f689f258d45843abbee830988c74a60f6874e6c7ed9b0ed5c6cef24386`.
+The prior digest is no longer available from GHCR.
 It does not rebuild or transfer ownership of that image. Its create hook runs
 `scripts/remote/setup.sh`, which installs missing tools, initializes a fresh
 Codex config, configures Headroom/RTK, and installs luna-factory. Its start hook

@@ -8,7 +8,7 @@ ROOT = Path(__file__).parents[1]
 DEFINITION = ROOT / ".devcontainer/remote-worker/devcontainer.json"
 SETUP = ROOT / "scripts/remote/setup.sh"
 VERIFY = ROOT / "scripts/remote/verify.sh"
-IMAGE = "ghcr.io/joshyorko/room-of-requirement:secure@sha256:0a71d1bf0a0debdad0a728d2f018a46192fe980eb321e5e8e67f1747a8ebcb6f"
+IMAGE = "ghcr.io/joshyorko/room-of-requirement:secure@sha256:ef50c0f689f258d45843abbee830988c74a60f6874e6c7ed9b0ed5c6cef24386"
 
 
 def _artifacts() -> str:
@@ -26,6 +26,14 @@ def test_definition_is_pinned_and_self_contained():
     assert "scripts/remote/setup.sh" in definition["postCreateCommand"]
     assert "scripts/remote/verify.sh" in definition["postStartCommand"]
     assert "/workspaces/" not in definition["postCreateCommand"]
+
+
+def test_worker_and_native_parity_use_the_same_published_base():
+    assert f"FROM {IMAGE}\n" in (ROOT / "Containerfile.worker").read_text()
+    assert (
+        f'const image = "{IMAGE}"'
+        in (ROOT / "tests/native/friday_source_parity_test.go").read_text()
+    )
 
 
 def test_expensive_setup_is_first_create_only_and_restart_is_cheap():
