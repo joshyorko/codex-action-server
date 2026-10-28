@@ -66,6 +66,13 @@ whitelist excludes them from HTTP routes and the MCP catalog. Startup does not
 delete retained Runtime state or dispatch receipts. Do not manually clear the
 datadir to change selection.
 
+Runtime 1.0.4 reserves each public MCP tool key for its original package. A
+datadir can change selection among split packages, but cannot switch between
+the aggregate and split layouts because those layouts assign the same keys to
+different packages. Use a separate new Runtime datadir for a layout change.
+Retain the old datadir and the existing independent dispatch receipt directory.
+Admission of a conflicting layout fails without replacing the last-good catalog.
+
 ## Assemble distributable packages
 
 Run the assembler from the checkout with an absolute output directory.
@@ -145,12 +152,13 @@ with `CAS_COMPOSITION_RUNTIME=1`. It uses a disposable Unix-socket native
 fixture, private state directories, and loopback HTTP/MCP. It covers exact
 catalogs, typed results, ordinary action kind, consequential OpenAPI metadata,
 package-qualified routes, denied controls, inventory selection, alternating
-dispatch between package worker keys, restart, changed selection in a reused
-datadir, and receipt replay without another native dispatch.
+dispatch between package worker keys, restart, changed split selection in a reused
+datadir, rejection of conflicting package ownership, and receipt replay without
+another native dispatch.
 
 `ACTION_SERVER_BIN` selects the CLI under test.
-`CAS_COMPOSITION_RUNTIME_VERSION` defaults to the separate native release
-`1.0.1`; set `1.0.2` for the pinned wheel CLI. Set
+`CAS_COMPOSITION_RUNTIME_VERSION` defaults to `1.0.4` for both the native
+release and pinned wheel CLI. Set
 `CAS_COMPOSITION_ANNOTATIONS=1` only when testing the exact patched wheel or
 container adapter. The unmodified host binary does not inherit that patch.
 The annotation and transport patch purposes remain separate, as documented

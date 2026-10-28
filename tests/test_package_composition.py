@@ -624,12 +624,11 @@ def test_real_runtime_composition_catalog_http_dispatch_and_restart(
         assert receipt["thread_id"] == native.thread_id
 
 
-def test_real_runtime_reused_datadir_excludes_stale_aggregate_and_control(
+def test_real_runtime_reused_datadir_excludes_unselected_split_packages(
     composition_runtime,
 ):
     environment, native, root = composition_runtime
     stages = [
-        (("codex-action-server",), "operator", OBSERVE | CONTROL),
         (("codex-observe", "codex-control"), "operator", OBSERVE | CONTROL),
         (("codex-observe",), "observe", OBSERVE),
         (("codex-control",), "operator", CONTROL),
@@ -648,6 +647,24 @@ def test_real_runtime_reused_datadir_excludes_stale_aggregate_and_control(
                     assert tool.input_schema == schemas[name], name
                 else:
                     schemas[name] = tool.input_schema
+    assert sum(call.get("method") == "thread/start" for call in native.calls) == 1
+
+
+def test_real_runtime_rejects_reassigning_aggregate_tool_ownership(composition_runtime):
+    environment, native, root = composition_runtime
+    with _running(environment, root, "aggregate") as base:
+        asyncio.run(
+            _exercise(base, ("codex-action-server",), OBSERVE | CONTROL, native)
+        )
+    environment["CODEX_ACTION_PACKAGES"] = "codex-observe,codex-control"
+    with pytest.raises(AssertionError, match="MCP tool key .* is reserved"):
+        with _running(environment, root, "conflicting-split"):
+            pytest.fail("Runtime admitted a conflicting tool owner")
+    environment["CODEX_ACTION_PACKAGES"] = "codex-action-server"
+    with _running(environment, root, "retained-aggregate") as base:
+        asyncio.run(
+            _exercise(base, ("codex-action-server",), OBSERVE | CONTROL, native)
+        )
     assert sum(call.get("method") == "thread/start" for call in native.calls) == 1
 
 
