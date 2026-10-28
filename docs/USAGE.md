@@ -1,12 +1,12 @@
 # Run Codex Action Server
 
 Run these steps from the repository root on a Linux host with Python 3.12 or
-newer, Actions Runtime 1.0.3 providing `action-server` on `PATH`, and an existing,
+newer, Actions Runtime 1.0.4 providing `action-server` on `PATH`, and an existing,
 authenticated native Codex daemon. The host launcher starts only Action Server.
 It does not start, restart, or authenticate Codex or a worker provider.
 
 For a container deployment, use the separate
-[container guide](CONTAINERS.md). The image pins Actions Runtime 1.0.3 and
+[container guide](CONTAINERS.md). The image pins Actions Runtime 1.0.4 and
 has a different network and mount contract.
 
 1. Create an operator-owned target file using

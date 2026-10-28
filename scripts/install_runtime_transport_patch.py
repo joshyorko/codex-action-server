@@ -6,7 +6,7 @@ import hashlib
 from importlib.metadata import distribution, version
 
 
-RUNTIME_VERSION = "1.0.3"
+RUNTIME_VERSION = "1.0.4"
 SDK_VERSION = "2.0.0"
 SOURCE_SHA256 = "9f8135a8bdb238bb1c83e91a1612d0814cec7309d7b32075157db719194540e3"
 
@@ -77,7 +77,7 @@ def main():
     path = runtime.locate_file("actions/server/_api_action_routes.py")
     patched = patch_source(path.read_text(), runtime.version, version("mcp"))
     path.write_text(patched)
-    print("Installed exact-listener MCP protection for actions-runtime 1.0.3")
+    print("Installed exact-listener MCP protection for actions-runtime 1.0.4")
 
 
 if __name__ == "__main__":

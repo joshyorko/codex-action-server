@@ -1,12 +1,12 @@
 # Container deployment
 
 The image controls existing native Codex daemons. It installs the PyPI packages
-`actions-runtime==1.0.3` and `actions-core==1.0.3`, Devsy 1.23.0, kubectl 1.36.3,
+`actions-runtime==1.0.4` and `actions-core==1.0.3`, Devsy 1.23.0, kubectl 1.36.3,
 and an SSH client.
-It does not contain Codex or start a native daemon. Runtime 1.0.3 publishes Linux
+It does not contain Codex or start a native daemon. Runtime 1.0.4 publishes Linux
 x86-64 wheels only, so this image
 does not claim arm64 support.
-The host CLI and CI use the released Actions Runtime 1.0.3 binary.
+The host CLI and CI use the released Actions Runtime 1.0.4 binary.
 
 Production images are published to `ghcr.io/joshyorko/codex-action-server` as
 `sha-<full-commit-SHA>`. The `container-image` workflow verifies and publishes the
@@ -126,10 +126,10 @@ Keep CAS host-side if a provider cannot work with this narrow read-only contract
 
 ## Verification
 
-PyPI runtime 1.0.3 constructs its MCP adapter with transport-security settings,
+PyPI runtime 1.0.4 constructs its MCP adapter with transport-security settings,
 but its defaults allow only localhost. This image applies an exact-listener policy
 to that owning adapter with
-`scripts/install_runtime_transport_patch.py`. It requires the exact runtime 1.0.3,
+`scripts/install_runtime_transport_patch.py`. It requires the exact runtime 1.0.4,
 SDK 2.0.0, and upstream adapter SHA-256 before applying. Unexpected inputs fail the
 build. DNS rebinding protection remains enabled, with only the actual validated
 IPv4 listener at port 8088 and its exact HTTP origin allowed. No wildcard,

@@ -9,7 +9,7 @@ import sys
 from importlib.metadata import distribution, version
 
 
-RUNTIME_VERSION = "1.0.3"
+RUNTIME_VERSION = "1.0.4"
 SDK_VERSION = "2.0.0"
 SOURCE_SHA256 = "953c99a1c67cb8cc508bd0079fb0869161b5f9192a724964562e90f34254701b"
 
@@ -88,7 +88,7 @@ def main():
     path = runtime.locate_file("actions/server/mcp/setup_mcp_server_v2.py")
     patched = patch_source(path.read_text(), runtime.version, version("mcp"))
     path.write_text(patched)
-    print("Installed scoped CAS MCP annotations for actions-runtime 1.0.3")
+    print("Installed scoped CAS MCP annotations for actions-runtime 1.0.4")
 
 
 if __name__ == "__main__":

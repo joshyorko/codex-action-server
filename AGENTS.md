@@ -23,7 +23,7 @@ action-server devenv task lint
 
 These tasks run tests with skip reasons and match CI lint/format checks. To format changes, run `action-server devenv task prettify`.
 
-For local API startup, follow `README.md` under "Run independently" to configure `CODEX_ACTION_TARGETS`, `CODEX_ACTION_RECEIPTS`, and `CODEX_ACTION_DATA`, then run `bash scripts/run.sh`. Startup requires Actions Runtime 1.0.1 and an existing native daemon.
+For local API startup, follow `README.md` under "Run independently" to configure `CODEX_ACTION_TARGETS`, `CODEX_ACTION_RECEIPTS`, and `CODEX_ACTION_DATA`, then run `bash scripts/run.sh`. Startup requires Actions Runtime 1.0.4 and an existing native daemon.
 
 ## Coding style and naming conventions
 

@@ -187,7 +187,7 @@ def test_executor_destructive_tool_rule_does_not_gate_read(name):
 
 
 @pytest.mark.parametrize(
-    "runtime,sdk", [("1.0.2", "2.0.0"), ("1.0.4", "2.0.0"), ("1.0.3", "2.0.1")]
+    "runtime,sdk", [("1.0.3", "2.0.0"), ("1.0.5", "2.0.0"), ("1.0.4", "2.0.1")]
 )
 def test_projection_patch_rejects_unreviewed_versions(runtime, sdk):
     with pytest.raises(RuntimeError):
@@ -196,7 +196,7 @@ def test_projection_patch_rejects_unreviewed_versions(runtime, sdk):
 
 def test_projection_patch_rejects_changed_upstream_source():
     with pytest.raises(RuntimeError):
-        POLICY["patch_source"]("untrusted source", "1.0.3", "2.0.0")
+        POLICY["patch_source"]("untrusted source", "1.0.4", "2.0.0")
 
 
 @pytest.mark.parametrize(
@@ -228,7 +228,7 @@ def test_serialized_patch_policy_is_independent_of_project_runtime_imports():
     previous = patch.__globals__["SOURCE_SHA256"]
     patch.__globals__["SOURCE_SHA256"] = hashlib.sha256(source.encode()).hexdigest()
     try:
-        patched = patch(source, "1.0.3", "2.0.0")
+        patched = patch(source, "1.0.4", "2.0.0")
     finally:
         patch.__globals__["SOURCE_SHA256"] = previous
     # Only the adapter replacement is nested in real runtime code; execute the serialized suffix independently.

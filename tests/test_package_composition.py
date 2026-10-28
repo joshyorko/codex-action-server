@@ -235,7 +235,7 @@ def _runtime_binary():
     binary = os.environ.get("ACTION_SERVER_BIN") or shutil.which("action-server")
     assert binary, "requested CLI acceptance requires installed Action Server"
     version = subprocess.run([binary, "version"], capture_output=True, text=True)
-    expected_version = os.environ.get("CAS_COMPOSITION_RUNTIME_VERSION", "1.0.3")
+    expected_version = os.environ.get("CAS_COMPOSITION_RUNTIME_VERSION", "1.0.4")
     assert version.returncode == 0, version.stderr
     assert expected_version in version.stdout, version.stdout
     return binary
@@ -472,8 +472,8 @@ async def _exercise(
                         ), name
                         assert tool.annotations.open_world_hint is True, name
                     elif (
-                        os.environ.get("CAS_COMPOSITION_RUNTIME_VERSION", "1.0.3")
-                        == "1.0.3"
+                        os.environ.get("CAS_COMPOSITION_RUNTIME_VERSION", "1.0.4")
+                        == "1.0.4"
                     ):
                         # Ordinary actions in the unchanged native adapter carry
                         # conservative defaults, not the scoped wheel projection.

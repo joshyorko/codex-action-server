@@ -153,6 +153,10 @@ def test_production_image_mcp_native_socket_and_persistent_receipt(
 
     def assert_baked_artifacts():
         assert docker("exec", identity, "id", "-u").stdout.strip() == "1000"
+        assert (
+            docker("exec", identity, "action-server", "version").stdout.strip()
+            == "1.0.4"
+        )
         if include_kubernetes_target:
             assert (
                 docker(
