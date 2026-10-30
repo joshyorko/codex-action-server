@@ -41,6 +41,8 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
@@ -83,25 +85,40 @@ jobs:
         run: |
           set -euo pipefail
           work="$RUNNER_TEMP/codex-candidate"
-          mkdir -p "$work/home" "$work/schema"
+          binary_dir="$RUNNER_TEMP/codex-binary"
+          mkdir -p "$work/home" "$work/schema" "$binary_dir"
           curl -fL --retry 2 --max-time 180 "$ASSET_URL" -o "$work/codex.tar.gz"
           printf '%s  %s\n' "${ASSET_DIGEST#sha256:}" "$work/codex.tar.gz" | sha256sum -c -
-          tar -xzf "$work/codex.tar.gz" -C "$work"
-          codex="$work/codex-x86_64-unknown-linux-musl"
+          tar -xzf "$work/codex.tar.gz" -C "$binary_dir"
+          codex="$binary_dir/codex-x86_64-unknown-linux-musl"
           test -f "$codex"
-          chmod 700 "$codex"
-          export HOME="$work/home"
-          export CODEX_HOME="$work/home"
-          version_output="$(env -i PATH="$PATH" HOME="$HOME" CODEX_HOME="$CODEX_HOME" "$codex" --version)"
-          case "$version_output" in *"$CANDIDATE_VERSION"*) ;; *) echo "Candidate version mismatch" >&2; exit 1 ;; esac
-          python3 ci/qualify_codex_schema.py \
-            --binary "$codex" \
+          chmod 755 "$codex"
+          qualification_image="python:3.12.15-slim@sha256:a0f57064cbdcd6285fa45f51237ab0b35ea8ebaed06a1f5973e89e19dfb86704"
+          docker run --rm \
+            --platform linux/amd64 \
+            --network none \
+            --read-only \
+            --user "$(id -u):$(id -g)" \
+            --cap-drop ALL \
+            --security-opt no-new-privileges \
+            --pids-limit 64 \
+            --memory 1g \
+            --cpus 1 \
+            --tmpfs "/tmp:rw,nosuid,nodev,size=256m,uid=$(id -u),gid=$(id -g)" \
+            --mount "type=bind,source=$GITHUB_WORKSPACE,target=/workspace,readonly" \
+            --mount "type=bind,source=$binary_dir,target=/candidate,readonly" \
+            --mount "type=bind,source=$work/schema,target=/out" \
+            --workdir /workspace \
+            --env HOME=/tmp \
+            "$qualification_image" \
+            -B /workspace/ci/qualify_codex_schema.py \
+            --binary /candidate/codex-x86_64-unknown-linux-musl \
             --version "$CANDIDATE_VERSION" \
             --source-tag "$CANDIDATE_TAG" \
             --source-url "$ASSET_URL" \
             --asset-sha256 "$ASSET_DIGEST" \
             --asset-id "$ASSET_ID" \
-            --output "$work/schema" \
+            --output /out \
             --typed-regression-tests-passed
           cp "$RUNNER_TEMP/source.json" "$work/schema/source-release.json"
           echo "qualification=$(jq -r .qualification "$work/schema/provenance.json")" >> "$GITHUB_OUTPUT"
@@ -117,6 +134,13 @@ jobs:
             --run-url "$run_url")"
           echo "$result"
           echo "status=$(jq -r .status <<<"$result")" >> "$GITHUB_OUTPUT"
+      - name: Require compatible candidate for native-contract changes
+        if: github.event_name == 'pull_request' && steps.qualification.outputs.qualification != 'compatible_pending_review'
+        env:
+          QUALIFICATION: ${{ steps.qualification.outputs.qualification }}
+        run: |
+          echo "Native diagnostics qualification is ${QUALIFICATION:-unqualified}; inspect the bounded artifact." >&2
+          exit 1
       - uses: actions/upload-artifact@v4
         if: always()
         with:

@@ -8,10 +8,6 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-      - run: python -m pip install -e '.[test]'
       - name: Install pinned Actions Runtime
         run: |
           mkdir -p "$RUNNER_TEMP/codex-action-test-bin"
@@ -19,7 +15,5 @@ jobs:
           echo "d3c450a2b10b226613588cc40cc6ec18873b23c7427958b0752711e4531a1de4  $RUNNER_TEMP/codex-action-test-bin/action-server" | sha256sum -c -
           chmod +x "$RUNNER_TEMP/codex-action-test-bin/action-server"
           echo "$RUNNER_TEMP/codex-action-test-bin" >> "$GITHUB_PATH"
-      - run: pytest -q -rs
-      - run: python ci/generate_native_qualification.py --check
-      - run: ruff check src tests scripts/preflight.py
-      - run: ruff format --check src tests scripts/preflight.py
+      - run: action-server devenv task test
+      - run: action-server devenv task lint
