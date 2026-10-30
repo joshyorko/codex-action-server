@@ -41,4 +41,9 @@ REVIEWED_EXPERIMENTAL_METHODS_BY_NATIVE_VERSION = {
             "server/diagnostics",
         }
     ),
+    "0.166.0": frozenset(
+        {
+            "server/diagnostics",
+        }
+    ),
 }

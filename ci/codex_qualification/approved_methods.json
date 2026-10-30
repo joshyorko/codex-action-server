@@ -215,6 +215,15 @@
         "response_sha256": "0b3b35e623761a05bcd4a20085be8395986d2b98037c8ebda4dcda2204689d1d"
       },
       "version": "0.162.1"
+    },
+    {
+      "method": "server/diagnostics",
+      "provenance_ref": "0.166.0",
+      "schema_fingerprint": {
+        "request_sha256": "5a4235de371d1a58a45300e14fbfbc9ab0a3ecef3078ae35d60f1470b6e4e4f1",
+        "response_sha256": "0b3b35e623761a05bcd4a20085be8395986d2b98037c8ebda4dcda2204689d1d"
+      },
+      "version": "0.166.0"
     }
   ],
   "schema_version": 1,
@@ -238,6 +247,16 @@
       "binary_sha256": "628e35487d888a28f0427fc37501da529dd3d81fcbad7a2c3421c1e8670d92e1",
       "fixture": "tests/fixtures/protocol/codex_0.162.1_server_diagnostics.json",
       "kind": "diagnostics_fixture"
+    },
+    "0.166.0": {
+      "binary_sha256": "b8a11fedf24b2dfb59a70c9e52b030f9a508dcd49cd2dd0d41956f4c785156b8",
+      "fixture": "tests/fixtures/protocol/codex_0.166.0_server_diagnostics.json",
+      "kind": "diagnostics_fixture",
+      "qualification_run": "https://github.com/joshyorko/codex-action-server/actions/runs/41070538834",
+      "source_asset_id": "689712643",
+      "source_asset_sha256": "a0bf572d2f93f056c6712a6da348e96078dc84f3885fd7be67807ef389cb3978",
+      "source_tag": "rust-v0.166.0",
+      "source_url": "https://github.com/openai/codex/releases/download/rust-v0.166.0/codex-x86_64-unknown-linux-musl.tar.gz"
     }
   }
 }

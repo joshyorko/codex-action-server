@@ -1,3 +1,4 @@
+import json
 import importlib.util
 from pathlib import Path
 
@@ -31,3 +32,21 @@ def test_schema_normalization_preserves_contract_changes():
     baseline = {"type": ["integer", "null"]}
     changed = {"type": "integer"}
     assert qualification.normalize(baseline) != qualification.normalize(changed)
+
+
+def test_0166_diagnostics_fixture_matches_reviewed_contract():
+    candidate = json.loads(
+        (
+            ROOT / "tests/fixtures/protocol/codex_0.166.0_server_diagnostics.json"
+        ).read_text()
+    )
+    baseline = json.loads(
+        (
+            ROOT / "tests/fixtures/protocol/codex_0.162.1_server_diagnostics.json"
+        ).read_text()
+    )
+    assert candidate["native_version"] == "0.166.0"
+    assert candidate["method"] == "server/diagnostics"
+    assert qualification.normalize(candidate["schemas"]) == qualification.normalize(
+        baseline["schemas"]
+    )
