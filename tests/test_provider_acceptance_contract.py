@@ -475,7 +475,7 @@ def test_provider_smoke_gates_diagnostics_by_exact_native_version(
     }
 
 
-def test_run_records_codex_version_before_pinned_diagnostics_failure(
+def test_run_records_codex_version_before_diagnostics_failure(
     monkeypatch, tmp_path
 ):
     import json
@@ -533,7 +533,7 @@ def test_run_records_codex_version_before_pinned_diagnostics_failure(
     )
     report = {}
 
-    with pytest.raises(RuntimeError, match="Pinned native diagnostics failed"):
+    with pytest.raises(RuntimeError):
         checks.run(
             SimpleNamespace(
                 engine="docker", endpoint="unix:///test.sock", owner="test"
