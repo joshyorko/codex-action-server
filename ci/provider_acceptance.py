@@ -106,11 +106,30 @@ def valid_native_diagnostics(value):
     )
 
 
+def _require_diagnostics_passed(evidence, stage):
+    status = evidence.get("diagnostics_status")
+    if status == "unqualified":
+        method = evidence.get("diagnostics_method")
+        version = evidence.get("diagnostics_observed_version")
+        method = method if isinstance(method, str) else "server/diagnostics"
+        version = version if isinstance(version, str) else "unknown"
+        raise RuntimeError(
+            "experimental_native_version_not_qualified: "
+            f"method={method}, observed_version={version}"
+        )
+    if status != "passed":
+        error = evidence.get("diagnostics_error")
+        error = error if isinstance(error, str) else "unknown"
+        raise RuntimeError(
+            f"Native diagnostics failed {stage} (status={status}, error={error})"
+        )
+
+
 def smoke(args, worker, target_file):
     from boundary import resolve_target
     from codex_rpc import (
         Client,
-        EXPERIMENTAL_NATIVE_VERSION,
+        NativeVersionNotQualified,
         RpcError,
         native_server_build_version,
     )
@@ -141,34 +160,35 @@ def smoke(args, worker, target_file):
         threads = client.request("thread/list", {"limit": 1})
         if not isinstance(threads, dict) or not isinstance(threads.get("data"), list):
             raise RuntimeError("Native thread discovery was not a data list")
-        if native_build_version == EXPERIMENTAL_NATIVE_VERSION:
-            try:
-                diagnostics = client.request("server/diagnostics", {})
-            except (
-                ConnectionClosed,
-                OSError,
-                RpcError,
-                TimeoutError,
-                ValueError,
-                KeyError,
-            ) as error:
-                diagnostics_status = "failed"
-                diagnostics_error = type(error).__name__
-            else:
-                if valid_native_diagnostics(diagnostics):
-                    diagnostics_status = "passed"
-                    diagnostics_error = None
-                else:
-                    diagnostics_status = "failed"
-                    diagnostics_error = "invalid_response"
-            diagnostics_evidence = {"diagnostics_status": diagnostics_status}
-            if diagnostics_error is not None:
-                diagnostics_evidence["diagnostics_error"] = diagnostics_error
-        else:
+        try:
+            diagnostics = client.request("server/diagnostics", {})
+        except NativeVersionNotQualified as error:
             diagnostics_evidence = {
-                "diagnostics_status": "skipped",
-                "diagnostics_skip_reason": "native_server_build_version_not_pinned",
+                "diagnostics_status": "unqualified",
+                "diagnostics_method": "server/diagnostics",
+                "diagnostics_observed_version": native_build_version,
+                "diagnostics_last_qualified_versions": error.last_qualified,
             }
+        except (
+            ConnectionClosed,
+            OSError,
+            RpcError,
+            TimeoutError,
+            ValueError,
+            KeyError,
+        ) as error:
+            diagnostics_evidence = {
+                "diagnostics_status": "failed",
+                "diagnostics_error": type(error).__name__,
+            }
+        else:
+            if valid_native_diagnostics(diagnostics):
+                diagnostics_evidence = {"diagnostics_status": "passed"}
+            else:
+                diagnostics_evidence = {
+                    "diagnostics_status": "failed",
+                    "diagnostics_error": "invalid_response",
+                }
         # Do not store thread contents, diagnostic content, or account data.
         evidence = {
             "codex_home": client.metadata["codexHome"],
@@ -257,11 +277,7 @@ def run(args, report):
         report["installed_versions"] = versions
         report["stage"] = "native_read_only"
         stale_target, report["first_rpc"] = smoke(args, first, target_file)
-        if report["first_rpc"]["diagnostics_status"] == "failed":
-            raise RuntimeError(
-                "Pinned native diagnostics failed: "
-                + report["first_rpc"]["diagnostics_error"]
-            )
+        _require_diagnostics_passed(report["first_rpc"], "before restart")
         for name, path in (
             ("headroom", "/home/linuxbrew/.linuxbrew/bin/headroom"),
             ("rtk", "/home/linuxbrew/.linuxbrew/bin/rtk"),
@@ -300,11 +316,7 @@ def run(args, report):
         if hashlib.sha256(retained_config.encode()).hexdigest() != config_hash:
             raise RuntimeError("Stop/start changed the retained Codex config")
         _, report["resumed_rpc"] = smoke(args, resumed, target_file)
-        if report["resumed_rpc"]["diagnostics_status"] == "failed":
-            raise RuntimeError(
-                "Pinned native diagnostics failed after restart: "
-                + report["resumed_rpc"]["diagnostics_error"]
-            )
+        _require_diagnostics_passed(report["resumed_rpc"], "after restart")
         report["retained_home_and_config"] = True
         report["restart_skipped_create_hook"] = True
         report["stage"] = "delete"

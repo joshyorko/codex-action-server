@@ -28,7 +28,9 @@ dev-dependencies:
 
 dev-tasks:
   # Keep Unix-socket fixtures below Linux's path limit in RCC environments.
-  test: env TMPDIR=/tmp pytest tests -q -rs
+  test: |
+    python ci/generate_native_qualification.py --check
+    env TMPDIR=/tmp pytest tests -q -rs
   lint: |
     ruff check src tests scripts/preflight.py
     ruff format --check src tests scripts/preflight.py

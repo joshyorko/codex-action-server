@@ -368,9 +368,9 @@ def test_worker_exec_uses_source_cwd_instead_of_pid1_cwd(monkeypatch):
         ),
         (
             native_server_user_agent("0.159.2"),
-            None,
-            "skipped",
-            ["thread/list"],
+            "unqualified",
+            "unqualified",
+            ["thread/list", "server/diagnostics"],
             None,
         ),
         (
@@ -426,6 +426,10 @@ def test_provider_smoke_gates_diagnostics_by_exact_native_version(
         def request(self, method, params):
             calls.append((method, params))
             if method == "server/diagnostics":
+                if diagnostics_result == "unqualified":
+                    raise codex_rpc.NativeVersionNotQualified(
+                        method, codex_rpc.native_server_build_version(user_agent)
+                    )
                 if diagnostics_result == "rpc-error":
                     raise codex_rpc.RpcError("private native error detail")
                 return diagnostics_result
@@ -448,13 +452,23 @@ def test_provider_smoke_gates_diagnostics_by_exact_native_version(
         "codex_home": "/home/vscode/.codex",
         "native_user_agent": user_agent,
         "native_server_build_version": (
-            "0.160.1" if expected_diagnostics_status != "skipped" else "0.159.2"
+            "0.159.2" if expected_diagnostics_status == "unqualified" else "0.160.1"
         ),
         "diagnostics_status": expected_diagnostics_status,
         **({"diagnostics_error": expected_error} if expected_error is not None else {}),
         **(
-            {"diagnostics_skip_reason": ("native_server_build_version_not_pinned")}
-            if expected_diagnostics_status == "skipped"
+            {
+                "diagnostics_method": "server/diagnostics",
+                "diagnostics_observed_version": "0.159.2",
+                "diagnostics_last_qualified_versions": [
+                    "0.160.1",
+                    "0.161.0",
+                    "0.162.0",
+                    "0.162.1",
+                    "0.166.0",
+                ],
+            }
+            if expected_diagnostics_status == "unqualified"
             else {}
         ),
         "thread_list_read": True,
@@ -462,8 +476,9 @@ def test_provider_smoke_gates_diagnostics_by_exact_native_version(
     }
 
 
-def test_run_records_codex_version_before_pinned_diagnostics_failure(
-    monkeypatch, tmp_path
+@pytest.mark.parametrize("diagnostics_status", ["failed", "unqualified"])
+def test_run_records_codex_version_before_diagnostics_rejection(
+    monkeypatch, tmp_path, diagnostics_status
 ):
     import json
     from types import SimpleNamespace
@@ -478,11 +493,26 @@ def test_run_records_codex_version_before_pinned_diagnostics_failure(
         "codex_home": "/home/vscode/.codex",
         "source_commit": "fixture-source-sha",
     }
+    native_version = "0.159.2" if diagnostics_status == "unqualified" else "0.160.1"
     native_evidence = {
-        "native_user_agent": native_server_user_agent("0.160.1"),
-        "native_server_build_version": "0.160.1",
-        "diagnostics_status": "failed",
-        "diagnostics_error": "RpcError",
+        "native_user_agent": native_server_user_agent(native_version),
+        "native_server_build_version": native_version,
+        "diagnostics_status": diagnostics_status,
+        **(
+            {
+                "diagnostics_method": "server/diagnostics",
+                "diagnostics_observed_version": native_version,
+                "diagnostics_last_qualified_versions": [
+                    "0.160.1",
+                    "0.161.0",
+                    "0.162.0",
+                    "0.162.1",
+                    "0.166.0",
+                ],
+            }
+            if diagnostics_status == "unqualified"
+            else {"diagnostics_error": "RpcError"}
+        ),
     }
     worker_commands = []
 
@@ -520,7 +550,7 @@ def test_run_records_codex_version_before_pinned_diagnostics_failure(
     )
     report = {}
 
-    with pytest.raises(RuntimeError, match="Pinned native diagnostics failed"):
+    with pytest.raises(RuntimeError):
         checks.run(
             SimpleNamespace(
                 engine="docker", endpoint="unix:///test.sock", owner="test"

@@ -216,7 +216,7 @@ def test_experimental_methods_reject_unpinned_daemon_before_dispatch(method):
     client.ws = Mock()
     client.metadata = {"userAgent": native_server_user_agent("0.153.4")}
 
-    with pytest.raises(codex_rpc.RpcError, match="pinned experimental"):
+    with pytest.raises(codex_rpc.NativeVersionNotQualified):
         client.request(method, {})
     client.ws.send.assert_not_called()
 
