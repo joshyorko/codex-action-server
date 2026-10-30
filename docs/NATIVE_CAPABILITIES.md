@@ -146,18 +146,25 @@ its `turn/start` and wait stay on the same native connection; that separate
 CLI workflow is not exposed through MCP and does not retain a connection for a
 later action. It is not a durable general callback broker.
 
-There is no connection handle or protocol request that lets a later action
-deliver a response to a request on a closed WebSocket. Safely supporting this
-requires a process-owned retained-connection service, minimal fenced receipts,
-restart/expiry reconciliation, and an end-to-end native fixture proving
-same-connection response delivery; none exists here. This warrants a focused
-follow-on in [CAS #11](https://github.com/joshyorko/codex-action-server/issues/11),
-“Retain and fence native app-server callback connections,” covering
-connection ownership, exact thread/turn/request identity, one-shot responses,
-duplicate/conflicting replies, cancellation, timeout, restart/loss
-reconciliation, and native fixture proof. Until that lifecycle is designed and
-proven, callbacks remain unsupported and an agent-mediated workaround is not
-native parity.
+Actions Runtime 1.0.4 does not provide a process-owned native-session service
+or a later-action handle to a pending callback. Its MCP action path runs `_run`
+with a `Client` scoped to that action; once the call exits, the WebSocket is
+closed. Reusing a worker process or setting the process-pool size to one does
+not extend the connection beyond the action's ownership scope. The native
+protocol has no resume RPC, so reconnecting cannot deliver a response to the
+original request.
+
+Supporting this requires an upstream Runtime lifecycle seam that owns a
+long-lived session independently of any one action invocation, routes a
+typed/fenced later response action to the original live session, and reports
+cancellation, disconnect, expiry, and process restart to that owner. The
+service must expose bounded session identity without callback payloads and
+provide deterministic startup/shutdown semantics. CAS has no such seam today;
+therefore this issue deliberately defers callback responses. Do not retain
+sockets in action globals, create a broker, or pretend a new native connection
+owns an old request. A future implementation still needs a native WebSocket
+fixture proving a separate response call uses the original socket and request
+ID, along with fencing, replay, restart, and cleanup coverage.
 
 ## Supervisory snapshot boundary
 
