@@ -475,7 +475,10 @@ def test_provider_smoke_gates_diagnostics_by_exact_native_version(
     }
 
 
-def test_run_records_codex_version_before_diagnostics_failure(monkeypatch, tmp_path):
+@pytest.mark.parametrize("diagnostics_status", ["failed", "unqualified"])
+def test_run_records_codex_version_before_diagnostics_rejection(
+    monkeypatch, tmp_path, diagnostics_status
+):
     import json
     from types import SimpleNamespace
 
@@ -489,11 +492,25 @@ def test_run_records_codex_version_before_diagnostics_failure(monkeypatch, tmp_p
         "codex_home": "/home/vscode/.codex",
         "source_commit": "fixture-source-sha",
     }
+    native_version = "0.159.2" if diagnostics_status == "unqualified" else "0.160.1"
     native_evidence = {
-        "native_user_agent": native_server_user_agent("0.160.1"),
-        "native_server_build_version": "0.160.1",
-        "diagnostics_status": "failed",
-        "diagnostics_error": "RpcError",
+        "native_user_agent": native_server_user_agent(native_version),
+        "native_server_build_version": native_version,
+        "diagnostics_status": diagnostics_status,
+        **(
+            {
+                "diagnostics_method": "server/diagnostics",
+                "diagnostics_observed_version": native_version,
+                "diagnostics_last_qualified_versions": [
+                    "0.160.1",
+                    "0.161.0",
+                    "0.162.0",
+                    "0.162.1",
+                ],
+            }
+            if diagnostics_status == "unqualified"
+            else {"diagnostics_error": "RpcError"}
+        ),
     }
     worker_commands = []
 

@@ -106,6 +106,25 @@ def valid_native_diagnostics(value):
     )
 
 
+def _require_diagnostics_passed(evidence, stage):
+    status = evidence.get("diagnostics_status")
+    if status == "unqualified":
+        method = evidence.get("diagnostics_method")
+        version = evidence.get("diagnostics_observed_version")
+        method = method if isinstance(method, str) else "server/diagnostics"
+        version = version if isinstance(version, str) else "unknown"
+        raise RuntimeError(
+            "experimental_native_version_not_qualified: "
+            f"method={method}, observed_version={version}"
+        )
+    if status != "passed":
+        error = evidence.get("diagnostics_error")
+        error = error if isinstance(error, str) else "unknown"
+        raise RuntimeError(
+            f"Native diagnostics failed {stage} (status={status}, error={error})"
+        )
+
+
 def smoke(args, worker, target_file):
     from boundary import resolve_target
     from codex_rpc import (
@@ -258,11 +277,7 @@ def run(args, report):
         report["installed_versions"] = versions
         report["stage"] = "native_read_only"
         stale_target, report["first_rpc"] = smoke(args, first, target_file)
-        if report["first_rpc"]["diagnostics_status"] == "failed":
-            raise RuntimeError(
-                "Native diagnostics failed: "
-                + report["first_rpc"]["diagnostics_error"]
-            )
+        _require_diagnostics_passed(report["first_rpc"], "before restart")
         for name, path in (
             ("headroom", "/home/linuxbrew/.linuxbrew/bin/headroom"),
             ("rtk", "/home/linuxbrew/.linuxbrew/bin/rtk"),
@@ -301,11 +316,7 @@ def run(args, report):
         if hashlib.sha256(retained_config.encode()).hexdigest() != config_hash:
             raise RuntimeError("Stop/start changed the retained Codex config")
         _, report["resumed_rpc"] = smoke(args, resumed, target_file)
-        if report["resumed_rpc"]["diagnostics_status"] == "failed":
-            raise RuntimeError(
-                "Native diagnostics failed after restart: "
-                + report["resumed_rpc"]["diagnostics_error"]
-            )
+        _require_diagnostics_passed(report["resumed_rpc"], "after restart")
         report["retained_home_and_config"] = True
         report["restart_skipped_create_hook"] = True
         report["stage"] = "delete"
