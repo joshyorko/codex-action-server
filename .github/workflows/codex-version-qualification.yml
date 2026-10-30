@@ -16,6 +16,9 @@ on:
       - 'tests/fixtures/protocol/**'
       - 'tests/test_native_diagnostics_*.py'
       - 'ci/codex_qualification/**'
+      - 'ci/qualify_codex_schema.py'
+      - 'ci/provider_acceptance.py'
+      - 'tests/test_codex_qualification.py'
       - '.github/workflows/codex-version-qualification.yml'
 
 permissions:
@@ -29,6 +32,13 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install qualification dependencies
+        run: python -m pip install -e '.[test]'
+      - name: Run typed native diagnostics regressions
+        run: pytest -q tests/test_native_diagnostics_0162.py tests/test_codex_qualification.py
       - name: Resolve stable release and immutable artifact
         id: candidate
         env:
