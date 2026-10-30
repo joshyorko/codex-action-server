@@ -130,7 +130,7 @@ def test_experimental_gate_uses_server_build_version_not_client_info_suffix():
     spoofed_client_suffix = client_with_user_agent(
         native_server_user_agent("0.159.2", client_version="0.160.1")
     )
-    with pytest.raises(codex_rpc.RpcError, match="pinned experimental"):
+    with pytest.raises(codex_rpc.NativeVersionNotQualified):
         spoofed_client_suffix.request("server/diagnostics", {})
     spoofed_client_suffix.ws.send.assert_not_called()
 
@@ -142,7 +142,7 @@ def test_experimental_gate_uses_server_build_version_not_client_info_suffix():
             client_version="0.160.1",
         )
     )
-    with pytest.raises(codex_rpc.RpcError, match="pinned experimental"):
+    with pytest.raises(codex_rpc.NativeVersionNotQualified):
         spoofed_originator.request("server/diagnostics", {})
     spoofed_originator.ws.send.assert_not_called()
 
@@ -152,7 +152,7 @@ def test_experimental_gate_uses_server_build_version_not_client_info_suffix():
             originator="spoofed/0.160.1 (Linux Unknown; x86_64) unknown",
         )
     )
-    with pytest.raises(codex_rpc.RpcError, match="pinned experimental"):
+    with pytest.raises(codex_rpc.NativeVersionNotQualified):
         ambiguous_originator.request("server/diagnostics", {})
     ambiguous_originator.ws.send.assert_not_called()
 
@@ -163,7 +163,7 @@ def test_experimental_gate_uses_server_build_version_not_client_info_suffix():
         "malformed user agent with codex-cli 0.160.1",
     ):
         client = client_with_user_agent(non_pinned)
-        with pytest.raises(codex_rpc.RpcError, match="pinned experimental"):
+        with pytest.raises(codex_rpc.NativeVersionNotQualified):
             client.request("server/diagnostics", {})
         client.ws.send.assert_not_called()
 
@@ -310,7 +310,7 @@ def test_default_union_app_read_is_version_gated_by_schema_annotation():
     )
 
     assert "app/read" in codex_rpc.EXPERIMENTAL_METHODS
-    with pytest.raises(codex_rpc.RpcError, match="pinned experimental"):
+    with pytest.raises(codex_rpc.NativeVersionNotQualified):
         client.request("app/read", {"appIds": ["docs"]})
     client.ws.send.assert_not_called()
 
@@ -342,7 +342,7 @@ def test_every_experimental_only_exposed_method_is_version_gated_before_send():
         client.ws = Mock()
         client.metadata = {"userAgent": native_server_user_agent("0.159.2")}
 
-        with pytest.raises(codex_rpc.RpcError, match="pinned experimental"):
+        with pytest.raises(codex_rpc.NativeVersionNotQualified):
             client.request(method, params)
 
         client.ws.send.assert_not_called()
@@ -397,7 +397,7 @@ def test_01610_allows_only_reviewed_diagnostics_and_queue_methods():
     deferred.ws = Mock()
     deferred.metadata = {"userAgent": user_agent}
 
-    with pytest.raises(codex_rpc.RpcError, match="pinned experimental"):
+    with pytest.raises(codex_rpc.NativeVersionNotQualified):
         deferred.request(
             "thread/settings/update", {"threadId": "thread-1", "effort": "high"}
         )

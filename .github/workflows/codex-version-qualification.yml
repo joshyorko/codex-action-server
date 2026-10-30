@@ -64,8 +64,8 @@ jobs:
           curl -fL --retry 2 --max-time 180 "$ASSET_URL" -o "$work/codex.tar.gz"
           printf '%s  %s\n' "${ASSET_DIGEST#sha256:}" "$work/codex.tar.gz" | sha256sum -c -
           tar -xzf "$work/codex.tar.gz" -C "$work"
-          codex="$(find "$work" -type f -name codex -print -quit)"
-          test -n "$codex"
+          codex="$work/codex-x86_64-unknown-linux-musl"
+          test -f "$codex"
           chmod 700 "$codex"
           export CODEX_HOME="$work/home"
           version_output="$("$codex" --version)"

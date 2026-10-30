@@ -383,9 +383,7 @@ class NativeLifecycleTests(unittest.TestCase):
         fixture = NativeProtocolFixture(existing=True)
         client = connected_client(fixture)
         try:
-            with self.assertRaisesRegex(
-                codex_rpc.RpcError, "pinned experimental Codex 0.160.1 schema"
-            ):
+            with self.assertRaises(codex_rpc.NativeVersionNotQualified):
                 client.request("thread/search", {"searchTerm": "x", "limit": 1})
             self.assertNotIn(
                 "thread/search",
