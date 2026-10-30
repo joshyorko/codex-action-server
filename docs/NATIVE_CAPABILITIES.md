@@ -166,9 +166,11 @@ continuation pointers. Command output and raw error messages are never included.
 
 The encoded snapshot is limited to 8 KiB. A repeated revision returns a smaller
 unchanged response that retains current status, wait flags, and turn error.
-Unknown native thread/turn status and flags remain marked unknown; a failed or
-mismatched native read fails closed and cannot become an idle snapshot. Every
-snapshot re-reads native state, so completion that occurs outside CAS and
+Changes to native error details also invalidate the revision without disclosing
+the raw details. Unknown native thread/turn status and flags remain marked
+unknown; a failed or mismatched native read fails closed and cannot become an
+idle snapshot.
+Every snapshot re-reads native state, so completion that occurs outside CAS and
 wrapper restart do not depend on an old local cursor; native cursor expiry on
 an explicit page remains an error and is never retried as a turn mutation.
 Snapshot envelopes omit

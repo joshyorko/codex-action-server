@@ -1,4 +1,4 @@
-"""Verify shared extraction against the independently retained pre-split source."""
+"""Exercise action wrappers and shared-module runtime boundaries."""
 
 import ast
 import inspect
