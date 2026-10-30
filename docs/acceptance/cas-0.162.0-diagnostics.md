@@ -29,3 +29,29 @@ workspace UID, the client initialized against the running native `0.162.0`
 daemon and successfully requested `server/diagnostics`. Its response contained
 the expected process object and one correctly typed gauge. The probe changed
 no running CAS process or native daemon and did not deploy this source patch.
+## Version drift and metric boundary
+
+An installed build outside the exact reviewed-version table is refused locally
+before `server/diagnostics` is sent. The public error identifies
+`experimental_native_version_not_qualified`, the method, observed version (or
+`unknown`), and versions qualified for that method; nonexperimental reads remain
+available. Provider acceptance now attempts diagnostics for every native build
+instead of silently skipping builds other than 0.160.1, and records an
+unqualified result separately from a transport or protocol failure.
+
+`ci/codex_qualification/approved_methods.json` records exact version/method
+approvals with request/response schema fingerprints and source provenance.
+`ci/generate_native_qualification.py` validates those fingerprints and generates
+the runtime admission table. CI checks the generated table and runs typed
+regressions before schema generation and live protocol qualification.
+
+`server/diagnostics` reports the Codex app-server process and its gauges. It is
+not a whole-host CPU or RAM utilization API; use a separately authorized,
+read-only host monitoring source for machine-wide resource utilization.
+
+The [qualification run](https://github.com/joshyorko/codex-action-server/actions/runs/41061213575)
+generated schemas for the exact `rust-v0.166.0` artifact; its
+`server/diagnostics` schema matched the reviewed 0.162.1 schema. Provenance
+records binary and asset digests, but `live_protocol_smoke` is `not_run`; 0.166.0
+remains unqualified. Dakota CPU/NVIDIA probes and the Executor 502 reproduction
+were not performed.

@@ -247,6 +247,8 @@ def _project_thread_snapshot(
             and "activeFlags" in native_status,
             "value": unknown_flags,
         }
+    if isinstance(turn, dict) and turn.get("error") is not None:
+        unknown_native_state["turn_error"] = turn["error"]
     if turn_status_unknown:
         unknown_native_state["turn_status"] = {
             "present": isinstance(turn, dict) and "status" in turn,

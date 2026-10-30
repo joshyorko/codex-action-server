@@ -176,7 +176,7 @@ def test_experimental_search_fails_closed_unless_exact_schema_version_is_adverti
     client.ws = Mock()
     client.metadata = {"userAgent": native_server_user_agent("0.153.4")}
 
-    with pytest.raises(codex_rpc.RpcError, match="pinned experimental"):
+    with pytest.raises(codex_rpc.NativeVersionNotQualified):
         client.request("thread/search", {"searchTerm": "needle", "limit": 10})
     client.ws.send.assert_not_called()
 
