@@ -122,6 +122,14 @@ actions. MCP tool and attachment payloads are limited to 16 KiB, and MCP
 resource/tool results to 1 MiB. Terminal termination requires the process ID
 to match a native terminal record for the exact thread and CWD.
 
+`list_mcp_server_status` preserves the native `full` and `toolsAndAuthOnly`
+detail requests and server-page cursor. Its response is capped at 256 KiB and
+16 levels of nested values; long strings and oversized/deep inventory fields
+are marked in `_codexActionTruncation`. Server identity, `authStatus`, and
+`nextCursor` are retained before optional detail. This read-only response omits
+duplicated RPC receipts and events. A page that cannot fit after projection
+fails closed instead of claiming a complete inventory.
+
 The `DEFERRED/UNSUPPORTED` list is intentionally not callable. It contains
 native operations without reviewed typed request/response contracts. No raw-RPC
 fallback exists.
