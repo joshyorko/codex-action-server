@@ -64,6 +64,7 @@ def test_mcp_status_preserves_native_page_and_detail_with_bounded_schema(limit, 
                 "name": f"server-{index}",
                 "authStatus": "oAuth",
                 "authorization": "native-secret",
+                "serverInfo": {"name": "synthetic-server", "version": "1"},
                 "tools": tools,
                 "resources": [],
                 "resourceTemplates": [],
@@ -97,6 +98,8 @@ def test_mcp_status_preserves_native_page_and_detail_with_bounded_schema(limit, 
     assert len(result["data"]) == limit
     assert result["data"][0]["authStatus"] == "oAuth"
     assert result["data"][0]["name"] == "server-0"
+    assert result["data"][0]["serverInfo"]["version"] == "1"
+    assert result["data"][0]["tools"]["tool-0"]["name"] == "tool-0"
     assert result.get("truncated") is True
     assert result["_codexActionTruncation"]
     assert _depth(response.model_dump(mode="json")) <= 24
