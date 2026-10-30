@@ -465,6 +465,7 @@ def test_provider_smoke_gates_diagnostics_by_exact_native_version(
                     "0.161.0",
                     "0.162.0",
                     "0.162.1",
+                    "0.166.0",
                 ],
             }
             if expected_diagnostics_status == "unqualified"
@@ -506,6 +507,7 @@ def test_run_records_codex_version_before_diagnostics_rejection(
                     "0.161.0",
                     "0.162.0",
                     "0.162.1",
+                    "0.166.0",
                 ],
             }
             if diagnostics_status == "unqualified"
