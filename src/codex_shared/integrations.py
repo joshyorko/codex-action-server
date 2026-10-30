@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import json
+import math
 from typing import Any
 from codex_shared.models import AppReadRequest
 from codex_shared.models import AppsListRequest
@@ -19,6 +21,156 @@ from codex_shared.common import _bounded_native_result
 from codex_shared.common import _dispatch_run
 from codex_shared.common import _read_guarded_thread
 from codex_shared.common import _run
+
+
+_MCP_STATUS_MAX_DEPTH = 16
+_MCP_STATUS_MAX_BYTES = 262_144
+_MCP_STATUS_TRUNCATION_KEY = "_codexActionTruncation"
+_MCP_STATUS_PRIORITY = {
+    "nextCursor": 0,
+    "name": 1,
+    "status": 2,
+    "authStatus": 3,
+    "serverInfo": 4,
+    "tools": 5,
+    "resources": 6,
+    "resourceTemplates": 7,
+    "title": 8,
+    "description": 9,
+    "type": 10,
+    "inputSchema": 11,
+    "outputSchema": 12,
+}
+_MCP_STATUS_SECRET_KEYS = {
+    "accesstoken",
+    "refreshtoken",
+    "clientsecret",
+    "apikey",
+    "authorization",
+    "password",
+    "credential",
+    "credentials",
+}
+
+
+def _bounded_mcp_status_result(result: Any) -> dict[str, Any]:
+    """Keep MCP status pages useful while bounding nested native inventories."""
+    if not isinstance(result, dict) or not isinstance(result.get("data"), list):
+        raise RpcError("Native MCP status response is missing its data page")
+    servers = result["data"]
+    if len(servers) > 100:
+        raise RpcError("Native MCP status page exceeds the 100-server limit")
+    if any(not isinstance(server, dict) for server in servers):
+        raise RpcError("Native MCP status page contains an invalid server entry")
+
+    for per_server_budget in (1024, 512, 256, 128, 64):
+        for max_string_chars in (2048, 1024, 512, 256):
+            truncations: list[dict[str, Any]] = []
+
+            def record(path: str, reason: str, omitted: int | None = None) -> None:
+                if len(truncations) < 32:
+                    item: dict[str, Any] = {
+                        "path": path[:max_string_chars],
+                        "reason": reason,
+                    }
+                    if omitted is not None:
+                        item["omittedItems"] = omitted
+                    truncations.append(item)
+
+            def visit(value: Any, path: str, depth: int, budget: list[int]) -> Any:
+                if budget[0] <= 0:
+                    record(path, "item_limit")
+                    return None
+                budget[0] -= 1
+
+                if isinstance(value, str):
+                    if len(value) > max_string_chars:
+                        record(path, "string_limit")
+                        return value[:max_string_chars] + "…"
+                    return value
+                if value is None or isinstance(value, (bool, int)):
+                    return value
+                if isinstance(value, float):
+                    if math.isfinite(value):
+                        return value
+                    raise RpcError("Native MCP status response is not JSON data")
+                if isinstance(value, list):
+                    if depth >= _MCP_STATUS_MAX_DEPTH:
+                        record(path, "depth_limit")
+                        return []
+                    bounded = []
+                    for index, item in enumerate(value):
+                        if budget[0] <= 0:
+                            record(path, "item_limit", len(value) - index)
+                            break
+                        bounded.append(
+                            visit(item, f"{path}[{index}]", depth + 1, budget)
+                        )
+                    return bounded
+                if isinstance(value, dict):
+                    if depth >= _MCP_STATUS_MAX_DEPTH:
+                        record(path, "depth_limit")
+                        return {"_truncated": True, "reason": "depth_limit"}
+                    bounded = {}
+                    keys = sorted(
+                        value,
+                        key=lambda key: (_MCP_STATUS_PRIORITY.get(key, 100), str(key)),
+                    )
+                    for index, key in enumerate(keys):
+                        if budget[0] <= 0:
+                            record(path, "item_limit", len(keys) - index)
+                            break
+                        if not isinstance(key, str):
+                            raise RpcError(
+                                "Native MCP status response is not JSON data"
+                            )
+                        child_path = f"{path}.{key}" if path else str(key)
+                        if len(key) > max_string_chars:
+                            record(child_path, "key_limit")
+                            continue
+                        normalized_key = str(key).replace("_", "").lower()
+                        if normalized_key in _MCP_STATUS_SECRET_KEYS:
+                            bounded[key] = "[REDACTED]"
+                        else:
+                            bounded[key] = visit(
+                                value[key], child_path, depth + 1, budget
+                            )
+                    return bounded
+                raise RpcError("Native MCP status response is not JSON data")
+
+            bounded_result: dict[str, Any] = {}
+            root_budget = [2048]
+            ordered_keys = sorted(
+                result,
+                key=lambda key: (_MCP_STATUS_PRIORITY.get(key, 100), str(key)),
+            )
+            for key in ordered_keys:
+                if key == "data":
+                    bounded_result[key] = [
+                        visit(
+                            server,
+                            f"data[{index}]",
+                            2,
+                            [per_server_budget],
+                        )
+                        for index, server in enumerate(servers)
+                    ]
+                else:
+                    bounded_result[key] = visit(result[key], str(key), 1, root_budget)
+
+            if truncations:
+                bounded_result["truncated"] = True
+                bounded_result[_MCP_STATUS_TRUNCATION_KEY] = truncations
+            encoded = json.dumps(
+                bounded_result,
+                ensure_ascii=False,
+                allow_nan=False,
+                separators=(",", ":"),
+            ).encode("utf-8")
+            if len(encoded) <= _MCP_STATUS_MAX_BYTES:
+                return bounded_result
+
+    raise RpcError("Native MCP status page exceeds the bounded response limit")
 
 
 def _validate_app_read_response(result: Any, requested_app_id: str) -> None:
@@ -221,5 +373,10 @@ def list_mcp_server_status(
     return _run(
         "mcpServerStatus/list",
         payload.target,
-        lambda client: client.request("mcpServerStatus/list", params),
+        lambda client: _bounded_mcp_status_result(
+            client.request("mcpServerStatus/list", params)
+        ),
+        include_receipts=False,
+        include_events=False,
+        maximum_response_bytes=_MCP_STATUS_MAX_BYTES,
     )
