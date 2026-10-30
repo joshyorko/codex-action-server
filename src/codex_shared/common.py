@@ -236,6 +236,7 @@ def _run(
             f"{operation} failed closed ({type(error).__name__}); inspect target diagnostics"
         ) from None
 
+
 class _UnkeyedReceipt:
     replayed = False
 
