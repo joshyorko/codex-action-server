@@ -111,7 +111,7 @@ jobs:
             --workdir /workspace \
             --env HOME=/tmp \
             "$qualification_image" \
-            -B /workspace/ci/qualify_codex_schema.py \
+            python3 -B /workspace/ci/qualify_codex_schema.py \
             --binary /candidate/codex-x86_64-unknown-linux-musl \
             --version "$CANDIDATE_VERSION" \
             --source-tag "$CANDIDATE_TAG" \
