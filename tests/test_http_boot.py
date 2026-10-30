@@ -12,6 +12,7 @@ import time
 import pytest
 
 from action_catalog_contract import action_names_for_profile
+from test_package_composition import CONTROL
 from test_thread_discovery import assert_mcp_cwd_rejected
 
 
@@ -117,23 +118,12 @@ def test_standalone_http_boot_catalog_and_safe_diagnostics(tmp_path, profile):
                             assert "request_id" in json.dumps(schema)
                         else:
                             assert "create_thread_and_start_turn" not in tools
-                            try:
-                                forbidden = await session.call_tool(
-                                    "start_turn",
-                                    {
-                                        "payload": {
-                                            "target": "local",
-                                            "cwd": cwd,
-                                            "thread_id": thread_id,
-                                            "text": "must not reach native Codex",
-                                            "profile": "operator",
-                                        }
-                                    },
-                                )
-                            except MCPError:
-                                pass
-                            else:
-                                assert forbidden.is_error
+                            for name in CONTROL:
+                                try:
+                                    forbidden = await session.call_tool(name, {})
+                                except MCPError:
+                                    continue
+                                assert forbidden.is_error, name
                         discovery = tools["discover_threads"].input_schema[
                             "properties"
                         ]["payload"]
@@ -194,20 +184,13 @@ def test_standalone_http_boot_catalog_and_safe_diagnostics(tmp_path, profile):
                                 },
                             )
                             assert direct_read.status_code == 200
-                            direct_write = await http.post(
-                                f"http://127.0.0.1:{port}/api/actions/"
-                                "codex-action-server/start-turn/run",
-                                json={
-                                    "payload": {
-                                        "target": "local",
-                                        "cwd": cwd,
-                                        "thread_id": thread_id,
-                                        "text": "must not reach native Codex",
-                                        "profile": "operator",
-                                    }
-                                },
-                            )
-                            assert direct_write.status_code == 404
+                            for name in CONTROL:
+                                direct_write = await http.post(
+                                    f"http://127.0.0.1:{port}/api/actions/"
+                                    f"codex-action-server/{name.replace('_', '-')}/run",
+                                    json={"payload": {}},
+                                )
+                                assert direct_write.status_code == 404, name
 
         asyncio.run(exercise())
     finally:

@@ -45,6 +45,11 @@ in-flight process. This is a server-wide trusted-reader boundary, not per-client
 or per-repository isolation. No caller-selectable elevation or ADMIN action
 exists.
 
+Thread content may contain sensitive prompts, code, and tool output. Operators
+must expose only targets whose contents every client of this server may read;
+`observe` removes mutation tools but does not narrow the existing trusted-reader
+scope.
+
 ## Package composition
 
 `CODEX_ACTION_PACKAGES` selects the default compatibility package
