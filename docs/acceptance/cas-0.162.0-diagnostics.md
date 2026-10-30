@@ -43,8 +43,9 @@ unqualified result separately from a transport or protocol failure.
 not a whole-host CPU or RAM utilization API; use a separately authorized,
 read-only host monitoring source for machine-wide resource utilization.
 
-Codex 0.166.0 remains unqualified here: this checkout has no generated-schema
-evidence or live protocol result for that exact artifact. Its semver and server
-banner are not evidence of compatibility. Neither Dakota target was contacted
-or modified during this change, so CPU/NVIDIA operational proof remains a
-separate deployment-time check.
+The [qualification run](https://github.com/joshyorko/codex-action-server/actions/runs/41061213575)
+generated schemas for the exact `rust-v0.166.0` artifact; its
+`server/diagnostics` schema matched the reviewed 0.162.1 schema. Provenance
+records binary and asset digests, but `live_protocol_smoke` is `not_run`; 0.166.0
+remains unqualified. Dakota CPU/NVIDIA probes and the Executor 502 reproduction
+were not performed.
