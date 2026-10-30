@@ -1,0 +1,243 @@
+{
+  "approvals": [
+    {
+      "method": "app/read",
+      "provenance_ref": "0.160.1",
+      "schema_fingerprint": {
+        "request_sha256": "e13ea89cd0dbb148d024a54768cef9cb0d647a98c87d0db70d556712adf6281e",
+        "response_sha256": "d957eb5120a66c46746fe3f5485a72a428f57380883a3797234ce3d4adbb21db"
+      },
+      "version": "0.160.1"
+    },
+    {
+      "method": "server/diagnostics",
+      "provenance_ref": "0.160.1",
+      "schema_fingerprint": {
+        "request_sha256": "a2c799262a3ce3c19ef5cdd983bf3d12b43ab3c426227091b909dcb7054738c0",
+        "response_sha256": "a4c35a0973f0b67bd16b23dfa0c32a82e1d7d05c47936244da6f926560dc8122"
+      },
+      "version": "0.160.1"
+    },
+    {
+      "method": "thread/backgroundTerminals/list",
+      "provenance_ref": "0.160.1",
+      "schema_fingerprint": {
+        "request_sha256": "b54e9f0d7ffb682b44e7412b1103c6b630886f24aafa7e07a0069e1500aaa3a1",
+        "response_sha256": "7376bdb62c82c0f7aa1e354fd375f1b9f3f5a6bff462aad23becc9e93785cb3a"
+      },
+      "version": "0.160.1"
+    },
+    {
+      "method": "thread/backgroundTerminals/terminate",
+      "provenance_ref": "0.160.1",
+      "schema_fingerprint": {
+        "request_sha256": "5a920f45f4a28e263d3c329837d79d07139c6d5b0241285c858189ae56d97ee1",
+        "response_sha256": "9a88f6a56fde93b92a2b318585154627886669faf3699ef23f319ece775500cb"
+      },
+      "version": "0.160.1"
+    },
+    {
+      "method": "thread/queue/add",
+      "provenance_ref": "0.160.1",
+      "schema_fingerprint": {
+        "request_sha256": "bf79b0f75ee2ca5b2b660e03dac7807c980e455a30e801e3a1dc64ca1e150299",
+        "response_sha256": "fc861eb5f1e044249c0b1af79ccf72e1c8408bf06773a030211a32d3074a7ceb"
+      },
+      "version": "0.160.1"
+    },
+    {
+      "method": "thread/queue/delete",
+      "provenance_ref": "0.160.1",
+      "schema_fingerprint": {
+        "request_sha256": "f5d5ec07768bba2d95983c86eb9f6786a1a787f1785c9b20ef1665d50bbad4e3",
+        "response_sha256": "babf503ecbb10dc6ad10094800cefdf311fac92c05b17f15ee63cf5a6a63bf99"
+      },
+      "version": "0.160.1"
+    },
+    {
+      "method": "thread/queue/list",
+      "provenance_ref": "0.160.1",
+      "schema_fingerprint": {
+        "request_sha256": "b54e9f0d7ffb682b44e7412b1103c6b630886f24aafa7e07a0069e1500aaa3a1",
+        "response_sha256": "be59bf081e00e88204c7547171ec0f059f816f4f874e8c7302708caaf0562271"
+      },
+      "version": "0.160.1"
+    },
+    {
+      "method": "thread/queue/reorder",
+      "provenance_ref": "0.160.1",
+      "schema_fingerprint": {
+        "request_sha256": "8d26956da9e7489975f585728d035080fd45bc943750c0561d7015cf937d019a",
+        "response_sha256": "a2c799262a3ce3c19ef5cdd983bf3d12b43ab3c426227091b909dcb7054738c0"
+      },
+      "version": "0.160.1"
+    },
+    {
+      "method": "thread/queue/start",
+      "provenance_ref": "0.160.1",
+      "schema_fingerprint": {
+        "request_sha256": "c7cfb31b1318540b414b71e05f5f46e93a10fa3f1de0907cc9dac38b276b37b5",
+        "response_sha256": "0daab685bf69016cdf7e98363ca228a6d8c68e8676f0e076587886eb5b92a5f1"
+      },
+      "version": "0.160.1"
+    },
+    {
+      "method": "thread/queue/update",
+      "provenance_ref": "0.160.1",
+      "schema_fingerprint": {
+        "request_sha256": "27c5776a520bde8561903cd1469c1229dca3225e77b6454257cd3ed27e450503",
+        "response_sha256": "fc861eb5f1e044249c0b1af79ccf72e1c8408bf06773a030211a32d3074a7ceb"
+      },
+      "version": "0.160.1"
+    },
+    {
+      "method": "thread/search",
+      "provenance_ref": "0.160.1",
+      "schema_fingerprint": {
+        "request_sha256": "84b5a1d8479388dff26667de43a0e511cde3285543eec967b92405a651773c95",
+        "response_sha256": "6929678ff1448365226a7ee05f0579f66b12e2349d58a60b5d1dd07685536f12"
+      },
+      "version": "0.160.1"
+    },
+    {
+      "method": "thread/searchOccurrences",
+      "provenance_ref": "0.160.1",
+      "schema_fingerprint": {
+        "request_sha256": "f0902a19323d89d25ec3b0cfb34bc3b423196c7da69d43c1bb9fa07608db7e4a",
+        "response_sha256": "b9ca23c2b4c17e80de8e80d2d523a0b4b59cfcae432ef9ddfba60f903a6683c7"
+      },
+      "version": "0.160.1"
+    },
+    {
+      "method": "thread/settings/update",
+      "provenance_ref": "0.160.1",
+      "schema_fingerprint": {
+        "request_sha256": "007102a0046a83b34fda0ebefa21dc2cdb5425b125ae73052bf14db0432b3c98",
+        "response_sha256": "a2c799262a3ce3c19ef5cdd983bf3d12b43ab3c426227091b909dcb7054738c0"
+      },
+      "version": "0.160.1"
+    },
+    {
+      "method": "thread/timeline/list",
+      "provenance_ref": "0.160.1",
+      "schema_fingerprint": {
+        "request_sha256": "b54e9f0d7ffb682b44e7412b1103c6b630886f24aafa7e07a0069e1500aaa3a1",
+        "response_sha256": "3ed4792ecc147b582b09a9cfccf6179145850238f4925299b571ce72b0de9167"
+      },
+      "version": "0.160.1"
+    },
+    {
+      "method": "turn/settings/update",
+      "provenance_ref": "0.160.1",
+      "schema_fingerprint": {
+        "request_sha256": "355f32946d863a54f84bd4f328588a9114cad17dbfb33f1e3c7778e66618bbf0",
+        "response_sha256": "71ceaa869bc0c99a76a04cf932b999b1ffc5e6fd2d7ed751be03356e7e1c580f"
+      },
+      "version": "0.160.1"
+    },
+    {
+      "method": "server/diagnostics",
+      "provenance_ref": "0.161.0",
+      "schema_fingerprint": {
+        "request_sha256": "a2c799262a3ce3c19ef5cdd983bf3d12b43ab3c426227091b909dcb7054738c0",
+        "response_sha256": "a4c35a0973f0b67bd16b23dfa0c32a82e1d7d05c47936244da6f926560dc8122"
+      },
+      "version": "0.161.0"
+    },
+    {
+      "method": "thread/queue/add",
+      "provenance_ref": "0.161.0",
+      "schema_fingerprint": {
+        "request_sha256": "bf79b0f75ee2ca5b2b660e03dac7807c980e455a30e801e3a1dc64ca1e150299",
+        "response_sha256": "fc861eb5f1e044249c0b1af79ccf72e1c8408bf06773a030211a32d3074a7ceb"
+      },
+      "version": "0.161.0"
+    },
+    {
+      "method": "thread/queue/delete",
+      "provenance_ref": "0.161.0",
+      "schema_fingerprint": {
+        "request_sha256": "f5d5ec07768bba2d95983c86eb9f6786a1a787f1785c9b20ef1665d50bbad4e3",
+        "response_sha256": "babf503ecbb10dc6ad10094800cefdf311fac92c05b17f15ee63cf5a6a63bf99"
+      },
+      "version": "0.161.0"
+    },
+    {
+      "method": "thread/queue/list",
+      "provenance_ref": "0.161.0",
+      "schema_fingerprint": {
+        "request_sha256": "b54e9f0d7ffb682b44e7412b1103c6b630886f24aafa7e07a0069e1500aaa3a1",
+        "response_sha256": "be59bf081e00e88204c7547171ec0f059f816f4f874e8c7302708caaf0562271"
+      },
+      "version": "0.161.0"
+    },
+    {
+      "method": "thread/queue/reorder",
+      "provenance_ref": "0.161.0",
+      "schema_fingerprint": {
+        "request_sha256": "8d26956da9e7489975f585728d035080fd45bc943750c0561d7015cf937d019a",
+        "response_sha256": "a2c799262a3ce3c19ef5cdd983bf3d12b43ab3c426227091b909dcb7054738c0"
+      },
+      "version": "0.161.0"
+    },
+    {
+      "method": "thread/queue/start",
+      "provenance_ref": "0.161.0",
+      "schema_fingerprint": {
+        "request_sha256": "c7cfb31b1318540b414b71e05f5f46e93a10fa3f1de0907cc9dac38b276b37b5",
+        "response_sha256": "0c186869b9256b0f39bd0208394f031d95e2825abb449709004579ffb96f9497"
+      },
+      "version": "0.161.0"
+    },
+    {
+      "method": "thread/queue/update",
+      "provenance_ref": "0.161.0",
+      "schema_fingerprint": {
+        "request_sha256": "27c5776a520bde8561903cd1469c1229dca3225e77b6454257cd3ed27e450503",
+        "response_sha256": "fc861eb5f1e044249c0b1af79ccf72e1c8408bf06773a030211a32d3074a7ceb"
+      },
+      "version": "0.161.0"
+    },
+    {
+      "method": "server/diagnostics",
+      "provenance_ref": "0.162.0",
+      "schema_fingerprint": {
+        "request_sha256": "5a4235de371d1a58a45300e14fbfbc9ab0a3ecef3078ae35d60f1470b6e4e4f1",
+        "response_sha256": "0b3b35e623761a05bcd4a20085be8395986d2b98037c8ebda4dcda2204689d1d"
+      },
+      "version": "0.162.0"
+    },
+    {
+      "method": "server/diagnostics",
+      "provenance_ref": "0.162.1",
+      "schema_fingerprint": {
+        "request_sha256": "5a4235de371d1a58a45300e14fbfbc9ab0a3ecef3078ae35d60f1470b6e4e4f1",
+        "response_sha256": "0b3b35e623761a05bcd4a20085be8395986d2b98037c8ebda4dcda2204689d1d"
+      },
+      "version": "0.162.1"
+    }
+  ],
+  "schema_version": 1,
+  "sources": {
+    "0.160.1": {
+      "fixture": "tests/fixtures/protocol/codex_0.160.1_to_0.161.0_experimental_compatibility.json",
+      "kind": "compatibility_fixture",
+      "source_commit": "d27764b82f7118f674371e6d6e76271d9d606edb"
+    },
+    "0.161.0": {
+      "fixture": "tests/fixtures/protocol/codex_0.160.1_to_0.161.0_experimental_compatibility.json",
+      "kind": "compatibility_fixture",
+      "source_commit": "979011409de0a60b52f179721948e65531d26144"
+    },
+    "0.162.0": {
+      "binary_sha256": "50ed828f357c655a3c82054d346cab8434f24901f14ec19b8267571bdd008b38",
+      "fixture": "tests/fixtures/protocol/codex_0.162.0_server_diagnostics.json",
+      "kind": "diagnostics_fixture"
+    },
+    "0.162.1": {
+      "binary_sha256": "628e35487d888a28f0427fc37501da529dd3d81fcbad7a2c3421c1e8670d92e1",
+      "fixture": "tests/fixtures/protocol/codex_0.162.1_server_diagnostics.json",
+      "kind": "diagnostics_fixture"
+    }
+  }
+}

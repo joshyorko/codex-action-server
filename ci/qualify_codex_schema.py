@@ -212,7 +212,9 @@ def main() -> int:
     parser.add_argument("--source-tag", required=True)
     parser.add_argument("--source-url", required=True)
     parser.add_argument("--asset-sha256", required=True)
+    parser.add_argument("--asset-id", required=True)
     parser.add_argument("--output", required=True, type=Path)
+    parser.add_argument("--typed-regression-tests-passed", action="store_true")
     args = parser.parse_args()
 
     args.output.mkdir(parents=True, exist_ok=True)
@@ -283,7 +285,9 @@ def main() -> int:
                 "candidate": candidate,
                 "identical": identical,
             }
-            if identical:
+            if not args.typed_regression_tests_passed:
+                status = "unqualified_regression_tests_not_run"
+            elif identical:
                 try:
                     live_smoke = live_protocol_smoke(
                         args.binary, temporary_path / "smoke"
@@ -295,7 +299,7 @@ def main() -> int:
                         "failure": type(error).__name__,
                     }
                 status = (
-                    "qualified"
+                    "compatible_pending_review"
                     if live_smoke["status"] == "passed"
                     else "unqualified_live_protocol_smoke"
                 )
@@ -316,10 +320,14 @@ def main() -> int:
             "source_tag": args.source_tag,
             "source_url": args.source_url,
             "source_asset_sha256": args.asset_sha256.removeprefix("sha256:"),
+            "source_asset_id": args.asset_id,
             "binary_sha256": binary_digest,
             "generated_files_sha256": generated_hashes,
             "baseline_version": baseline["native_version"],
             "qualification": status,
+            "typed_regression_tests": (
+                "passed" if args.typed_regression_tests_passed else "not_run"
+            ),
             "live_protocol_smoke": live_smoke["status"],
         }
         _write_json(args.output / "provenance.json", provenance)

@@ -16,8 +16,13 @@ on:
       - 'tests/fixtures/protocol/**'
       - 'tests/test_native_diagnostics_*.py'
       - 'ci/codex_qualification/**'
+      - 'ci/generate_native_qualification.py'
+      - 'src/codex_shared/native_qualification.py'
       - 'ci/qualify_codex_schema.py'
       - 'ci/provider_acceptance.py'
+      - 'ci/propose_codex_qualification.py'
+      - 'ci/report_codex_qualification.py'
+      - 'docs/acceptance/codex-native-qualification.md'
       - 'tests/test_codex_qualification.py'
       - '.github/workflows/codex-version-qualification.yml'
 
@@ -28,6 +33,10 @@ jobs:
   generate-candidate-schema:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    outputs:
+      version: ${{ steps.candidate.outputs.version }}
+      qualification: ${{ steps.qualification.outputs.qualification }}
+      proposal_status: ${{ steps.proposal.outputs.status }}
     permissions:
       contents: read
     steps:
@@ -37,6 +46,8 @@ jobs:
           python-version: '3.12'
       - name: Install qualification dependencies
         run: python -m pip install -e '.[test]'
+      - name: Check generated native qualification table
+        run: python ci/generate_native_qualification.py --check
       - name: Run typed native diagnostics regressions
         run: pytest -q tests/test_native_diagnostics_0162.py tests/test_codex_qualification.py
       - name: Resolve stable release and immutable artifact
@@ -62,9 +73,11 @@ jobs:
           echo "asset_url=$(jq -r .browser_download_url <<<"$asset")" >> "$GITHUB_OUTPUT"
           jq '{html_url, tag_name, published_at, asset: (.assets[] | select(.name == "codex-x86_64-unknown-linux-musl.tar.gz") | {id,name,size,digest,browser_download_url})}' <<<"$release" > "$RUNNER_TEMP/source.json"
       - name: Download and qualify exact candidate schema
+        id: qualification
         env:
           ASSET_URL: ${{ steps.candidate.outputs.asset_url }}
           ASSET_DIGEST: ${{ steps.candidate.outputs.asset_digest }}
+          ASSET_ID: ${{ steps.candidate.outputs.asset_id }}
           CANDIDATE_VERSION: ${{ steps.candidate.outputs.version }}
           CANDIDATE_TAG: ${{ steps.candidate.outputs.tag }}
         run: |
@@ -77,8 +90,9 @@ jobs:
           codex="$work/codex-x86_64-unknown-linux-musl"
           test -f "$codex"
           chmod 700 "$codex"
+          export HOME="$work/home"
           export CODEX_HOME="$work/home"
-          version_output="$("$codex" --version)"
+          version_output="$(env -i PATH="$PATH" HOME="$HOME" CODEX_HOME="$CODEX_HOME" "$codex" --version)"
           case "$version_output" in *"$CANDIDATE_VERSION"*) ;; *) echo "Candidate version mismatch" >&2; exit 1 ;; esac
           python3 ci/qualify_codex_schema.py \
             --binary "$codex" \
@@ -86,8 +100,23 @@ jobs:
             --source-tag "$CANDIDATE_TAG" \
             --source-url "$ASSET_URL" \
             --asset-sha256 "$ASSET_DIGEST" \
-            --output "$work/schema"
+            --asset-id "$ASSET_ID" \
+            --output "$work/schema" \
+            --typed-regression-tests-passed
           cp "$RUNNER_TEMP/source.json" "$work/schema/source-release.json"
+          echo "qualification=$(jq -r .qualification "$work/schema/provenance.json")" >> "$GITHUB_OUTPUT"
+      - name: Prepare compatible candidate PR patch
+        id: proposal
+        if: steps.qualification.outputs.qualification == 'compatible_pending_review'
+        run: |
+          set -euo pipefail
+          run_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          result="$(python ci/propose_codex_qualification.py \
+            --artifact "$RUNNER_TEMP/codex-candidate/schema" \
+            --output "$RUNNER_TEMP/codex-qualification-pr" \
+            --run-url "$run_url")"
+          echo "$result"
+          echo "status=$(jq -r .status <<<"$result")" >> "$GITHUB_OUTPUT"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -95,3 +124,158 @@ jobs:
           path: ${{ runner.temp }}/codex-candidate/schema
           if-no-files-found: warn
           retention-days: 30
+      - uses: actions/upload-artifact@v4
+        if: steps.proposal.outputs.status == 'prepared'
+        with:
+          name: codex-qualification-pr-${{ steps.candidate.outputs.version }}
+          path: ${{ runner.temp }}/codex-qualification-pr
+          retention-days: 30
+
+  open-qualified-pr:
+    needs: generate-candidate-schema
+    if: >-
+      ${{
+        github.event_name != 'pull_request' &&
+        github.ref_name == github.event.repository.default_branch &&
+        needs.generate-candidate-schema.result == 'success' &&
+        needs.generate-candidate-schema.outputs.qualification == 'compatible_pending_review' &&
+        needs.generate-candidate-schema.outputs.proposal_status == 'prepared'
+      }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+      - uses: actions/download-artifact@v4
+        with:
+          name: codex-qualification-pr-${{ needs.generate-candidate-schema.outputs.version }}
+          path: ${{ runner.temp }}/qualification-pr
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install qualification test dependencies
+        run: python -m pip install -e '.[test]'
+      - name: Apply candidate to a dedicated branch and verify
+        env:
+          BASE_BRANCH: ${{ github.event.repository.default_branch }}
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.generate-candidate-schema.outputs.version }}
+        run: |
+          set -euo pipefail
+          if [[ ! "$VERSION" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+            echo "Invalid qualification version" >&2
+            exit 1
+          fi
+          proposal="$RUNNER_TEMP/qualification-pr"
+          jq -e --arg version "$VERSION" '.status == "prepared" and .version == $version' "$proposal/proposal.json" >/dev/null
+          branch="codex-qualification/codex-$VERSION"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin "$BASE_BRANCH"
+          if git ls-remote --exit-code --heads origin "$branch" >/dev/null 2>&1; then
+            git fetch origin "$branch"
+            git checkout -B "$branch" "origin/$branch"
+            git merge --no-edit "origin/$BASE_BRANCH"
+          else
+            git checkout -b "$branch" "origin/$BASE_BRANCH"
+          fi
+          fixture="tests/fixtures/protocol/codex_${VERSION}_server_diagnostics.json"
+          for file in \
+            ci/codex_qualification/approved_methods.json \
+            src/codex_shared/native_qualification.py \
+            docs/acceptance/codex-native-qualification.md \
+            "$fixture"; do
+            test -f "$proposal/$file"
+            mkdir -p "$(dirname "$file")"
+            cp "$proposal/$file" "$file"
+          done
+          test "$(git branch --show-current)" = "$branch"
+          python ci/generate_native_qualification.py --check
+          pytest -q tests/test_native_diagnostics_0162.py tests/test_codex_qualification.py
+          ruff check src tests scripts/preflight.py
+          ruff format --check src tests scripts/preflight.py
+          git add ci/codex_qualification/approved_methods.json src/codex_shared/native_qualification.py docs/acceptance/codex-native-qualification.md "$fixture"
+          if git diff --cached --quiet; then
+            echo "Candidate version is already represented on the branch"
+            exit 0
+          fi
+          git commit -m "Qualify Codex $VERSION diagnostics method"
+          git push origin "$branch"
+          title="Qualify Codex $VERSION server diagnostics"
+          request_hash="$(jq -r --arg version "$VERSION" '.approvals[] | select(.version == $version and .method == "server/diagnostics") | .schema_fingerprint.request_sha256' ci/codex_qualification/approved_methods.json)"
+          response_hash="$(jq -r --arg version "$VERSION" '.approvals[] | select(.version == $version and .method == "server/diagnostics") | .schema_fingerprint.response_sha256' ci/codex_qualification/approved_methods.json)"
+          body="$RUNNER_TEMP/qualification-pr-body.md"
+          printf '%s\n' \
+            "## Summary" \
+            "- Add an exact-version, method-scoped admission for Codex $VERSION." \
+            "- Include the generated schema fixture, provenance, typed regression coverage, and live protocol smoke evidence." \
+            "" \
+            "## Evidence" \
+            "- Request schema SHA-256: \`$request_hash\`" \
+            "- Response schema SHA-256: \`$response_hash\`" \
+            "- Qualification run: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
+            "" \
+            "This PR does not broaden the gate to other methods or use a semver range. No daemon is restarted or updated." > "$body"
+          existing="$(gh pr list --repo "$GITHUB_REPOSITORY" --state open --head "$GITHUB_REPOSITORY_OWNER:$branch" --json number --jq '.[0].number // empty')"
+          if [ -n "$existing" ]; then
+            existing_base="$(gh pr view "$existing" --repo "$GITHUB_REPOSITORY" --json baseRefName --jq .baseRefName)"
+            test "$existing_base" = "$BASE_BRANCH"
+            gh pr edit "$existing" --repo "$GITHUB_REPOSITORY" --title "$title" --body-file "$body"
+          else
+            gh pr create --repo "$GITHUB_REPOSITORY" --base "$BASE_BRANCH" --head "$GITHUB_REPOSITORY_OWNER:$branch" --title "$title" --body-file "$body"
+          fi
+
+  report-blocked-candidate:
+    needs: generate-candidate-schema
+    if: >-
+      ${{
+        always() &&
+        github.event_name != 'pull_request' &&
+        github.ref_name == github.event.repository.default_branch &&
+        (
+          needs.generate-candidate-schema.result != 'success' ||
+          needs.generate-candidate-schema.outputs.qualification != 'compatible_pending_review'
+        )
+      }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+      - uses: actions/download-artifact@v4
+        with:
+          name: codex-schema-${{ needs.generate-candidate-schema.outputs.version || 'unqualified' }}
+          path: ${{ runner.temp }}/codex-schema
+        continue-on-error: true
+      - name: Build sanitized blocker report
+        env:
+          CANDIDATE_VERSION: ${{ needs.generate-candidate-schema.outputs.version }}
+          WORKFLOW_RESULT: ${{ needs.generate-candidate-schema.result }}
+        run: |
+          python ci/report_codex_qualification.py \
+            --artifact "$RUNNER_TEMP/codex-schema" \
+            --output "$RUNNER_TEMP/qualification-report" \
+            --run-url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
+            --candidate-version "$CANDIDATE_VERSION" \
+            --workflow-result "$WORKFLOW_RESULT"
+      - name: Create or update the version blocker issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          title="$(cat "$RUNNER_TEMP/qualification-report/issue-title.txt")"
+          body="$RUNNER_TEMP/qualification-report/issue-body.md"
+          query="repo:$GITHUB_REPOSITORY is:issue in:title \"$title\""
+          existing="$(gh api -X GET search/issues -f q="$query" --jq '.items[0].number // empty')"
+          if [ -n "$existing" ]; then
+            gh issue edit "$existing" --repo "$GITHUB_REPOSITORY" --title "$title" --body-file "$body"
+            gh issue reopen "$existing" --repo "$GITHUB_REPOSITORY"
+          else
+            gh issue create --repo "$GITHUB_REPOSITORY" --title "$title" --body-file "$body"
+          fi

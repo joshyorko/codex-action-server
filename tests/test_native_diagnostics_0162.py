@@ -56,8 +56,28 @@ def test_01620_generated_diagnostics_request_and_consumed_response_shapes():
     assert gauge["properties"]["value"]["type"] == "integer"
 
 
-@pytest.mark.parametrize("version", ["0.162.0", "0.162.1"])
-def test_0162_allows_only_reviewed_diagnostics_contract(version):
+DIAGNOSTICS_VERSIONS = tuple(
+    sorted(
+        version
+        for version, methods in (
+            codex_rpc.REVIEWED_EXPERIMENTAL_METHODS_BY_NATIVE_VERSION.items()
+        )
+        if "server/diagnostics" in methods
+    )
+)
+DIAGNOSTICS_ONLY_VERSIONS = tuple(
+    sorted(
+        version
+        for version, methods in (
+            codex_rpc.REVIEWED_EXPERIMENTAL_METHODS_BY_NATIVE_VERSION.items()
+        )
+        if methods == {"server/diagnostics"}
+    )
+)
+
+
+@pytest.mark.parametrize("version", DIAGNOSTICS_VERSIONS)
+def test_reviewed_versions_allow_diagnostics(version):
     native = client(version)
     result = {
         "process": {"id": 1234, "residentMemoryBytes": None},
@@ -70,29 +90,31 @@ def test_0162_allows_only_reviewed_diagnostics_contract(version):
         "method": "server/diagnostics",
         "params": {},
     }
-    assert codex_rpc.REVIEWED_EXPERIMENTAL_METHODS_BY_NATIVE_VERSION[version] == {
-        "server/diagnostics"
-    }
+    assert "server/diagnostics" in (
+        codex_rpc.REVIEWED_EXPERIMENTAL_METHODS_BY_NATIVE_VERSION[version]
+    )
 
 
 @pytest.mark.parametrize(
     "method", sorted(codex_rpc.EXPERIMENTAL_METHODS - {"server/diagnostics"})
 )
-@pytest.mark.parametrize("version", ["0.162.0", "0.162.1"])
-def test_0162_other_experimental_methods_remain_rejected_before_send(method, version):
+@pytest.mark.parametrize("version", DIAGNOSTICS_ONLY_VERSIONS)
+def test_diagnostics_only_versions_reject_other_experimental_methods_before_send(
+    method, version
+):
     native = client(version)
     with pytest.raises(codex_rpc.NativeVersionNotQualified, match="not_qualified"):
         native.request(method, {})
     native.ws.send.assert_not_called()
 
 
-def test_0166_unqualified_diagnostics_are_explained_before_send():
-    native = client("0.166.0")
+def test_future_unqualified_diagnostics_are_explained_before_send():
+    native = client("0.999.0")
     with pytest.raises(
         codex_rpc.NativeVersionNotQualified,
         match=(
             "experimental_native_version_not_qualified: "
-            "method=server/diagnostics, observed_version=0.166.0"
+            "method=server/diagnostics, observed_version=0.999.0"
         ),
     ):
         native.request("server/diagnostics", {})

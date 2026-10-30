@@ -25,6 +25,9 @@ from websockets.sync.client import connect, unix_connect
 from websockets.exceptions import ConnectionClosed
 from worker_containers import Worker
 from worker_kubernetes import KubernetesWorker
+from codex_shared.native_qualification import (
+    REVIEWED_EXPERIMENTAL_METHODS_BY_NATIVE_VERSION,
+)
 
 METHODS = {
     "mcpServerStatus/list",
@@ -103,23 +106,6 @@ EXPERIMENTAL_METHODS = {
     "thread/backgroundTerminals/list",
     "thread/backgroundTerminals/terminate",
     "turn/settings/update",
-}
-EXPERIMENTAL_NATIVE_VERSION = "0.160.1"
-REVIEWED_EXPERIMENTAL_METHODS_BY_NATIVE_VERSION = {
-    EXPERIMENTAL_NATIVE_VERSION: frozenset(EXPERIMENTAL_METHODS),
-    "0.161.0": frozenset(
-        {
-            "server/diagnostics",
-            "thread/queue/add",
-            "thread/queue/delete",
-            "thread/queue/list",
-            "thread/queue/reorder",
-            "thread/queue/start",
-            "thread/queue/update",
-        }
-    ),
-    "0.162.0": frozenset({"server/diagnostics"}),
-    "0.162.1": frozenset({"server/diagnostics"}),
 }
 _NATIVE_SERVER_ORIGINATORS = frozenset(
     {

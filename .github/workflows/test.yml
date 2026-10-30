@@ -20,5 +20,6 @@ jobs:
           chmod +x "$RUNNER_TEMP/codex-action-test-bin/action-server"
           echo "$RUNNER_TEMP/codex-action-test-bin" >> "$GITHUB_PATH"
       - run: pytest -q -rs
+      - run: python ci/generate_native_qualification.py --check
       - run: ruff check src tests scripts/preflight.py
       - run: ruff format --check src tests scripts/preflight.py

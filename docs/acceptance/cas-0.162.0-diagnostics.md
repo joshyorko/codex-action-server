@@ -39,6 +39,12 @@ available. Provider acceptance now attempts diagnostics for every native build
 instead of silently skipping builds other than 0.160.1, and records an
 unqualified result separately from a transport or protocol failure.
 
+`ci/codex_qualification/approved_methods.json` records exact version/method
+approvals with request/response schema fingerprints and source provenance.
+`ci/generate_native_qualification.py` validates those fingerprints and generates
+the runtime admission table. CI checks the generated table and runs typed
+regressions before schema generation and live protocol qualification.
+
 `server/diagnostics` reports the Codex app-server process and its gauges. It is
 not a whole-host CPU or RAM utilization API; use a separately authorized,
 read-only host monitoring source for machine-wide resource utilization.
