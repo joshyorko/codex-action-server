@@ -22,6 +22,7 @@ class SnapshotClient:
         turn_status="failed",
         item_status=None,
         item_phase="final",
+        error=None,
         item_cursor="next-item",
     ):
         self.calls = []
@@ -37,6 +38,14 @@ class SnapshotClient:
         self.turn_status = turn_status
         self.item_status = item_status
         self.item_phase = item_phase
+        self.error = (
+            error
+            if error is not None
+            else {
+                "message": "detail intentionally omitted",
+                "codexErrorInfo": "rateLimitExceeded",
+            }
+        )
         self.item_cursor = item_cursor
 
     def __enter__(self):
@@ -69,10 +78,7 @@ class SnapshotClient:
                         "status": self.turn_status,
                         "items": [],
                         "itemsView": "notLoaded",
-                        "error": {
-                            "message": "detail intentionally omitted",
-                            "codexErrorInfo": "rateLimitExceeded",
-                        },
+                        "error": self.error,
                     }
                 ]
             }
@@ -216,6 +222,30 @@ def test_snapshot_same_revision_is_small_but_retains_native_status_and_errors():
     assert unchanged["latest_turn"] == first["latest_turn"]
     assert "latest_item" not in unchanged
     assert len(json.dumps(unchanged).encode()) < len(json.dumps(first).encode())
+
+
+def test_snapshot_error_detail_change_invalidates_revision_without_disclosure():
+    first, _ = run_snapshot(SnapshotClient())
+    second, _ = run_snapshot(
+        SnapshotClient(
+            error={
+                "message": "new private error detail",
+                "codexErrorInfo": "rateLimitExceeded",
+            }
+        ),
+        load_actions().ThreadSnapshotRequest(
+            target="local",
+            cwd="/work",
+            thread_id="thread-1",
+            revision=first.result.result["revision"],
+        ),
+    )
+    encoded = json.dumps(second.model_dump(mode="json"), ensure_ascii=True)
+
+    assert second.result.result["changed"] is True
+    assert second.result.result["revision"] != first.result.result["revision"]
+    assert second.result.result["latest_turn"]["error_code"] == "rateLimitExceeded"
+    assert "new private error detail" not in encoded
 
 
 def test_snapshot_status_change_invalidates_revision():
