@@ -90,8 +90,9 @@ def test_reviewed_versions_allow_diagnostics(version):
         "method": "server/diagnostics",
         "params": {},
     }
-    assert "server/diagnostics" in (
-        codex_rpc.REVIEWED_EXPERIMENTAL_METHODS_BY_NATIVE_VERSION[version]
+    assert (
+        "server/diagnostics"
+        in (codex_rpc.REVIEWED_EXPERIMENTAL_METHODS_BY_NATIVE_VERSION[version])
     )
 
 
