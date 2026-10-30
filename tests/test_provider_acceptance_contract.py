@@ -368,9 +368,9 @@ def test_worker_exec_uses_source_cwd_instead_of_pid1_cwd(monkeypatch):
         ),
         (
             native_server_user_agent("0.159.2"),
-            None,
-            "skipped",
-            ["thread/list"],
+            "unqualified",
+            "unqualified",
+            ["thread/list", "server/diagnostics"],
             None,
         ),
         (
@@ -426,6 +426,10 @@ def test_provider_smoke_gates_diagnostics_by_exact_native_version(
         def request(self, method, params):
             calls.append((method, params))
             if method == "server/diagnostics":
+                if diagnostics_result == "unqualified":
+                    raise codex_rpc.NativeVersionNotQualified(
+                        method, codex_rpc.native_server_build_version(user_agent)
+                    )
                 if diagnostics_result == "rpc-error":
                     raise codex_rpc.RpcError("private native error detail")
                 return diagnostics_result
@@ -448,13 +452,22 @@ def test_provider_smoke_gates_diagnostics_by_exact_native_version(
         "codex_home": "/home/vscode/.codex",
         "native_user_agent": user_agent,
         "native_server_build_version": (
-            "0.160.1" if expected_diagnostics_status != "skipped" else "0.159.2"
+            "0.159.2" if expected_diagnostics_status == "unqualified" else "0.160.1"
         ),
         "diagnostics_status": expected_diagnostics_status,
         **({"diagnostics_error": expected_error} if expected_error is not None else {}),
         **(
-            {"diagnostics_skip_reason": ("native_server_build_version_not_pinned")}
-            if expected_diagnostics_status == "skipped"
+            {
+                "diagnostics_method": "server/diagnostics",
+                "diagnostics_observed_version": "0.159.2",
+                "diagnostics_last_qualified_versions": [
+                    "0.160.1",
+                    "0.161.0",
+                    "0.162.0",
+                    "0.162.1",
+                ],
+            }
+            if expected_diagnostics_status == "unqualified"
             else {}
         ),
         "thread_list_read": True,

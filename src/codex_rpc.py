@@ -226,6 +226,30 @@ class RpcError(RuntimeError):
     pass
 
 
+class NativeVersionNotQualified(RpcError):
+    """Safe local refusal for an experimental method on an unreviewed build."""
+
+    def __init__(self, method: str, version: str | None):
+        self.method = method
+        self.version = version
+        self.last_qualified = sorted(
+            native_version
+            for native_version, methods in REVIEWED_EXPERIMENTAL_METHODS_BY_NATIVE_VERSION.items()
+            if method in methods
+        )
+        super().__init__(method)
+
+    def __str__(self) -> str:
+        observed = self.version or "unknown"
+        qualified = ", ".join(self.last_qualified) or "none"
+        return (
+            "experimental_native_version_not_qualified: "
+            f"method={self.method}, observed_version={observed}, "
+            f"last_qualified_versions={qualified}; qualify this exact Codex build "
+            "before retrying the experimental method"
+        )
+
+
 @dataclass(frozen=True)
 class Target:
     target: str
@@ -934,9 +958,7 @@ class Client:
                 native_version, frozenset()
             )
         ):
-            raise RpcError(
-                method + " requires the pinned experimental Codex 0.160.1 schema"
-            )
+            raise NativeVersionNotQualified(method, native_version)
         self._validate_request(method, params)
         self.next_id += 1
         msg = {"id": self.next_id, "method": method, "params": params}

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from actions import ActionError
 from typing import Any
-from codex_rpc import Client
+from codex_rpc import Client, NativeVersionNotQualified
 from websockets.exceptions import ConnectionClosed
 from codex_shared.models import ConnectionInfo
 from codex_shared.models import EffectiveConfiguration
@@ -221,6 +221,8 @@ def _run(
             return response
     except ActionError:
         raise
+    except NativeVersionNotQualified as error:
+        raise ActionError(str(error)) from None
     except (
         RpcError,
         OSError,
@@ -233,7 +235,6 @@ def _run(
         raise ActionError(
             f"{operation} failed closed ({type(error).__name__}); inspect target diagnostics"
         ) from None
-
 
 class _UnkeyedReceipt:
     replayed = False

@@ -1,0 +1,87 @@
+name: codex-version-qualification
+
+on:
+  schedule:
+    - cron: '17 6 * * *'
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Optional exact OpenAI Codex release tag (for example rust-v0.166.0)
+        required: false
+        type: string
+  pull_request:
+    paths:
+      - 'src/codex_rpc.py'
+      - 'src/codex_shared/**'
+      - 'tests/fixtures/protocol/**'
+      - 'tests/test_native_diagnostics_*.py'
+      - 'ci/codex_qualification/**'
+      - '.github/workflows/codex-version-qualification.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  generate-candidate-schema:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: Resolve stable release and immutable artifact
+        id: candidate
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.release_tag }}
+        run: |
+          set -euo pipefail
+          if [ -n "$RELEASE_TAG" ]; then
+            release="$(gh api "repos/openai/codex/releases/tags/$RELEASE_TAG")"
+          else
+            release="$(gh api repos/openai/codex/releases/latest)"
+          fi
+          jq -e '(.draft == false) and (.prerelease == false)' <<<"$release" >/dev/null
+          asset="$(jq -c '[.assets[] | select(.name == "codex-x86_64-unknown-linux-musl.tar.gz")][0]' <<<"$release")"
+          jq -e '.id and .digest and (.digest | startswith("sha256:"))' <<<"$asset" >/dev/null
+          echo "version=$(jq -r '.name | ltrimstr("v")' <<<"$release")" >> "$GITHUB_OUTPUT"
+          echo "tag=$(jq -r .tag_name <<<"$release")" >> "$GITHUB_OUTPUT"
+          echo "asset_id=$(jq -r .id <<<"$asset")" >> "$GITHUB_OUTPUT"
+          echo "asset_name=$(jq -r .name <<<"$asset")" >> "$GITHUB_OUTPUT"
+          echo "asset_digest=$(jq -r .digest <<<"$asset")" >> "$GITHUB_OUTPUT"
+          echo "asset_url=$(jq -r .browser_download_url <<<"$asset")" >> "$GITHUB_OUTPUT"
+          jq '{html_url, tag_name, published_at, asset: (.assets[] | select(.name == "codex-x86_64-unknown-linux-musl.tar.gz") | {id,name,size,digest,browser_download_url})}' <<<"$release" > "$RUNNER_TEMP/source.json"
+      - name: Download and qualify exact candidate schema
+        env:
+          ASSET_URL: ${{ steps.candidate.outputs.asset_url }}
+          ASSET_DIGEST: ${{ steps.candidate.outputs.asset_digest }}
+          CANDIDATE_VERSION: ${{ steps.candidate.outputs.version }}
+          CANDIDATE_TAG: ${{ steps.candidate.outputs.tag }}
+        run: |
+          set -euo pipefail
+          work="$RUNNER_TEMP/codex-candidate"
+          mkdir -p "$work/home" "$work/schema"
+          curl -fL --retry 2 --max-time 180 "$ASSET_URL" -o "$work/codex.tar.gz"
+          printf '%s  %s\n' "${ASSET_DIGEST#sha256:}" "$work/codex.tar.gz" | sha256sum -c -
+          tar -xzf "$work/codex.tar.gz" -C "$work"
+          codex="$(find "$work" -type f -name codex -print -quit)"
+          test -n "$codex"
+          chmod 700 "$codex"
+          export CODEX_HOME="$work/home"
+          version_output="$("$codex" --version)"
+          case "$version_output" in *"$CANDIDATE_VERSION"*) ;; *) echo "Candidate version mismatch" >&2; exit 1 ;; esac
+          python3 ci/qualify_codex_schema.py \
+            --binary "$codex" \
+            --version "$CANDIDATE_VERSION" \
+            --source-tag "$CANDIDATE_TAG" \
+            --source-url "$ASSET_URL" \
+            --asset-sha256 "$ASSET_DIGEST" \
+            --output "$work/schema"
+          cp "$RUNNER_TEMP/source.json" "$work/schema/source-release.json"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: codex-schema-${{ steps.candidate.outputs.version || 'unqualified' }}
+          path: ${{ runner.temp }}/codex-candidate/schema
+          if-no-files-found: warn
+          retention-days: 30

@@ -29,3 +29,22 @@ workspace UID, the client initialized against the running native `0.162.0`
 daemon and successfully requested `server/diagnostics`. Its response contained
 the expected process object and one correctly typed gauge. The probe changed
 no running CAS process or native daemon and did not deploy this source patch.
+## Version drift and metric boundary
+
+An installed build outside the exact reviewed-version table is refused locally
+before `server/diagnostics` is sent. The public error identifies
+`experimental_native_version_not_qualified`, the method, observed version (or
+`unknown`), and versions qualified for that method; nonexperimental reads remain
+available. Provider acceptance now attempts diagnostics for every native build
+instead of silently skipping builds other than 0.160.1, and records an
+unqualified result separately from a transport or protocol failure.
+
+`server/diagnostics` reports the Codex app-server process and its gauges. It is
+not a whole-host CPU or RAM utilization API; use a separately authorized,
+read-only host monitoring source for machine-wide resource utilization.
+
+Codex 0.166.0 remains unqualified here: this checkout has no generated-schema
+evidence or live protocol result for that exact artifact. Its semver and server
+banner are not evidence of compatibility. Neither Dakota target was contacted
+or modified during this change, so CPU/NVIDIA operational proof remains a
+separate deployment-time check.

@@ -110,7 +110,7 @@ def smoke(args, worker, target_file):
     from boundary import resolve_target
     from codex_rpc import (
         Client,
-        EXPERIMENTAL_NATIVE_VERSION,
+        NativeVersionNotQualified,
         RpcError,
         native_server_build_version,
     )
@@ -141,34 +141,35 @@ def smoke(args, worker, target_file):
         threads = client.request("thread/list", {"limit": 1})
         if not isinstance(threads, dict) or not isinstance(threads.get("data"), list):
             raise RuntimeError("Native thread discovery was not a data list")
-        if native_build_version == EXPERIMENTAL_NATIVE_VERSION:
-            try:
-                diagnostics = client.request("server/diagnostics", {})
-            except (
-                ConnectionClosed,
-                OSError,
-                RpcError,
-                TimeoutError,
-                ValueError,
-                KeyError,
-            ) as error:
-                diagnostics_status = "failed"
-                diagnostics_error = type(error).__name__
-            else:
-                if valid_native_diagnostics(diagnostics):
-                    diagnostics_status = "passed"
-                    diagnostics_error = None
-                else:
-                    diagnostics_status = "failed"
-                    diagnostics_error = "invalid_response"
-            diagnostics_evidence = {"diagnostics_status": diagnostics_status}
-            if diagnostics_error is not None:
-                diagnostics_evidence["diagnostics_error"] = diagnostics_error
-        else:
+        try:
+            diagnostics = client.request("server/diagnostics", {})
+        except NativeVersionNotQualified as error:
             diagnostics_evidence = {
-                "diagnostics_status": "skipped",
-                "diagnostics_skip_reason": "native_server_build_version_not_pinned",
+                "diagnostics_status": "unqualified",
+                "diagnostics_method": "server/diagnostics",
+                "diagnostics_observed_version": native_build_version,
+                "diagnostics_last_qualified_versions": error.last_qualified,
             }
+        except (
+            ConnectionClosed,
+            OSError,
+            RpcError,
+            TimeoutError,
+            ValueError,
+            KeyError,
+        ) as error:
+            diagnostics_evidence = {
+                "diagnostics_status": "failed",
+                "diagnostics_error": type(error).__name__,
+            }
+        else:
+            if valid_native_diagnostics(diagnostics):
+                diagnostics_evidence = {"diagnostics_status": "passed"}
+            else:
+                diagnostics_evidence = {
+                    "diagnostics_status": "failed",
+                    "diagnostics_error": "invalid_response",
+                }
         # Do not store thread contents, diagnostic content, or account data.
         evidence = {
             "codex_home": client.metadata["codexHome"],
@@ -259,7 +260,7 @@ def run(args, report):
         stale_target, report["first_rpc"] = smoke(args, first, target_file)
         if report["first_rpc"]["diagnostics_status"] == "failed":
             raise RuntimeError(
-                "Pinned native diagnostics failed: "
+                "Native diagnostics failed: "
                 + report["first_rpc"]["diagnostics_error"]
             )
         for name, path in (
@@ -302,7 +303,7 @@ def run(args, report):
         _, report["resumed_rpc"] = smoke(args, resumed, target_file)
         if report["resumed_rpc"]["diagnostics_status"] == "failed":
             raise RuntimeError(
-                "Pinned native diagnostics failed after restart: "
+                "Native diagnostics failed after restart: "
                 + report["resumed_rpc"]["diagnostics_error"]
             )
         report["retained_home_and_config"] = True

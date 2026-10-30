@@ -81,8 +81,21 @@ def test_0162_allows_only_reviewed_diagnostics_contract(version):
 @pytest.mark.parametrize("version", ["0.162.0", "0.162.1"])
 def test_0162_other_experimental_methods_remain_rejected_before_send(method, version):
     native = client(version)
-    with pytest.raises(codex_rpc.RpcError, match="pinned experimental"):
+    with pytest.raises(codex_rpc.NativeVersionNotQualified, match="not_qualified"):
         native.request(method, {})
+    native.ws.send.assert_not_called()
+
+
+def test_0166_unqualified_diagnostics_are_explained_before_send():
+    native = client("0.166.0")
+    with pytest.raises(
+        codex_rpc.NativeVersionNotQualified,
+        match=(
+            "experimental_native_version_not_qualified: "
+            "method=server/diagnostics, observed_version=0.166.0"
+        ),
+    ):
+        native.request("server/diagnostics", {})
     native.ws.send.assert_not_called()
 
 
@@ -91,7 +104,7 @@ def test_0162_other_experimental_methods_remain_rejected_before_send(method, ver
 )
 def test_01620_review_does_not_authorize_unreviewed_future_builds(version):
     native = client(version)
-    with pytest.raises(codex_rpc.RpcError, match="pinned experimental"):
+    with pytest.raises(codex_rpc.NativeVersionNotQualified, match="not_qualified"):
         native.request("server/diagnostics", {})
     native.ws.send.assert_not_called()
 
