@@ -111,15 +111,29 @@ def _method_types_from_fixtures() -> dict[str, tuple[str, str]]:
     return result
 
 
-def _owners_by_method() -> dict[str, list[str]]:
+def _action_capabilities_by_method() -> dict[str, list[dict]]:
     sys.path.insert(0, str(ROOT / "src"))
     from action_catalog_contract import CAPABILITIES
 
-    result: dict[str, list[str]] = {}
+    result: dict[str, list[dict]] = {}
     for action_name, capability in CAPABILITIES.items():
+        contract = {
+            "action": action_name,
+            "group": capability.group,
+            "packages": sorted(capability.packages),
+            "profiles": sorted(capability.profiles),
+            "is_consequential": capability.is_consequential,
+            "read_only_hint": capability.read_only_hint,
+            "destructive_hint": capability.destructive_hint,
+            "idempotent_hint": capability.idempotent_hint,
+            "open_world_hint": capability.open_world_hint,
+        }
         for method in capability.native_methods:
-            result.setdefault(method, []).append(action_name)
-    return {method: sorted(set(owners)) for method, owners in result.items()}
+            result.setdefault(method, []).append(contract)
+    return {
+        method: sorted(contracts, key=lambda contract: contract["action"])
+        for method, contracts in result.items()
+    }
 
 
 def _regression_files(method: str, owners: list[str]) -> list[str]:
@@ -138,14 +152,14 @@ def expected_catalog() -> dict:
     methods = _assigned_literal(RPC_SOURCE, "METHODS")
     experimental = _assigned_literal(RPC_SOURCE, "EXPERIMENTAL_METHODS")
     observe = _assigned_literal(CAPABILITY_SOURCE, "OBSERVE_METHODS")
-    owners = _owners_by_method()
+    action_capabilities = _action_capabilities_by_method()
     fixture_types = _method_types_from_fixtures()
 
     if not experimental <= methods:
         raise ValueError(
             "experimental methods are outside the typed native RPC surface"
         )
-    missing_owners = methods - owners.keys()
+    missing_owners = methods - action_capabilities.keys()
     if missing_owners:
         raise ValueError(
             "native methods lack typed action owners: "
@@ -164,7 +178,8 @@ def expected_catalog() -> dict:
                 ),
             ),
         )
-        method_owners = owners[method]
+        owner_capabilities = action_capabilities[method]
+        method_owners = [item["action"] for item in owner_capabilities]
         read_only = method in observe
         if method in READ_ONLY_PROTOCOL_SMOKE:
             smoke_strategy = "disposable_protocol_smoke"
@@ -186,6 +201,7 @@ def expected_catalog() -> dict:
                 "access": "read_only" if read_only else "mutating_or_external",
                 "smoke_strategy": smoke_strategy,
                 "owning_typed_actions": method_owners,
+                "action_capabilities": owner_capabilities,
                 "regression_tests": _regression_files(method, method_owners),
             }
         )

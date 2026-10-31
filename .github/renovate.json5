@@ -1,0 +1,39 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "github>joshyorko/renovate-config:org-inherited-config"
+  ],
+  "enabledManagers": [
+    "pep621",
+    "pip_requirements",
+    "github-actions",
+    "dockerfile"
+  ],
+  "automerge": false,
+  "platformAutomerge": false,
+  "dependencyDashboardApproval": true,
+  "prCreation": "status-success",
+  "prConcurrentLimit": 1,
+  "prHourlyLimit": 1,
+  "packageRules": [
+    {
+      "description": [
+        "CAS runtime, toolchain, and base image updates require dashboard approval and repository CI; override inherited pin and digest automerge."
+      ],
+      "matchUpdateTypes": [
+        "major",
+        "minor",
+        "patch",
+        "pin",
+        "pinDigest",
+        "digest",
+        "replacement",
+        "rollback"
+      ],
+      "automerge": false,
+      "platformAutomerge": false,
+      "dependencyDashboardApproval": true,
+      "prCreation": "status-success"
+    }
+  ]
+}

@@ -30,6 +30,7 @@ dev-tasks:
   # Keep Unix-socket fixtures below Linux's path limit in RCC environments.
   test: |
     python ci/generate_native_qualification.py --check
+    python ci/generate_native_method_catalog.py --check
     env TMPDIR=/tmp pytest tests -q -rs
   lint: |
     ruff check src tests scripts/preflight.py

@@ -381,7 +381,7 @@ def prepare_proposal(artifact: Path, output: Path, run_url: str) -> dict:
     # Preserve reviewed method records while allowing a same-version PR to add
     # newly qualified methods. This makes reruns idempotent and retains every
     # existing exact-version approval.
-    if existing_source and existing_source.get("native_methods_fixture"):
+    if had_native_fixture:
         old_fixture = _read_json(_safe_repo_file(fixture_relative))
         old_rows = {row.get("method"): row for row in old_fixture.get("methods", [])}
         retained = []

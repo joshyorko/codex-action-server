@@ -58,6 +58,10 @@ def main() -> int:
                 "pytest",
                 "-q",
                 "tests/test_codex_qualification.py",
+                "tests/test_native_method_catalog.py",
+                "tests/test_native_qualification_receipt.py",
+                "tests/test_image_publication_workflow.py",
+                "tests/test_renovate_config.py",
             ]
         )
     if task == "lint":
@@ -73,9 +77,13 @@ def main() -> int:
                 "ci/propose_codex_qualification.py",
                 "ci/generate_native_qualification.py",
                 "ci/report_codex_qualification.py",
+                "ci/create_native_qualification_receipt.py",
                 "ci/codex_qualification/tasks.py",
                 "tests/test_native_method_catalog.py",
                 "tests/test_codex_qualification.py",
+                "tests/test_native_qualification_receipt.py",
+                "tests/test_image_publication_workflow.py",
+                "tests/test_renovate_config.py",
             ]
         )
         if lint:
@@ -93,9 +101,13 @@ def main() -> int:
                 "ci/propose_codex_qualification.py",
                 "ci/generate_native_qualification.py",
                 "ci/report_codex_qualification.py",
+                "ci/create_native_qualification_receipt.py",
                 "ci/codex_qualification/tasks.py",
                 "tests/test_native_method_catalog.py",
                 "tests/test_codex_qualification.py",
+                "tests/test_native_qualification_receipt.py",
+                "tests/test_image_publication_workflow.py",
+                "tests/test_renovate_config.py",
             ]
         )
     if task == "format":
@@ -111,9 +123,13 @@ def main() -> int:
                 "ci/propose_codex_qualification.py",
                 "ci/generate_native_qualification.py",
                 "ci/report_codex_qualification.py",
+                "ci/create_native_qualification_receipt.py",
                 "ci/codex_qualification/tasks.py",
                 "tests/test_native_method_catalog.py",
                 "tests/test_codex_qualification.py",
+                "tests/test_native_qualification_receipt.py",
+                "tests/test_image_publication_workflow.py",
+                "tests/test_renovate_config.py",
             ]
         )
     print(f"unknown RCC task: {task}", file=sys.stderr)

@@ -9,6 +9,26 @@ on:
         description: Optional exact OpenAI Codex release tag (for example rust-v0.166.0)
         required: false
         type: string
+  push:
+    branches: [main]
+    paths:
+      - 'src/codex_rpc.py'
+      - 'src/codex_shared/**'
+      - 'tests/fixtures/protocol/**'
+      - 'tests/test_native_diagnostics_*.py'
+      - 'ci/codex_qualification/**'
+      - 'ci/*.py'
+      - 'docs/acceptance/codex-native-qualification.md'
+      - '.github/schemas/**'
+      - 'tests/test_codex_qualification.py'
+      - 'tests/test_native_method_catalog.py'
+      - 'tests/test_native_qualification_receipt.py'
+      - 'tests/test_image_publication_workflow.py'
+      - 'tests/test_renovate_config.py'
+      - 'package.yaml'
+      - '.github/renovate.json5'
+      - '.github/workflows/codex-version-qualification.yml'
+      - '.github/workflows/container.yml'
   pull_request:
     paths:
       - 'src/codex_rpc.py'
@@ -18,6 +38,7 @@ on:
       - 'ci/codex_qualification/**'
       - 'ci/generate_native_method_catalog.py'
       - 'ci/run_native_method_regressions.py'
+      - 'ci/create_native_qualification_receipt.py'
       - 'ci/generate_native_qualification.py'
       - 'src/codex_shared/native_qualification.py'
       - 'ci/qualify_codex_schema.py'
@@ -25,11 +46,18 @@ on:
       - 'ci/propose_codex_qualification.py'
       - 'ci/report_codex_qualification.py'
       - 'docs/acceptance/codex-native-qualification.md'
+      - '.github/schemas/**'
       - 'tests/test_codex_qualification.py'
       - 'tests/test_native_method_catalog.py'
+      - 'tests/test_native_qualification_receipt.py'
+      - 'tests/test_image_publication_workflow.py'
+      - '.github/workflows/container.yml'
       - 'ci/codex_qualification/robot.yaml'
       - 'ci/codex_qualification/conda.yaml'
       - 'ci/codex_qualification/tasks.py'
+      - 'ci/codex_qualification/environment_linux_amd64_freeze.yaml'
+      - '.github/renovate.json5'
+      - 'tests/test_renovate_config.py'
       - '.github/workflows/codex-version-qualification.yml'
 
 permissions:
@@ -70,6 +98,8 @@ jobs:
         run: rcc task run --robot ci/codex_qualification/robot.yaml --task check-catalog
       - name: Lint qualification and catalog changes in RCC
         run: rcc task run --robot ci/codex_qualification/robot.yaml --task lint
+      - name: Run focused qualification and Renovate contract tests in RCC
+        run: rcc task run --robot ci/codex_qualification/robot.yaml --task focused-tests
       - name: Resolve stable release and immutable artifact
         id: candidate
         env:
@@ -291,9 +321,11 @@ jobs:
             ci/propose_codex_qualification.py \
             ci/generate_native_qualification.py \
             ci/report_codex_qualification.py \
+            ci/create_native_qualification_receipt.py \
             ci/codex_qualification/tasks.py \
             tests/test_native_method_catalog.py \
-            tests/test_codex_qualification.py
+            tests/test_codex_qualification.py \
+            tests/test_native_qualification_receipt.py
           ruff format --check \
             ci/generate_native_method_catalog.py \
             ci/run_native_method_regressions.py \
@@ -301,9 +333,11 @@ jobs:
             ci/propose_codex_qualification.py \
             ci/generate_native_qualification.py \
             ci/report_codex_qualification.py \
+            ci/create_native_qualification_receipt.py \
             ci/codex_qualification/tasks.py \
             tests/test_native_method_catalog.py \
-            tests/test_codex_qualification.py
+            tests/test_codex_qualification.py \
+            tests/test_native_qualification_receipt.py
           git add ci/codex_qualification/approved_methods.json src/codex_shared/native_qualification.py docs/acceptance/codex-native-qualification.md "tests/fixtures/protocol/codex_${VERSION}_native_methods.json"
           if ! git diff --cached --quiet; then
             git commit -m "Qualify Codex $VERSION native methods"

@@ -1,6 +1,7 @@
 """The reviewed native-method catalog must cover CAS's exact typed surface."""
 
 import json
+import importlib.util
 from pathlib import Path
 
 import codex_rpc
@@ -41,6 +42,23 @@ def test_catalog_exactly_covers_cas_native_methods_and_owners():
             "read_only" if method in OBSERVE_METHODS else "mutating_or_external"
         )
         assert set(row["owning_typed_actions"]) == expected_owners[method]
+        expected_capabilities = []
+        for owner in sorted(expected_owners[method]):
+            capability = CAPABILITIES[owner]
+            expected_capabilities.append(
+                {
+                    "action": owner,
+                    "group": capability.group,
+                    "packages": sorted(capability.packages),
+                    "profiles": sorted(capability.profiles),
+                    "is_consequential": capability.is_consequential,
+                    "read_only_hint": capability.read_only_hint,
+                    "destructive_hint": capability.destructive_hint,
+                    "idempotent_hint": capability.idempotent_hint,
+                    "open_world_hint": capability.open_world_hint,
+                }
+            )
+        assert row["action_capabilities"] == expected_capabilities
         assert row["request_schema"].endswith("Params")
         assert row["response_schema"].endswith("Response")
         assert row["smoke_strategy"] in {
@@ -53,6 +71,10 @@ def test_catalog_exactly_covers_cas_native_methods_and_owners():
 
 
 def test_catalog_check_matches_the_reviewed_source_contract():
-    from ci.generate_native_method_catalog import expected_catalog
+    spec = importlib.util.spec_from_file_location(
+        "native_method_catalog_generator", ROOT / "ci/generate_native_method_catalog.py"
+    )
+    generator = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(generator)
 
-    assert json.loads(CATALOG_PATH.read_text()) == expected_catalog()
+    assert json.loads(CATALOG_PATH.read_text()) == generator.expected_catalog()

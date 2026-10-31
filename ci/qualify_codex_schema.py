@@ -358,16 +358,25 @@ def _load_method_catalog() -> list[dict]:
     return methods
 
 
-def _latest_approval(manifest: dict, method: str) -> tuple[str, dict] | None:
-    approvals = [
-        item for item in manifest.get("approvals", []) if item.get("method") == method
-    ]
+def _latest_approval(
+    manifest: dict, method: str, *, before_version: str | None = None
+) -> tuple[str, dict] | None:
+    before_key = _version_key(before_version) if before_version is not None else None
+    approvals = []
+    for item in manifest.get("approvals", []):
+        if item.get("method") != method:
+            continue
+        version = item.get("version")
+        version_key = _version_key(version)
+        if version_key is None or (
+            before_key is not None and version_key >= before_key
+        ):
+            continue
+        approvals.append((version_key, version, item))
     if not approvals:
         return None
-    return max(
-        ((item["version"], item) for item in approvals),
-        key=lambda pair: tuple(int(part) for part in pair[0].split(".")),
-    )
+    _, version, approval = max(approvals, key=lambda item: item[0])
+    return version, approval
 
 
 def _version_key(version: str) -> tuple[int, int, int] | None:
@@ -389,7 +398,7 @@ def _latest_method_contract(
     if candidate_key is None:
         return None
     options = []
-    approval = _latest_approval(manifest, method)
+    approval = _latest_approval(manifest, method, before_version=candidate_version)
     if approval is not None:
         version, row = approval
         version_key = _version_key(version)
@@ -446,7 +455,9 @@ def _latest_method_contract(
 
     if not options:
         return None
-    _, _, version, fingerprint, schemas = max(options, key=lambda item: (item[0], item[1]))
+    _, _, version, fingerprint, schemas = max(
+        options, key=lambda item: (item[0], item[1])
+    )
     return version, fingerprint, schemas
 
 
