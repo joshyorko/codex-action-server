@@ -3,6 +3,7 @@ import json
 import os
 from pathlib import Path
 import re
+import shutil
 import subprocess
 
 import pytest
@@ -201,6 +202,18 @@ printf '{"workflow_runs":[{"head_sha":"%s","head_branch":"main","event":"push","
 """
     )
     gh.chmod(0o755)
+    git = bin_dir / "git"
+    git.write_text(
+        """#!/usr/bin/env bash
+set -euo pipefail
+if [[ "$1" == "rev-parse" && "${2-}" == "$GITHUB_SHA^" ]]; then
+  printf '%s\\n' "$MOCK_PREVIOUS_SHA"
+  exit 0
+fi
+exec "$REAL_GIT" "$@"
+"""
+    )
+    git.chmod(0o755)
     sleep = bin_dir / "sleep"
     sleep.write_text("#!/usr/bin/env bash\nexit 0\n")
     sleep.chmod(0o755)
@@ -212,6 +225,7 @@ printf '{"workflow_runs":[{"head_sha":"%s","head_branch":"main","event":"push","
     env = {
         **os.environ,
         "PATH": str(bin_dir) + ":" + os.environ["PATH"],
+        "REAL_GIT": shutil.which("git") or "git",
         "GITHUB_REPOSITORY": "joshyorko/codex-action-server",
         "GITHUB_SHA": commit,
         "GITHUB_REF": "refs/heads/main",
@@ -221,6 +235,7 @@ printf '{"workflow_runs":[{"head_sha":"%s","head_branch":"main","event":"push","
         "IMAGE_DIGEST": "sha256:" + "f" * 64,
         "IMAGE_REVISION": commit,
         "MOCK_MAIN_SHA": main_sha,
+        "MOCK_PREVIOUS_SHA": "a" * 40,
         "RUNNER_TEMP": str(temp),
         "GITHUB_OUTPUT": str(output),
         "GITHUB_STEP_SUMMARY": str(summary),
