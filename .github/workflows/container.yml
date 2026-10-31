@@ -50,16 +50,21 @@ jobs:
       github.repository == 'joshyorko/codex-action-server' && ((github.event_name == 'workflow_dispatch' && inputs.publish) || (github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/feat/container-control-plane' || startsWith(github.ref, 'refs/tags/v'))))
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    outputs:
+      image_digest: ${{ steps.publish.outputs.image_digest }}
+      image_revision: ${{ steps.publish.outputs.image_revision }}
     concurrency:
       group: ghcr-codex-action-server-publication
       cancel-in-progress: false
     permissions:
       contents: read
       packages: write
+      actions: read
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           persist-credentials: false
+          fetch-depth: 2
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: '3.12'
@@ -100,6 +105,7 @@ jobs:
           set -euo pipefail
           printf '%s' "$GHCR_TOKEN" | docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
       - name: Publish immutable commit and release tags
+        id: publish
         run: |
           set -euo pipefail
           image=ghcr.io/joshyorko/codex-action-server
@@ -138,5 +144,108 @@ jobs:
             fi
           fi
           digest="$(docker buildx imagetools inspect "$image:sha-$GITHUB_SHA" --format '{{.Manifest.Digest}}')"
+          if [[ ! "$digest" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+            echo "Registry did not return an immutable sha256 digest" >&2
+            exit 1
+          fi
+          echo "image_digest=$digest" >> "$GITHUB_OUTPUT"
+          revision="$(docker image inspect codex-action-server:verified --format '{{index .Config.Labels "org.opencontainers.image.revision"}}')"
+          if [[ "$revision" != "$GITHUB_SHA" ]]; then
+            echo "Published image revision does not match the source commit" >&2
+            exit 1
+          fi
+          echo "image_revision=$revision" >> "$GITHUB_OUTPUT"
           # shellcheck disable=SC2016 # Literal Markdown backticks in the summary.
           printf 'Verified production pin: `%s@%s`\n' "$image" "$digest" >> "$GITHUB_STEP_SUMMARY"
+      - name: Create merged qualification handoff receipt
+        id: handoff
+        if: github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          IMAGE_DIGEST: ${{ steps.publish.outputs.image_digest }}
+          IMAGE_REVISION: ${{ steps.publish.outputs.image_revision }}
+        run: |
+          set -euo pipefail
+          main_sha="$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq .object.sha)"
+          if [[ "$main_sha" != "$GITHUB_SHA" ]]; then
+            echo "status=skipped_main_advanced" >> "$GITHUB_OUTPUT"
+            echo "Main advanced before receipt creation; no receipt emitted." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          find_green_run() {
+            workflow="$1"
+            gh api "repos/$GITHUB_REPOSITORY/actions/workflows/$workflow/runs?head_sha=$GITHUB_SHA&per_page=100" \
+              | jq -c --arg sha "$GITHUB_SHA" \
+                  '[.workflow_runs[] | select(.head_sha == $sha and .head_branch == "main" and .event == "push")] | sort_by(.run_number, .run_attempt) | last // empty'
+          }
+          qualification_run=""
+          required_ci_run=""
+          for attempt in $(seq 1 120); do
+            qualification="$(find_green_run codex-version-qualification.yml)"
+            required_ci="$(find_green_run test.yml)"
+            if [ -n "$qualification" ] && [ -n "$required_ci" ]; then
+              qualification_state="$(jq -r '.status + ":" + (.conclusion // "")' <<<"$qualification")"
+              required_ci_state="$(jq -r '.status + ":" + (.conclusion // "")' <<<"$required_ci")"
+              if [ "$qualification_state" = "completed:success" ] && [ "$required_ci_state" = "completed:success" ]; then
+                qualification_run="$(jq -r .html_url <<<"$qualification")"
+                required_ci_run="$(jq -r .html_url <<<"$required_ci")"
+                break
+              fi
+              if [[ "$qualification_state" == completed:* || "$required_ci_state" == completed:* ]]; then
+                echo "A required exact-commit workflow completed without success; no qualification receipt emitted." >> "$GITHUB_STEP_SUMMARY"
+                echo "status=skipped_failed_validation" >> "$GITHUB_OUTPUT"
+                exit 0
+              fi
+            fi
+            sleep 10
+          done
+          if [ -z "$qualification_run" ] || [ -z "$required_ci_run" ]; then
+            echo "status=skipped_missing_validation_run" >> "$GITHUB_OUTPUT"
+            echo "No successful exact-commit qualification and CI runs were found; no receipt emitted." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          previous_commit="$(git rev-parse "$GITHUB_SHA^")"
+          image=ghcr.io/joshyorko/codex-action-server
+          python ci/create_native_qualification_receipt.py \
+            --root . \
+            --repository "$GITHUB_REPOSITORY" \
+            --source-commit "$GITHUB_SHA" \
+            --image "$image" \
+            --image-digest "$IMAGE_DIGEST" \
+            --image-revision "$IMAGE_REVISION" \
+            --qualification-run-url "$qualification_run" \
+            --required-ci-url "$required_ci_run" \
+            --publication-run-url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
+            --comparison-url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/compare/$previous_commit...$GITHUB_SHA" \
+            --output "$RUNNER_TEMP/qualified-release.json" \
+            | tee "$RUNNER_TEMP/receipt-result.json"
+          status="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["status"])' "$RUNNER_TEMP/receipt-result.json")"
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          if [ "$status" = "created" ]; then
+            receipt_sha="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["receipt_sha256"])' "$RUNNER_TEMP/qualified-release.json")"
+            printf 'Full-surface qualification handoff: `%s`\n' "$receipt_sha" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "Merged qualification is incomplete; no receipt emitted." >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - name: Confirm the source commit is still main before artifact upload
+        id: handoff_guard
+        if: steps.handoff.outputs.status == 'created'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          main_sha="$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq .object.sha)"
+          if [[ "$main_sha" != "$GITHUB_SHA" ]]; then
+            rm -f "$RUNNER_TEMP/qualified-release.json"
+            echo "status=skipped_main_advanced" >> "$GITHUB_OUTPUT"
+            echo "Main advanced before artifact upload; no receipt emitted." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "status=created" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/upload-artifact@v4
+        if: steps.handoff_guard.outputs.status == 'created'
+        with:
+          name: cas-qualified-release-${{ github.sha }}-${{ github.run_id }}
+          path: ${{ runner.temp }}/qualified-release.json
+          if-no-files-found: error
+          retention-days: 90

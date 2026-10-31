@@ -9,6 +9,26 @@ on:
         description: Optional exact OpenAI Codex release tag (for example rust-v0.166.0)
         required: false
         type: string
+  push:
+    branches: [main]
+    paths:
+      - 'src/codex_rpc.py'
+      - 'src/codex_shared/**'
+      - 'tests/fixtures/protocol/**'
+      - 'tests/test_native_diagnostics_*.py'
+      - 'ci/codex_qualification/**'
+      - 'ci/*.py'
+      - 'docs/acceptance/codex-native-qualification.md'
+      - '.github/schemas/**'
+      - 'tests/test_codex_qualification.py'
+      - 'tests/test_native_method_catalog.py'
+      - 'tests/test_native_qualification_receipt.py'
+      - 'tests/test_image_publication_workflow.py'
+      - 'tests/test_renovate_config.py'
+      - 'package.yaml'
+      - '.github/renovate.json5'
+      - '.github/workflows/codex-version-qualification.yml'
+      - '.github/workflows/container.yml'
   pull_request:
     paths:
       - 'src/codex_rpc.py'
@@ -16,6 +36,9 @@ on:
       - 'tests/fixtures/protocol/**'
       - 'tests/test_native_diagnostics_*.py'
       - 'ci/codex_qualification/**'
+      - 'ci/generate_native_method_catalog.py'
+      - 'ci/run_native_method_regressions.py'
+      - 'ci/create_native_qualification_receipt.py'
       - 'ci/generate_native_qualification.py'
       - 'src/codex_shared/native_qualification.py'
       - 'ci/qualify_codex_schema.py'
@@ -23,35 +46,60 @@ on:
       - 'ci/propose_codex_qualification.py'
       - 'ci/report_codex_qualification.py'
       - 'docs/acceptance/codex-native-qualification.md'
+      - '.github/schemas/**'
       - 'tests/test_codex_qualification.py'
+      - 'tests/test_native_method_catalog.py'
+      - 'tests/test_native_qualification_receipt.py'
+      - 'tests/test_image_publication_workflow.py'
+      - '.github/workflows/container.yml'
+      - 'ci/codex_qualification/robot.yaml'
+      - 'ci/codex_qualification/conda.yaml'
+      - 'ci/codex_qualification/tasks.py'
+      - 'ci/codex_qualification/environment_linux_amd64_freeze.yaml'
+      - '.github/renovate.json5'
+      - 'tests/test_renovate_config.py'
       - '.github/workflows/codex-version-qualification.yml'
 
 permissions:
   contents: read
 
+concurrency:
+  group: codex-version-qualification
+  cancel-in-progress: false
+
 jobs:
   generate-candidate-schema:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 45
     outputs:
       version: ${{ steps.candidate.outputs.version }}
       qualification: ${{ steps.qualification.outputs.qualification }}
       proposal_status: ${{ steps.proposal.outputs.status }}
+      withheld_count: ${{ steps.qualification.outputs.withheld_count }}
     permissions:
       contents: read
     steps:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-      - name: Install qualification dependencies
-        run: python -m pip install -e '.[test]'
-      - name: Check generated native qualification table
-        run: python ci/generate_native_qualification.py --check
-      - name: Run typed native diagnostics regressions
-        run: pytest -q tests/test_native_diagnostics_0162.py tests/test_codex_qualification.py
+      - name: Install pinned Robocorp RCC
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/rcc-bin"
+          curl -fL --retry 2 --max-time 120 \
+            https://github.com/joshyorko/rcc/releases/download/v18.19.7/rcc-linux64 \
+            -o "$RUNNER_TEMP/rcc-bin/rcc"
+          printf '%s  %s\n' \
+            f8e0394be7f47ee84d6f4cd734822b87b492a4d6102f977f6a18f29453703d48 \
+            "$RUNNER_TEMP/rcc-bin/rcc" | sha256sum -c -
+          chmod 755 "$RUNNER_TEMP/rcc-bin/rcc"
+          echo "$RUNNER_TEMP/rcc-bin" >> "$GITHUB_PATH"
+      - name: Check catalog in the pinned RCC environment
+        run: rcc task run --robot ci/codex_qualification/robot.yaml --task check-catalog
+      - name: Lint qualification and catalog changes in RCC
+        run: rcc task run --robot ci/codex_qualification/robot.yaml --task lint
+      - name: Run focused qualification and Renovate contract tests in RCC
+        run: rcc task run --robot ci/codex_qualification/robot.yaml --task focused-tests
       - name: Resolve stable release and immutable artifact
         id: candidate
         env:
@@ -60,20 +108,46 @@ jobs:
         run: |
           set -euo pipefail
           if [ -n "$RELEASE_TAG" ]; then
+            if [[ ! "$RELEASE_TAG" =~ ^rust-v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+              echo "release_tag must be an exact stable rust-vX.Y.Z tag" >&2
+              exit 1
+            fi
             release="$(gh api "repos/openai/codex/releases/tags/$RELEASE_TAG")"
           else
             release="$(gh api repos/openai/codex/releases/latest)"
           fi
           jq -e '(.draft == false) and (.prerelease == false)' <<<"$release" >/dev/null
-          asset="$(jq -c '[.assets[] | select(.name == "codex-x86_64-unknown-linux-musl.tar.gz")][0]' <<<"$release")"
+          tag="$(jq -r .tag_name <<<"$release")"
+          if [[ ! "$tag" =~ ^rust-v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+            echo "Upstream stable release tag is not an exact rust-vX.Y.Z tag" >&2
+            exit 1
+          fi
+          version="${tag#rust-v}"
+          if [ -n "$RELEASE_TAG" ] && [ "$tag" != "$RELEASE_TAG" ]; then
+            echo "Upstream returned a different tag than requested" >&2
+            exit 1
+          fi
+          asset="$(jq -c '[.assets[] | select(.name == "codex-x86_64-unknown-linux-musl.tar.gz")] | if length == 1 then .[0] else empty end' <<<"$release")"
           jq -e '.id and .digest and (.digest | startswith("sha256:"))' <<<"$asset" >/dev/null
-          echo "version=$(jq -r '.name | ltrimstr("v")' <<<"$release")" >> "$GITHUB_OUTPUT"
-          echo "tag=$(jq -r .tag_name <<<"$release")" >> "$GITHUB_OUTPUT"
+          expected_url="https://github.com/openai/codex/releases/download/$tag/codex-x86_64-unknown-linux-musl.tar.gz"
+          test "$(jq -r .browser_download_url <<<"$asset")" = "$expected_url"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
           echo "asset_id=$(jq -r .id <<<"$asset")" >> "$GITHUB_OUTPUT"
           echo "asset_name=$(jq -r .name <<<"$asset")" >> "$GITHUB_OUTPUT"
           echo "asset_digest=$(jq -r .digest <<<"$asset")" >> "$GITHUB_OUTPUT"
           echo "asset_url=$(jq -r .browser_download_url <<<"$asset")" >> "$GITHUB_OUTPUT"
           jq '{html_url, tag_name, published_at, asset: (.assets[] | select(.name == "codex-x86_64-unknown-linux-musl.tar.gz") | {id,name,size,digest,browser_download_url})}' <<<"$release" > "$RUNNER_TEMP/source.json"
+      - name: Run mapped typed regressions in the pinned RCC environment
+        id: regressions
+        continue-on-error: true
+        env:
+          CODEX_CANDIDATE_VERSION: ${{ steps.candidate.outputs.version }}
+          CODEX_REGRESSION_EVIDENCE: ${{ runner.temp }}/native-regression-evidence.json
+        run: |
+          set -euo pipefail
+          printf '{"schema_version":1,"candidate_version":"%s","status":"not_run","test_files":{},"methods":{}}\n' "$CODEX_CANDIDATE_VERSION" > "$CODEX_REGRESSION_EVIDENCE"
+          rcc task run --robot ci/codex_qualification/robot.yaml --task native-regressions
       - name: Download and qualify exact candidate schema
         id: qualification
         env:
@@ -86,6 +160,7 @@ jobs:
           set -euo pipefail
           work="$RUNNER_TEMP/codex-candidate"
           binary_dir="$RUNNER_TEMP/codex-binary"
+          regression_evidence="$RUNNER_TEMP/native-regression-evidence.json"
           mkdir -p "$work/home" "$work/schema" "$binary_dir"
           curl -fL --retry 2 --max-time 180 "$ASSET_URL" -o "$work/codex.tar.gz"
           printf '%s  %s\n' "${ASSET_DIGEST#sha256:}" "$work/codex.tar.gz" | sha256sum -c -
@@ -107,6 +182,7 @@ jobs:
             --tmpfs "/tmp:rw,nosuid,nodev,size=256m,uid=$(id -u),gid=$(id -g)" \
             --mount "type=bind,source=$GITHUB_WORKSPACE,target=/workspace,readonly" \
             --mount "type=bind,source=$binary_dir,target=/candidate,readonly" \
+            --mount "type=bind,source=$regression_evidence,target=/evidence.json,readonly" \
             --mount "type=bind,source=$work/schema,target=/out" \
             --workdir /workspace \
             --env HOME=/tmp \
@@ -119,9 +195,11 @@ jobs:
             --asset-sha256 "$ASSET_DIGEST" \
             --asset-id "$ASSET_ID" \
             --output /out \
-            --typed-regression-tests-passed
+            --typed-regression-evidence /evidence.json
           cp "$RUNNER_TEMP/source.json" "$work/schema/source-release.json"
+          cp "$regression_evidence" "$work/schema/typed-regression-evidence.json"
           echo "qualification=$(jq -r .qualification "$work/schema/provenance.json")" >> "$GITHUB_OUTPUT"
+          echo "withheld_count=$(jq -r .counts.withheld "$work/schema/native-methods.json")" >> "$GITHUB_OUTPUT"
       - name: Prepare compatible candidate PR patch
         id: proposal
         if: steps.qualification.outputs.qualification == 'compatible_pending_review'
@@ -134,12 +212,12 @@ jobs:
             --run-url "$run_url")"
           echo "$result"
           echo "status=$(jq -r .status <<<"$result")" >> "$GITHUB_OUTPUT"
-      - name: Require compatible candidate for native-contract changes
-        if: github.event_name == 'pull_request' && steps.qualification.outputs.qualification != 'compatible_pending_review'
+      - name: Require compatible method evidence for native-contract changes
+        if: github.event_name == 'pull_request' && (steps.qualification.outputs.qualification != 'compatible_pending_review' || steps.regressions.outcome != 'success')
         env:
           QUALIFICATION: ${{ steps.qualification.outputs.qualification }}
         run: |
-          echo "Native diagnostics qualification is ${QUALIFICATION:-unqualified}; inspect the bounded artifact." >&2
+          echo "Native method qualification is ${QUALIFICATION:-unqualified}; inspect the bounded evidence artifact." >&2
           exit 1
       - uses: actions/upload-artifact@v4
         if: always()
@@ -201,48 +279,90 @@ jobs:
           git fetch origin "$BASE_BRANCH"
           if git ls-remote --exit-code --heads origin "$branch" >/dev/null 2>&1; then
             git fetch origin "$branch"
+            bot_email="41898282+github-actions[bot]@users.noreply.github.com"
+            while read -r commit; do
+              author_email="$(git show -s --format=%ae "$commit")"
+              committer_email="$(git show -s --format=%ce "$commit")"
+              if [ "$author_email" != "$bot_email" ] || [ "$committer_email" != "$bot_email" ]; then
+                echo "Refusing to replace a qualification branch with human-authored commits: $branch" >&2
+                exit 1
+              fi
+            done < <(git rev-list "origin/$BASE_BRANCH..origin/$branch")
             git checkout -B "$branch" "origin/$branch"
             git merge --no-edit "origin/$BASE_BRANCH"
           else
             git checkout -b "$branch" "origin/$BASE_BRANCH"
           fi
-          fixture="tests/fixtures/protocol/codex_${VERSION}_server_diagnostics.json"
-          for file in \
-            ci/codex_qualification/approved_methods.json \
-            src/codex_shared/native_qualification.py \
-            docs/acceptance/codex-native-qualification.md \
-            "$fixture"; do
+          while IFS= read -r file; do
+            case "$file" in
+              "tests/fixtures/protocol/codex_${VERSION}_native_methods.json"|\
+              ci/codex_qualification/approved_methods.json|\
+              src/codex_shared/native_qualification.py|\
+              docs/acceptance/codex-native-qualification.md) ;;
+              *) echo "Proposal contains an unexpected path: $file" >&2; exit 1 ;;
+            esac
             test -f "$proposal/$file"
             mkdir -p "$(dirname "$file")"
             cp "$proposal/$file" "$file"
-          done
+          done < <(jq -r '.files[]' "$proposal/proposal.json")
           test "$(git branch --show-current)" = "$branch"
+          python ci/generate_native_method_catalog.py --check
           python ci/generate_native_qualification.py --check
-          pytest -q tests/test_native_diagnostics_0162.py tests/test_codex_qualification.py
+          python ci/run_native_method_regressions.py \
+            --candidate-version "$VERSION" \
+            --output "$RUNNER_TEMP/qualification-regressions.json"
+          pytest -q tests/test_native_method_catalog.py tests/test_codex_qualification.py
           ruff check src tests scripts/preflight.py
           ruff format --check src tests scripts/preflight.py
-          git add ci/codex_qualification/approved_methods.json src/codex_shared/native_qualification.py docs/acceptance/codex-native-qualification.md "$fixture"
-          if git diff --cached --quiet; then
-            echo "Candidate version is already represented on the branch"
+          ruff check \
+            ci/generate_native_method_catalog.py \
+            ci/run_native_method_regressions.py \
+            ci/qualify_codex_schema.py \
+            ci/propose_codex_qualification.py \
+            ci/generate_native_qualification.py \
+            ci/report_codex_qualification.py \
+            ci/create_native_qualification_receipt.py \
+            ci/codex_qualification/tasks.py \
+            tests/test_native_method_catalog.py \
+            tests/test_codex_qualification.py \
+            tests/test_native_qualification_receipt.py
+          ruff format --check \
+            ci/generate_native_method_catalog.py \
+            ci/run_native_method_regressions.py \
+            ci/qualify_codex_schema.py \
+            ci/propose_codex_qualification.py \
+            ci/generate_native_qualification.py \
+            ci/report_codex_qualification.py \
+            ci/create_native_qualification_receipt.py \
+            ci/codex_qualification/tasks.py \
+            tests/test_native_method_catalog.py \
+            tests/test_codex_qualification.py \
+            tests/test_native_qualification_receipt.py
+          git add ci/codex_qualification/approved_methods.json src/codex_shared/native_qualification.py docs/acceptance/codex-native-qualification.md "tests/fixtures/protocol/codex_${VERSION}_native_methods.json"
+          if ! git diff --cached --quiet; then
+            git commit -m "Qualify Codex $VERSION native methods"
+          elif git diff --quiet "origin/$BASE_BRANCH...HEAD"; then
+            echo "Candidate evidence is already on the base branch"
             exit 0
           fi
-          git commit -m "Qualify Codex $VERSION diagnostics method"
           git push origin "$branch"
-          title="Qualify Codex $VERSION server diagnostics"
-          request_hash="$(jq -r --arg version "$VERSION" '.approvals[] | select(.version == $version and .method == "server/diagnostics") | .schema_fingerprint.request_sha256' ci/codex_qualification/approved_methods.json)"
-          response_hash="$(jq -r --arg version "$VERSION" '.approvals[] | select(.version == $version and .method == "server/diagnostics") | .schema_fingerprint.response_sha256' ci/codex_qualification/approved_methods.json)"
+          title="Qualify Codex $VERSION native methods"
+          qualified="$(jq -r '.qualified_methods | map("`" + . + "`") | join(", ")' "$proposal/proposal.json")"
+          withheld="$(jq -r '.withheld_methods | map("`" + . + "`") | join(", ")' "$proposal/proposal.json")"
+          approval_count="$(jq -r '.new_approvals | length' "$proposal/proposal.json")"
           body="$RUNNER_TEMP/qualification-pr-body.md"
           printf '%s\n' \
             "## Summary" \
-            "- Add an exact-version, method-scoped admission for Codex $VERSION." \
-            "- Include the generated schema fixture, provenance, typed regression coverage, and live protocol smoke evidence." \
+            "- Record qualification evidence for the complete CAS native method catalog on Codex $VERSION." \
+            "- Add $approval_count exact-version experimental method admission(s) only where schema and behavior evidence passed." \
+            "- Qualified methods: $qualified" \
+            "- Withheld methods: $withheld" \
             "" \
             "## Evidence" \
-            "- Request schema SHA-256: \`$request_hash\`" \
-            "- Response schema SHA-256: \`$response_hash\`" \
+            "- Stable release asset, immutable asset digest, binary digest, per-method schema IDs and fingerprints, typed regression file hashes, and disposable read-only protocol smoke results are recorded in the fixture." \
             "- Qualification run: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
             "" \
-            "This PR does not broaden the gate to other methods or use a semver range. No daemon is restarted or updated." > "$body"
+            "This PR is a human review gate. Withheld experimental methods remain absent from the exact-version approval table. No installed daemon is restarted or updated, and the evidence makes no deployment claim." > "$body"
           existing="$(gh pr list --repo "$GITHUB_REPOSITORY" --state open --head "$GITHUB_REPOSITORY_OWNER:$branch" --json number --jq '.[0].number // empty')"
           if [ -n "$existing" ]; then
             existing_base="$(gh pr view "$existing" --repo "$GITHUB_REPOSITORY" --json baseRefName --jq .baseRefName)"
@@ -253,7 +373,7 @@ jobs:
           fi
 
   report-blocked-candidate:
-    needs: generate-candidate-schema
+    needs: [generate-candidate-schema, open-qualified-pr]
     if: >-
       ${{
         always() &&
@@ -261,7 +381,11 @@ jobs:
         github.ref_name == github.event.repository.default_branch &&
         (
           needs.generate-candidate-schema.result != 'success' ||
-          needs.generate-candidate-schema.outputs.qualification != 'compatible_pending_review'
+          needs.generate-candidate-schema.outputs.withheld_count != '0' ||
+          (
+            needs.generate-candidate-schema.outputs.qualification == 'compatible_pending_review' &&
+            needs.open-qualified-pr.result == 'failure'
+          )
         )
       }}
     runs-on: ubuntu-latest

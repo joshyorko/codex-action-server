@@ -1,0 +1,460 @@
+"""Downstream receipts tie merged qualification evidence to one image digest."""
+
+import importlib.util
+import hashlib
+import json
+from pathlib import Path
+import pytest
+
+ROOT = Path(__file__).resolve().parents[1]
+SPEC = importlib.util.spec_from_file_location(
+    "native_qualification_receipt", ROOT / "ci/create_native_qualification_receipt.py"
+)
+receipt = importlib.util.module_from_spec(SPEC)
+SPEC.loader.exec_module(receipt)
+
+
+def _write_receipt_inputs(root: Path):
+    version = "0.166.0"
+    method = "app/read"
+    source_tag = "rust-v0.166.0"
+    source_url = (
+        "https://github.com/openai/codex/releases/download/rust-v0.166.0/"
+        "codex-x86_64-unknown-linux-musl.tar.gz"
+    )
+    fixture_relative = f"tests/fixtures/protocol/codex_{version}_native_methods.json"
+    fixture = {
+        "schema_version": 1,
+        "native_version": version,
+        "source_tag": source_tag,
+        "source_url": source_url,
+        "source_asset_sha256": "a" * 64,
+        "source_asset_id": "42",
+        "binary_sha256": "b" * 64,
+        "qualification_run": "https://github.com/joshyorko/codex-action-server/actions/runs/123",
+        "typed_regression_status": "passed",
+        "methods": [
+            {
+                "method": method,
+                "classification": "experimental",
+                "request_schema": "AppsReadParams",
+                "response_schema": "AppsReadResponse",
+                "status": "compatible_pending_review",
+                "smoke_strategy": "typed_read_fixture",
+                "owning_typed_actions": ["read_app"],
+                "typed_regressions": "passed",
+                "typed_regression_coverage": {
+                    "tests/test_protocol_contracts.py": {
+                        "passed": 1,
+                        "skipped": 0,
+                        "failed": 0,
+                    }
+                },
+                "smoke": {"status": "typed_action_regressions_passed"},
+                "regression_tests": ["tests/test_protocol_contracts.py"],
+                "schema_fingerprint": {
+                    "request_sha256": "c" * 64,
+                    "response_sha256": "d" * 64,
+                },
+                "schemas": {
+                    "AppsReadParams": {"type": "object"},
+                    "AppsReadResponse": {"type": "object"},
+                },
+            }
+        ],
+    }
+    fixture_path = root / fixture_relative
+    fixture_path.parent.mkdir(parents=True)
+    fixture_path.write_text(json.dumps(fixture))
+    source = {
+        "kind": "native_methods_fixture",
+        "fixture": fixture_relative,
+        "native_methods_fixture": fixture_relative,
+        "native_methods_qualification_run": fixture["qualification_run"],
+        "source_tag": source_tag,
+        "source_url": source_url,
+        "source_asset_sha256": "a" * 64,
+        "source_asset_id": "42",
+        "binary_sha256": "b" * 64,
+    }
+    manifest = {
+        "schema_version": 1,
+        "sources": {version: source},
+        "approvals": [
+            {
+                "version": version,
+                "method": method,
+                "provenance_ref": version,
+                "method_evidence_ref": fixture_relative,
+                "schema_fingerprint": fixture["methods"][0]["schema_fingerprint"],
+            }
+        ],
+    }
+    manifest_path = root / "ci/codex_qualification/approved_methods.json"
+    manifest_path.parent.mkdir(parents=True)
+    manifest_path.write_text(json.dumps(manifest))
+    catalog_path = root / "ci/codex_qualification/native_methods.json"
+    catalog_path.write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "methods": [
+                    {
+                        "method": method,
+                        "classification": "experimental",
+                        "request_schema": "AppsReadParams",
+                        "response_schema": "AppsReadResponse",
+                        "smoke_strategy": "typed_read_fixture",
+                        "owning_typed_actions": ["read_app"],
+                        "regression_tests": ["tests/test_protocol_contracts.py"],
+                    }
+                ],
+            }
+        )
+    )
+
+
+def _build_synthetic_full_surface_receipt(root: Path):
+    """Generate a test-only receipt from the real CAS method catalog."""
+    version = "9.9.9"
+    source_tag = f"rust-v{version}"
+    source_url = (
+        f"https://github.com/openai/codex/releases/download/{source_tag}/"
+        "codex-x86_64-unknown-linux-musl.tar.gz"
+    )
+    qualification_run = (
+        "https://github.com/joshyorko/codex-action-server/actions/runs/999999999"
+    )
+    fixture_relative = f"tests/fixtures/protocol/codex_{version}_native_methods.json"
+    fixture_path = root / fixture_relative
+    fixture_path.parent.mkdir(parents=True)
+
+    catalog = json.loads(
+        (ROOT / "ci/codex_qualification/native_methods.json").read_text()
+    )
+    catalog_path = root / "ci/codex_qualification/native_methods.json"
+    catalog_path.parent.mkdir(parents=True)
+    catalog_path.write_text(json.dumps(catalog, sort_keys=True))
+
+    methods = []
+    approvals = []
+    for row in catalog["methods"]:
+        method = row["method"]
+        fingerprint = {
+            "request_sha256": hashlib.sha256(f"request:{method}".encode()).hexdigest(),
+            "response_sha256": hashlib.sha256(
+                f"response:{method}".encode()
+            ).hexdigest(),
+        }
+        request_schema = row["request_schema"]
+        response_schema = row["response_schema"]
+        methods.append(
+            {
+                "method": method,
+                "classification": row["classification"],
+                "request_schema": request_schema,
+                "response_schema": response_schema,
+                "status": "compatible_pending_review",
+                "smoke_strategy": row["smoke_strategy"],
+                "owning_typed_actions": row["owning_typed_actions"],
+                "typed_regressions": "passed",
+                "typed_regression_coverage": {
+                    name: {"passed": 1, "skipped": 0, "failed": 0}
+                    for name in row["regression_tests"]
+                },
+                "smoke": {
+                    "status": "passed"
+                    if row["smoke_strategy"] == "disposable_protocol_smoke"
+                    else "typed_action_regressions_passed"
+                },
+                "regression_tests": row["regression_tests"],
+                "schema_fingerprint": fingerprint,
+                "schemas": {
+                    request_schema: {"type": "object"},
+                    response_schema: {"type": "object"},
+                },
+            }
+        )
+        if row["classification"] == "experimental":
+            approvals.append(
+                {
+                    "version": version,
+                    "method": method,
+                    "provenance_ref": version,
+                    "method_evidence_ref": fixture_relative,
+                    "schema_fingerprint": fingerprint,
+                }
+            )
+
+    fixture = {
+        "schema_version": 1,
+        "native_version": version,
+        "source_tag": source_tag,
+        "source_url": source_url,
+        "source_asset_sha256": "a" * 64,
+        "source_asset_id": "999999999",
+        "binary_sha256": "b" * 64,
+        "qualification_run": qualification_run,
+        "typed_regression_status": "passed",
+        "methods": methods,
+    }
+    fixture_path.write_text(json.dumps(fixture, sort_keys=True) + "\n")
+
+    manifest = {
+        "schema_version": 1,
+        "sources": {
+            version: {
+                "kind": "native_methods_fixture",
+                "fixture": fixture_relative,
+                "native_methods_fixture": fixture_relative,
+                "native_methods_qualification_run": qualification_run,
+                "source_tag": source_tag,
+                "source_url": source_url,
+                "source_asset_sha256": "a" * 64,
+                "source_asset_id": "999999999",
+                "binary_sha256": "b" * 64,
+            }
+        },
+        "approvals": approvals,
+    }
+    manifest_path = root / "ci/codex_qualification/approved_methods.json"
+    manifest_path.write_text(json.dumps(manifest, sort_keys=True))
+
+    commit = "e" * 40
+    return receipt.build_receipt(
+        root,
+        repository="joshyorko/codex-action-server",
+        source_commit=commit,
+        image="ghcr.io/joshyorko/codex-action-server",
+        image_digest="sha256:" + "f" * 64,
+        image_revision=commit,
+        qualification_run_url="https://github.com/joshyorko/codex-action-server/actions/runs/123",
+        required_ci_url="https://github.com/joshyorko/codex-action-server/actions/runs/124",
+        publication_run_url="https://github.com/joshyorko/codex-action-server/actions/runs/125",
+        comparison_url=f"https://github.com/joshyorko/codex-action-server/compare/{'d' * 40}...{commit}",
+    )
+
+
+def test_full_surface_receipt_matches_generated_consumer_fixture(tmp_path):
+    value = _build_synthetic_full_surface_receipt(tmp_path)
+    assert value is not None
+    assert len(value["qualification"]["surface"]["methods"]) == 58
+    assert len(value["qualification"]["method_verdicts"]) == 58
+    assert len(value["qualification"]["behavior_coverage"]) == 58
+    assert value["qualification"]["withheld_methods"] == []
+    assert value["qualification"]["native_release"]["version"] == "9.9.9"
+    assert value["receipt_sha256"] == receipt._canonical_receipt_digest(value)
+
+    fixture_path = ROOT / "tests/fixtures/contracts/cas-qualified-release-v1.json"
+    assert json.loads(fixture_path.read_text()) == value
+
+    import jsonschema
+
+    schema = json.loads(
+        (ROOT / ".github/schemas/cas-qualified-release-v1.schema.json").read_text()
+    )
+    jsonschema.Draft202012Validator(
+        schema, format_checker=jsonschema.FormatChecker()
+    ).validate(value)
+
+
+def test_receipt_binds_merged_qualification_to_one_published_image(tmp_path):
+    _write_receipt_inputs(tmp_path)
+    commit = "e" * 40
+    digest = "sha256:" + "f" * 64
+    value = receipt.build_receipt(
+        tmp_path,
+        repository="joshyorko/codex-action-server",
+        source_commit=commit,
+        image="ghcr.io/joshyorko/codex-action-server",
+        image_digest=digest,
+        image_revision=commit,
+        qualification_run_url="https://github.com/joshyorko/codex-action-server/actions/runs/123",
+        required_ci_url="https://github.com/joshyorko/codex-action-server/actions/runs/124",
+        publication_run_url="https://github.com/joshyorko/codex-action-server/actions/runs/125",
+        comparison_url=f"https://github.com/joshyorko/codex-action-server/compare/{'d' * 40}...{commit}",
+    )
+    assert value["source"] == {
+        "repository": "joshyorko/codex-action-server",
+        "revision": commit,
+        "merged": True,
+        "commit_url": f"https://github.com/joshyorko/codex-action-server/commit/{commit}",
+    }
+    assert value["publication"] == {
+        "image_repository": "ghcr.io/joshyorko/codex-action-server",
+        "image_tag": f"sha-{commit}",
+        "digest": digest,
+        "revision": commit,
+        "status": "published",
+        "run_url": "https://github.com/joshyorko/codex-action-server/actions/runs/125",
+        "platform": "linux/amd64",
+    }
+    assert value["qualification"]["status"] == "qualified"
+    assert value["qualification"]["native_release"] == {
+        "version": "0.166.0",
+        "tag": "rust-v0.166.0",
+        "asset_url": "https://github.com/openai/codex/releases/download/rust-v0.166.0/codex-x86_64-unknown-linux-musl.tar.gz",
+        "asset_id": "42",
+        "asset_sha256": "a" * 64,
+        "binary_sha256": "b" * 64,
+        "fixture_path": "tests/fixtures/protocol/codex_0.166.0_native_methods.json",
+        "fixture_sha256": receipt._sha256(
+            tmp_path / "tests/fixtures/protocol/codex_0.166.0_native_methods.json"
+        ),
+        "qualification_run_url": "https://github.com/joshyorko/codex-action-server/actions/runs/123",
+    }
+    assert value["qualification"]["method_verdicts"] == {"app/read": "already_approved"}
+    assert value["qualification"]["behavior_coverage"] == {
+        "app/read": {"result": "passed", "strategy": "isolated_fixture"}
+    }
+    assert value["qualification"]["withheld_methods"] == []
+    assert value["receipt_sha256"] == receipt._canonical_receipt_digest(value)
+    expected_surface_hash = hashlib.sha256(
+        b'[{"name":"app/read","owner":"typed_action"}]'
+    ).hexdigest()
+    assert value["qualification"]["surface"]["sha256"] == expected_surface_hash
+
+    import jsonschema
+
+    schema = json.loads(
+        (ROOT / ".github/schemas/cas-qualified-release-v1.schema.json").read_text()
+    )
+    jsonschema.Draft202012Validator(
+        schema, format_checker=jsonschema.FormatChecker()
+    ).validate(value)
+
+
+def test_receipt_refuses_an_image_built_from_another_commit(tmp_path):
+    _write_receipt_inputs(tmp_path)
+    commit = "e" * 40
+    try:
+        receipt.build_receipt(
+            tmp_path,
+            repository="joshyorko/codex-action-server",
+            source_commit=commit,
+            image="ghcr.io/joshyorko/codex-action-server",
+            image_digest="sha256:" + "f" * 64,
+            image_revision="1" * 40,
+            qualification_run_url="https://github.com/joshyorko/codex-action-server/actions/runs/123",
+            required_ci_url="https://github.com/joshyorko/codex-action-server/actions/runs/124",
+            publication_run_url="https://github.com/joshyorko/codex-action-server/actions/runs/125",
+            comparison_url=f"https://github.com/joshyorko/codex-action-server/compare/{'d' * 40}...{commit}",
+        )
+    except ValueError as error:
+        assert "image revision" in str(error)
+    else:
+        raise AssertionError("receipt accepted a mismatched image revision")
+
+
+def test_partial_method_surface_never_emits_a_qualified_handoff(tmp_path):
+    _write_receipt_inputs(tmp_path)
+    fixture_path = (
+        tmp_path / "tests/fixtures/protocol/codex_0.166.0_native_methods.json"
+    )
+    fixture = json.loads(fixture_path.read_text())
+    fixture["methods"][0]["status"] = "needs_review"
+    fixture_path.write_text(json.dumps(fixture))
+    commit = "e" * 40
+
+    value = receipt.build_receipt(
+        tmp_path,
+        repository="joshyorko/codex-action-server",
+        source_commit=commit,
+        image="ghcr.io/joshyorko/codex-action-server",
+        image_digest="sha256:" + "f" * 64,
+        image_revision=commit,
+        qualification_run_url="https://github.com/joshyorko/codex-action-server/actions/runs/123",
+        required_ci_url="https://github.com/joshyorko/codex-action-server/actions/runs/124",
+        publication_run_url="https://github.com/joshyorko/codex-action-server/actions/runs/125",
+        comparison_url=f"https://github.com/joshyorko/codex-action-server/compare/{'d' * 40}...{commit}",
+    )
+
+    assert value is None
+
+
+@pytest.mark.parametrize(
+    "counts, message",
+    [
+        ({"passed": 0, "skipped": 4, "failed": 0}, "did not run"),
+        ({"passed": 1, "skipped": 0, "failed": 1}, "coverage is invalid"),
+    ],
+)
+def test_receipt_rejects_skipped_or_failed_mapped_tests(tmp_path, counts, message):
+    _write_receipt_inputs(tmp_path)
+    fixture_path = (
+        tmp_path / "tests/fixtures/protocol/codex_0.166.0_native_methods.json"
+    )
+    fixture = json.loads(fixture_path.read_text())
+    fixture["methods"][0]["typed_regression_coverage"][
+        "tests/test_protocol_contracts.py"
+    ] = counts
+    fixture_path.write_text(json.dumps(fixture))
+    commit = "e" * 40
+
+    with pytest.raises(ValueError, match=message):
+        receipt.build_receipt(
+            tmp_path,
+            repository="joshyorko/codex-action-server",
+            source_commit=commit,
+            image="ghcr.io/joshyorko/codex-action-server",
+            image_digest="sha256:" + "f" * 64,
+            image_revision=commit,
+            qualification_run_url="https://github.com/joshyorko/codex-action-server/actions/runs/123",
+            required_ci_url="https://github.com/joshyorko/codex-action-server/actions/runs/124",
+            publication_run_url="https://github.com/joshyorko/codex-action-server/actions/runs/125",
+            comparison_url=f"https://github.com/joshyorko/codex-action-server/compare/{'d' * 40}...{commit}",
+        )
+
+
+def test_experimental_method_without_exact_runtime_approval_blocks_handoff(tmp_path):
+    _write_receipt_inputs(tmp_path)
+    manifest_path = tmp_path / "ci/codex_qualification/approved_methods.json"
+    manifest = json.loads(manifest_path.read_text())
+    manifest["approvals"] = []
+    manifest_path.write_text(json.dumps(manifest))
+    commit = "e" * 40
+
+    value = receipt.build_receipt(
+        tmp_path,
+        repository="joshyorko/codex-action-server",
+        source_commit=commit,
+        image="ghcr.io/joshyorko/codex-action-server",
+        image_digest="sha256:" + "f" * 64,
+        image_revision=commit,
+        qualification_run_url="https://github.com/joshyorko/codex-action-server/actions/runs/123",
+        required_ci_url="https://github.com/joshyorko/codex-action-server/actions/runs/124",
+        publication_run_url="https://github.com/joshyorko/codex-action-server/actions/runs/125",
+        comparison_url=f"https://github.com/joshyorko/codex-action-server/compare/{'d' * 40}...{commit}",
+    )
+
+    assert value is None
+
+
+def test_native_qualification_run_must_match_merged_fixture_provenance(tmp_path):
+    _write_receipt_inputs(tmp_path)
+    manifest_path = tmp_path / "ci/codex_qualification/approved_methods.json"
+    manifest = json.loads(manifest_path.read_text())
+    manifest["sources"]["0.166.0"]["native_methods_qualification_run"] = (
+        "https://github.com/joshyorko/codex-action-server/actions/runs/999"
+    )
+    manifest_path.write_text(json.dumps(manifest))
+
+    try:
+        receipt.build_receipt(
+            tmp_path,
+            repository="joshyorko/codex-action-server",
+            source_commit="e" * 40,
+            image="ghcr.io/joshyorko/codex-action-server",
+            image_digest="sha256:" + "f" * 64,
+            image_revision="e" * 40,
+            qualification_run_url="https://github.com/joshyorko/codex-action-server/actions/runs/123",
+            required_ci_url="https://github.com/joshyorko/codex-action-server/actions/runs/124",
+            publication_run_url="https://github.com/joshyorko/codex-action-server/actions/runs/125",
+            comparison_url=f"https://github.com/joshyorko/codex-action-server/compare/{'d' * 40}...{'e' * 40}",
+        )
+    except ValueError as error:
+        assert "qualification run mismatch" in str(error)
+    else:
+        raise AssertionError(
+            "receipt accepted different fixture and manifest run provenance"
+        )

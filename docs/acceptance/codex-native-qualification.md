@@ -1,45 +1,102 @@
 # Native Codex method qualification
 
-## Approval source of truth
+## Admission and evidence
 
-`ci/codex_qualification/approved_methods.json` records exact native-version and
-method approvals, request/response schema SHA-256 fingerprints, and fixture
-provenance. `ci/generate_native_qualification.py` verifies those fingerprints
-against the retained source fixtures and generates
-`src/codex_shared/native_qualification.py`. Runtime admission uses only that
-generated exact-version/method table; unknown versions remain refused before
-RPC transmission.
+`ci/codex_qualification/native_methods.json` is the generated catalog of every
+native RPC consumed by CAS. It records request/response schema IDs, access
+classification, owning typed actions or shared helpers, an isolated smoke
+strategy, and mapped regression tests. `ci/generate_native_method_catalog.py`
+derives it from the consumed method definitions and fails if the code surface
+cannot be represented. The RCC `check-catalog` task checks the generated file
+against the current source.
 
-The repository test workflow runs the generator in check mode and exercises
-the typed fail-closed regression tests. The scheduled and manually dispatched
-`codex-version-qualification` workflow resolves a stable release from
-`openai/codex`, verifies its immutable Linux asset digest, and runs its exact
-binary in a credential-free disposable `HOME` and `CODEX_HOME`. It retains the
-consumed diagnostics schemas, normalized comparison, binary/source provenance,
-and a protocol-smoke receipt that contains only response-shape evidence.
+`ci/codex_qualification/approved_methods.json` remains the sole approval
+source. Exact native-version/method approvals include request and response
+schema fingerprints and fixture provenance. The generated runtime admission
+map accepts only explicitly approved version/method pairs; evidence alone never
+widens admission, and unknown or withheld methods are refused before RPC
+transmission.
 
-Schema equality alone never admits a method. The candidate must also pass the
-typed regressions and return the expected process/gauges shape from a disposable
-native app-server. A compatible candidate produces a deduplicated review PR;
-a changed schema or failed/unavailable qualification produces a deduplicated
-blocked issue. Neither path auto-approves, merges, updates a daemon, or changes
-an operator installation.
+The scheduled/manual `codex-version-qualification` workflow discovers a stable
+upstream Codex release, verifies the exact Linux asset ID, URL, and digest, then
+runs that binary in a credential-free, network-isolated container. It checks
+all catalog schema references and typed regression coverage. Per-method
+evidence records passed, skipped, and failed test counts for every mapped file;
+a method with no executed passing test or any mapped failure is withheld. It
+emits per-method schema and behavior evidence, and uses a disposable app-server smoke only for
+the catalogued read-only methods. Mutation and side-effecting methods use
+isolated typed fixtures. A candidate with changed schema or incomplete evidence
+is withheld method by method; failed or unavailable qualification remains
+fail-closed. Compatible proposals are deduplicated and require human review.
+Unavailable or incompatible candidates produce a deduplicated blocker with
+sanitized evidence. Human-authored branch changes and concurrent runs are
+preserved rather than overwritten or cancelled.
+
+## Immutable downstream handoff
+
+The `container-image` workflow emits
+`cas-qualified-release-<source-commit>-<publication-run-id>` as a 90-day
+Actions artifact named `qualified-release.json`. It does so only for an exact
+`main` commit whose qualification and required CI push runs both succeeded,
+whose merged native fixture covers the complete catalog with passing evidence,
+whose experimental methods have exact approval fingerprints, and whose
+published GHCR digest and image revision match that commit. Partial qualification
+or any withheld method produces no artifact.
+
+The JSON validates against
+`.github/schemas/cas-qualified-release-v1.schema.json`. Its canonical
+`receipt_sha256` binds the source commit, exact upstream release/asset/binary
+provenance, qualification and required CI runs, complete method surface and
+verdicts, image digest, tag, platform, revision, and publication run. The
+publication run ID is included in `publication.run_url` and is also the suffix
+of the artifact name. A consumer must verify that run belongs to this
+repository and publication workflow, completed successfully for the receipt's
+source revision, then fetch the artifact with read-only Actions access and
+validate both checksums. There is no mutable `main` receipt URL. The receipt
+asserts qualification and image publication only; it does not claim deployment,
+device observation, or native daemon state.
+
+`tests/fixtures/contracts/cas-qualified-release-v1.json` is generated by the
+receipt builder test from the actual 58-method catalog to lock the consumer
+wire shape. It uses deliberately synthetic version, run IDs, source revision,
+and image digests; it is not a release receipt and cannot pass publisher-run
+verification. `receipt_sha256` detects content changes but is not a digital
+signature. Trust comes from verifying the successful exact-source publication
+workflow and its run-bound artifact metadata before accepting the receipt.
 
 ## Operational boundaries
 
-`server/diagnostics` reports the Codex process and its gauges, not whole-host
-CPU/RAM. The qualification workflow does not probe Dakota CPU or NVIDIA. Those
-read-only post-deployment checks and the separate Executor 502 reproduction
-require operational access and must remain independently evidenced; no host
-mutation or daemon restart is part of this CI qualification.
+The qualification workflow does not probe Dakota CPU or NVIDIA. Installed Codex
+CLI versions, running native daemon versions, and CAS method qualification are
+separate facts. No host mutation, deployment, or daemon restart is part of this
+CI qualification.
 
-## Candidate 0.166.0 evidence
+The retained diagnostics-only fixture for Codex 0.166.0 is not a full native
+method qualification. It cannot produce a downstream receipt or expand runtime
+admission by itself.
 
-Qualification run [41070538834](https://github.com/joshyorko/codex-action-server/actions/runs/41070538834)
-verified the official release asset, matched the diagnostics schemas to 0.162.1,
-passed typed regressions, and completed a disposable live `server/diagnostics`
-smoke. The retained fixture and method-specific approval are in the source of
-truth above. The pull-request run generated the candidate PR artifact; the
-default-branch write job was skipped by design, so publication permissions and
-idempotent PR updates remain unverified. Dakota device probes and the Executor
-502 reproduction remain operational work, not CI qualification.
+## Reproducible candidate check
+
+The implementation was exercised against the official `rust-v0.166.0` Linux
+asset (release asset ID `689712643`, asset SHA-256
+`a0bf572d2f93f056c6712a6da348e96078dc84f3885fd7be67807ef389cb3978`, binary
+SHA-256 `b8a11fedf24b2dfb59b70c9e52b030f9a508dcd49cd2dd0d41956f4c785156b8`).
+The candidate binary ran in the workflow's pinned Python image with no network,
+read-only root filesystem, non-root UID, dropped capabilities, and bounded CPU,
+memory, processes, and temporary storage. The isolated `server/diagnostics`
+smoke passed. The mapped typed suite passed **440 tests** with **20 documented
+environment/runtime skips** and produced passed evidence for all 58 catalog
+methods across 32 test files.
+
+The candidate evidence reported **1 compatible method** (`server/diagnostics`)
+and **57 withheld methods**: 43 lacked a reviewed baseline and 14 had changed
+schemas. The proposal helper prepared only the individually compatible method;
+it added no new runtime approvals. This incomplete candidate correctly cannot
+emit the downstream receipt. Reproducible evidence output hashes:
+
+- `native-methods.json`: `36f83086aff70adedd546b90f1a3ef354a652217b2991eba879a8af208a650d7`
+- `provenance.json`: `d9fc4156fd5d25c5d6e53aa5ad647b218f67d624f6e20f2ff2b03bb86ef64287`
+- `protocol-smoke.json`: `d81e0ddb594de942871e9d89641b671339ca34bbc397071cf0676e03166ca25c`
+- `typed-regression-evidence.json`: `77497fd29e250daebca632e9b03573a608b227e2e61466bd9f83b2d33af602f0`
+
+These are candidate-run outputs, not merged approvals or deployment evidence.
