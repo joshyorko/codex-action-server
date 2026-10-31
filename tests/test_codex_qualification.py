@@ -184,9 +184,7 @@ def test_method_qualification_requires_executed_mapped_regression_tests():
         "candidate_version": "0.166.0",
         "status": "passed",
         "test_files": {test_path: qualification.sha256_file(path)},
-        "test_outcomes": {
-            test_path: {"passed": 0, "skipped": 3, "failed": 0}
-        },
+        "test_outcomes": {test_path: {"passed": 0, "skipped": 3, "failed": 0}},
         "methods": {
             "server/diagnostics": {
                 "status": "passed",
