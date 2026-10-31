@@ -62,7 +62,66 @@ def load_approvals() -> dict[str, set[str]]:
         if fixture not in fixture_cache:
             fixture_cache[fixture] = json.loads(Path(fixture).read_text())
         source_data = fixture_cache[fixture]
-        if source.get("kind") == "compatibility_fixture":
+        method_evidence_ref = approval.get("method_evidence_ref")
+        if method_evidence_ref is not None:
+            expected_ref = source.get("native_methods_fixture")
+            if expected_ref is None and source.get("kind") == "native_methods_fixture":
+                expected_ref = source.get("fixture")
+            if method_evidence_ref != expected_ref or not isinstance(
+                method_evidence_ref, str
+            ):
+                raise ValueError(
+                    f"method evidence reference mismatch for {version}/{method}"
+                )
+            evidence_path = (ROOT / method_evidence_ref).resolve()
+            if ROOT not in evidence_path.parents:
+                raise ValueError(
+                    "method evidence fixture must stay inside the repository"
+                )
+            evidence_fixture = json.loads(evidence_path.read_text())
+            if evidence_fixture.get(
+                "native_version"
+            ) != version or evidence_fixture.get("binary_sha256") != source.get(
+                "binary_sha256"
+            ):
+                raise ValueError(
+                    f"method fixture binary provenance mismatch for {version}"
+                )
+            for key in (
+                "source_tag",
+                "source_url",
+                "source_asset_sha256",
+                "source_asset_id",
+            ):
+                if key in source and evidence_fixture.get(key) != source[key]:
+                    raise ValueError(f"{key} provenance mismatch for Codex {version}")
+            evidence_run = source.get(
+                "native_methods_qualification_run", source.get("qualification_run")
+            )
+            if evidence_fixture.get("qualification_run") != evidence_run:
+                raise ValueError(
+                    f"qualification_run provenance mismatch for Codex {version}"
+                )
+            method_row = next(
+                (
+                    item
+                    for item in evidence_fixture.get("methods", [])
+                    if item.get("method") == method
+                ),
+                None,
+            )
+            if (
+                not isinstance(method_row, dict)
+                or method_row.get("status") != "compatible_pending_review"
+            ):
+                raise ValueError(
+                    f"method evidence is not qualified for {version}/{method}"
+                )
+            expected = (
+                method_row.get("schema_fingerprint", {}).get("request_sha256"),
+                method_row.get("schema_fingerprint", {}).get("response_sha256"),
+            )
+        elif source.get("kind") == "compatibility_fixture":
             if source_data.get("source_commits", {}).get(version) != source.get(
                 "source_commit"
             ):
@@ -76,9 +135,13 @@ def load_approvals() -> dict[str, set[str]]:
                 None,
             )
             expected = (
-                contract.get("request_sha256", {}).get(version),
-                contract.get("response_sha256", {}).get(version),
-            ) if contract else None
+                (
+                    contract.get("request_sha256", {}).get(version),
+                    contract.get("response_sha256", {}).get(version),
+                )
+                if contract
+                else None
+            )
         elif source.get("kind") == "diagnostics_fixture":
             if source_data.get("native_version") != version or source_data.get(
                 "binary_sha256"
@@ -106,8 +169,25 @@ def load_approvals() -> dict[str, set[str]]:
             raise ValueError(f"schema fingerprint mismatch for {version}/{method}")
         methods_by_version.setdefault(version, set()).add(method)
 
-    if set(methods_by_version) != set(sources):
-        raise ValueError("manifest provenance contains an unreferenced version")
+    unreferenced = set(sources) - set(methods_by_version)
+    for version in unreferenced:
+        source = sources[version]
+        if source.get("kind") != "native_methods_fixture":
+            raise ValueError("manifest provenance contains an unreferenced version")
+        fixture = str(_fixture_path(source))
+        if fixture not in fixture_cache:
+            fixture_cache[fixture] = json.loads(Path(fixture).read_text())
+        evidence = fixture_cache[fixture]
+        methods = evidence.get("methods")
+        if (
+            evidence.get("native_version") != version
+            or evidence.get("binary_sha256") != source.get("binary_sha256")
+            or not isinstance(methods, list)
+            or not methods
+            or len({row.get("method") for row in methods if isinstance(row, dict)})
+            != len(methods)
+        ):
+            raise ValueError(f"unreferenced method evidence is malformed for {version}")
     return methods_by_version
 
 
@@ -118,9 +198,7 @@ def render_module(methods_by_version: dict[str, set[str]]) -> str:
         "REVIEWED_EXPERIMENTAL_METHODS_BY_NATIVE_VERSION = {",
     ]
     for version in sorted(methods_by_version):
-        lines.extend(
-            (f"    {json.dumps(version)}: frozenset(", "        {")
-        )
+        lines.extend((f"    {json.dumps(version)}: frozenset(", "        {"))
         lines.extend(
             f"            {json.dumps(method)},"
             for method in sorted(methods_by_version[version])
