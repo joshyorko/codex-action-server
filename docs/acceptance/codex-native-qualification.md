@@ -20,8 +20,10 @@ transmission.
 The scheduled/manual `codex-version-qualification` workflow discovers a stable
 upstream Codex release, verifies the exact Linux asset ID, URL, and digest, then
 runs that binary in a credential-free, network-isolated container. It checks
-all catalog schema references and typed regression coverage, emits per-method
-schema and behavior evidence, and uses a disposable app-server smoke only for
+all catalog schema references and typed regression coverage. Per-method
+evidence records passed, skipped, and failed test counts for every mapped file;
+a method with no executed passing test or any mapped failure is withheld. It
+emits per-method schema and behavior evidence, and uses a disposable app-server smoke only for
 the catalogued read-only methods. Mutation and side-effecting methods use
 isolated typed fixtures. A candidate with changed schema or incomplete evidence
 is withheld method by method; failed or unavailable qualification remains
@@ -82,7 +84,7 @@ SHA-256 `b8a11fedf24b2dfb59b70c9e52b030f9a508dcd49cd2dd0d41956f4c785156b8`).
 The candidate binary ran in the workflow's pinned Python image with no network,
 read-only root filesystem, non-root UID, dropped capabilities, and bounded CPU,
 memory, processes, and temporary storage. The isolated `server/diagnostics`
-smoke passed. The mapped typed suite passed **436 tests** with **20 documented
+smoke passed. The mapped typed suite passed **440 tests** with **20 documented
 environment/runtime skips** and produced passed evidence for all 58 catalog
 methods across 32 test files.
 

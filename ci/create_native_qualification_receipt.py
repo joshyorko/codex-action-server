@@ -81,6 +81,10 @@ def _method_rows(fixture: dict, catalog: dict, version: str) -> dict[str, dict]:
             row.get("classification") != expected_row.get("classification")
             or row.get("request_schema") != expected_row.get("request_schema")
             or row.get("response_schema") != expected_row.get("response_schema")
+            or row.get("smoke_strategy") != expected_row.get("smoke_strategy")
+            or row.get("owning_typed_actions")
+            != expected_row.get("owning_typed_actions")
+            or row.get("regression_tests") != expected_row.get("regression_tests")
         ):
             raise ValueError(
                 f"native method fixture catalog mismatch for {version}/{method}"
@@ -98,6 +102,36 @@ def _method_rows(fixture: dict, catalog: dict, version: str) -> dict[str, dict]:
         if row.get("typed_regressions") != "passed":
             raise ValueError(
                 f"native method typed regressions are missing for {version}/{method}"
+            )
+        expected_tests = expected_row.get("regression_tests")
+        coverage = row.get("typed_regression_coverage")
+        if (
+            not isinstance(expected_tests, list)
+            or not expected_tests
+            or not isinstance(coverage, dict)
+            or set(coverage) != set(expected_tests)
+        ):
+            raise ValueError(
+                f"native method regression coverage is missing for {version}/{method}"
+            )
+        passed_tests = 0
+        for test_path, counts in coverage.items():
+            if (
+                not isinstance(counts, dict)
+                or set(counts) != {"passed", "skipped", "failed"}
+                or any(
+                    type(counts.get(key)) is not int or counts[key] < 0
+                    for key in ("passed", "skipped", "failed")
+                )
+                or counts["failed"] != 0
+            ):
+                raise ValueError(
+                    f"native method regression coverage is invalid for {version}/{method}/{test_path}"
+                )
+            passed_tests += counts["passed"]
+        if passed_tests == 0:
+            raise ValueError(
+                f"native method regression tests did not run for {version}/{method}"
             )
         fingerprint = row.get("schema_fingerprint")
         if not isinstance(fingerprint, dict) or any(

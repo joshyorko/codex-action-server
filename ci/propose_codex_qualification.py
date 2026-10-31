@@ -113,10 +113,32 @@ def _validate_method_evidence(
 
         typed_row = typed.get("methods", {}).get(method, {})
         required_tests = sorted(set(catalog_row["regression_tests"]))
+        coverage = typed_row.get("coverage")
+        coverage_valid = isinstance(coverage, dict) and set(coverage) == set(
+            required_tests
+        )
+        passed_test_count = 0
+        if coverage_valid:
+            for counts in coverage.values():
+                if (
+                    not isinstance(counts, dict)
+                    or set(counts) != {"passed", "skipped", "failed"}
+                    or any(
+                        type(counts.get(key)) is not int or counts[key] < 0
+                        for key in ("passed", "skipped", "failed")
+                    )
+                    or counts["failed"]
+                ):
+                    coverage_valid = False
+                    break
+                passed_test_count += counts["passed"]
+            coverage_valid = coverage_valid and passed_test_count > 0
         if (
             evidence.get("typed_regressions") != "passed"
+            or evidence.get("typed_regression_coverage") != coverage
             or typed_row.get("status") != "passed"
             or typed_row.get("test_files") != required_tests
+            or not coverage_valid
         ):
             if evidence.get("status") == "compatible_pending_review":
                 raise ValueError(
@@ -263,6 +285,7 @@ def prepare_proposal(artifact: Path, output: Path, run_url: str) -> dict:
                 "schema_fingerprint",
                 "schema_diff",
                 "typed_regressions",
+                "typed_regression_coverage",
                 "smoke_strategy",
                 "smoke",
                 "owning_typed_actions",

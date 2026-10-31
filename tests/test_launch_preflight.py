@@ -57,6 +57,8 @@ def test_launch_creates_private_state(tmp_path):
 
 def test_launch_rejects_world_readable_receipts(tmp_path):
     (tmp_path / "receipts").mkdir(mode=0o755)
+    # Test the unsafe mode explicitly even when the test runner's umask is 077.
+    (tmp_path / "receipts").chmod(0o755)
     assert launch(tmp_path).returncode != 0
 
 

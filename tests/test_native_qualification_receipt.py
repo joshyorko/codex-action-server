@@ -4,6 +4,7 @@ import importlib.util
 import hashlib
 import json
 from pathlib import Path
+import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 SPEC = importlib.util.spec_from_file_location(
@@ -42,6 +43,13 @@ def _write_receipt_inputs(root: Path):
                 "smoke_strategy": "typed_read_fixture",
                 "owning_typed_actions": ["read_app"],
                 "typed_regressions": "passed",
+                "typed_regression_coverage": {
+                    "tests/test_protocol_contracts.py": {
+                        "passed": 1,
+                        "skipped": 0,
+                        "failed": 0,
+                    }
+                },
                 "smoke": {"status": "typed_action_regressions_passed"},
                 "regression_tests": ["tests/test_protocol_contracts.py"],
                 "schema_fingerprint": {
@@ -98,6 +106,7 @@ def _write_receipt_inputs(root: Path):
                         "response_schema": "AppsReadResponse",
                         "smoke_strategy": "typed_read_fixture",
                         "owning_typed_actions": ["read_app"],
+                        "regression_tests": ["tests/test_protocol_contracts.py"],
                     }
                 ],
             }
@@ -149,6 +158,10 @@ def _build_synthetic_full_surface_receipt(root: Path):
                 "smoke_strategy": row["smoke_strategy"],
                 "owning_typed_actions": row["owning_typed_actions"],
                 "typed_regressions": "passed",
+                "typed_regression_coverage": {
+                    name: {"passed": 1, "skipped": 0, "failed": 0}
+                    for name in row["regression_tests"]
+                },
                 "smoke": {
                     "status": "passed"
                     if row["smoke_strategy"] == "disposable_protocol_smoke"
@@ -357,6 +370,40 @@ def test_partial_method_surface_never_emits_a_qualified_handoff(tmp_path):
     )
 
     assert value is None
+
+
+@pytest.mark.parametrize(
+    "counts, message",
+    [
+        ({"passed": 0, "skipped": 4, "failed": 0}, "did not run"),
+        ({"passed": 1, "skipped": 0, "failed": 1}, "coverage is invalid"),
+    ],
+)
+def test_receipt_rejects_skipped_or_failed_mapped_tests(tmp_path, counts, message):
+    _write_receipt_inputs(tmp_path)
+    fixture_path = (
+        tmp_path / "tests/fixtures/protocol/codex_0.166.0_native_methods.json"
+    )
+    fixture = json.loads(fixture_path.read_text())
+    fixture["methods"][0]["typed_regression_coverage"][
+        "tests/test_protocol_contracts.py"
+    ] = counts
+    fixture_path.write_text(json.dumps(fixture))
+    commit = "e" * 40
+
+    with pytest.raises(ValueError, match=message):
+        receipt.build_receipt(
+            tmp_path,
+            repository="joshyorko/codex-action-server",
+            source_commit=commit,
+            image="ghcr.io/joshyorko/codex-action-server",
+            image_digest="sha256:" + "f" * 64,
+            image_revision=commit,
+            qualification_run_url="https://github.com/joshyorko/codex-action-server/actions/runs/123",
+            required_ci_url="https://github.com/joshyorko/codex-action-server/actions/runs/124",
+            publication_run_url="https://github.com/joshyorko/codex-action-server/actions/runs/125",
+            comparison_url=f"https://github.com/joshyorko/codex-action-server/compare/{'d' * 40}...{commit}",
+        )
 
 
 def test_experimental_method_without_exact_runtime_approval_blocks_handoff(tmp_path):

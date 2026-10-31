@@ -495,13 +495,39 @@ def _typed_regression_status(
         return "not_run"
     methods = evidence.get("methods", {})
     hashes = evidence.get("test_files", {})
-    if not isinstance(methods, dict) or not isinstance(hashes, dict):
+    test_outcomes = evidence.get("test_outcomes")
+    if (
+        not isinstance(methods, dict)
+        or not isinstance(hashes, dict)
+        or not isinstance(test_outcomes, dict)
+    ):
         return "invalid_evidence"
     row = methods.get(method)
     if not isinstance(row, dict) or row.get("status") != "passed":
         return "not_run"
     if row.get("test_files") != sorted(set(expected_files)):
         return "invalid_evidence"
+    coverage = row.get("coverage")
+    if not isinstance(coverage, dict) or set(coverage) != set(row["test_files"]):
+        return "invalid_evidence"
+    passed_tests = 0
+    for name, counts in coverage.items():
+        if (
+            not isinstance(counts, dict)
+            or set(counts) != {"passed", "skipped", "failed"}
+            or any(
+                type(counts.get(key)) is not int or counts[key] < 0
+                for key in ("passed", "skipped", "failed")
+            )
+        ):
+            return "invalid_evidence"
+        if test_outcomes.get(name) != counts:
+            return "invalid_evidence"
+        if counts["failed"]:
+            return "failed"
+        passed_tests += counts["passed"]
+    if passed_tests == 0:
+        return "not_run"
     for name in row["test_files"]:
         path = ROOT / name
         if not path.is_file() or hashes.get(name) != sha256_file(path):
@@ -562,6 +588,9 @@ def build_method_evidence(
                 version,
                 row["regression_tests"],
             ),
+            "typed_regression_coverage": typed_regression_evidence.get("methods", {})
+            .get(row["method"], {})
+            .get("coverage", {}),
             "schema_fingerprint": None,
             "schema_diff": None,
             "smoke": {"status": "not_run"},
@@ -669,6 +698,8 @@ def build_method_evidence(
             reason = (
                 "typed_regression_evidence_invalid"
                 if evidence["typed_regressions"] == "invalid_evidence"
+                else "typed_regressions_failed"
+                if evidence["typed_regressions"] == "failed"
                 else "typed_regressions_not_run"
             )
             evidence.update(status="unqualified", reason_code=reason)

@@ -58,6 +58,7 @@ def main() -> int:
                 "pytest",
                 "-q",
                 "tests/test_codex_qualification.py",
+                "tests/test_native_method_regressions.py",
                 "tests/test_native_method_catalog.py",
                 "tests/test_native_qualification_receipt.py",
                 "tests/test_image_publication_workflow.py",
@@ -81,6 +82,7 @@ def main() -> int:
                 "ci/codex_qualification/tasks.py",
                 "tests/test_native_method_catalog.py",
                 "tests/test_codex_qualification.py",
+                "tests/test_native_method_regressions.py",
                 "tests/test_native_qualification_receipt.py",
                 "tests/test_image_publication_workflow.py",
                 "tests/test_renovate_config.py",
@@ -104,10 +106,12 @@ def main() -> int:
                 "ci/create_native_qualification_receipt.py",
                 "ci/codex_qualification/tasks.py",
                 "tests/test_native_method_catalog.py",
+                "tests/test_native_method_regressions.py",
                 "tests/test_codex_qualification.py",
                 "tests/test_native_qualification_receipt.py",
                 "tests/test_image_publication_workflow.py",
                 "tests/test_renovate_config.py",
+                "tests/test_launch_preflight.py",
             ]
         )
     if task == "format":
@@ -126,10 +130,12 @@ def main() -> int:
                 "ci/create_native_qualification_receipt.py",
                 "ci/codex_qualification/tasks.py",
                 "tests/test_native_method_catalog.py",
+                "tests/test_native_method_regressions.py",
                 "tests/test_codex_qualification.py",
                 "tests/test_native_qualification_receipt.py",
                 "tests/test_image_publication_workflow.py",
                 "tests/test_renovate_config.py",
+                "tests/test_launch_preflight.py",
             ]
         )
     print(f"unknown RCC task: {task}", file=sys.stderr)

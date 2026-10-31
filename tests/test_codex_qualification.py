@@ -176,6 +176,50 @@ def test_method_qualification_rejects_stale_typed_regression_evidence():
     )
 
 
+def test_method_qualification_requires_executed_mapped_regression_tests():
+    test_path = "tests/test_codex_qualification.py"
+    path = ROOT / test_path
+    evidence = {
+        "schema_version": 1,
+        "candidate_version": "0.166.0",
+        "status": "passed",
+        "test_files": {test_path: qualification.sha256_file(path)},
+        "test_outcomes": {
+            test_path: {"passed": 0, "skipped": 3, "failed": 0}
+        },
+        "methods": {
+            "server/diagnostics": {
+                "status": "passed",
+                "test_files": [test_path],
+                "coverage": {test_path: {"passed": 0, "skipped": 3, "failed": 0}},
+            }
+        },
+    }
+    assert (
+        qualification._typed_regression_status(
+            evidence, "server/diagnostics", "0.166.0", [test_path]
+        )
+        == "not_run"
+    )
+
+    evidence["methods"]["server/diagnostics"]["coverage"][test_path] = {
+        "passed": 1,
+        "skipped": 3,
+        "failed": 0,
+    }
+    evidence["test_outcomes"][test_path] = {
+        "passed": 1,
+        "skipped": 3,
+        "failed": 0,
+    }
+    assert (
+        qualification._typed_regression_status(
+            evidence, "server/diagnostics", "0.166.0", [test_path]
+        )
+        == "passed"
+    )
+
+
 def test_merged_native_fixture_is_a_schema_baseline_without_runtime_approval(
     tmp_path, monkeypatch
 ):
@@ -270,6 +314,7 @@ def test_first_native_fixture_extends_existing_diagnostics_source(
     asset_id = "42"
     run_url = "https://github.com/joshyorko/codex-action-server/actions/runs/123"
     typed_files = {}
+    typed_outcomes = {}
     typed_methods = {}
     method_rows = []
     diagnostic_catalog_row = next(
@@ -300,7 +345,13 @@ def test_first_native_fixture_extends_existing_diagnostics_source(
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(f"# fixture for {method}\n")
             typed_files[test_path] = hashlib.sha256(path.read_bytes()).hexdigest()
-        typed_methods[method] = {"status": "passed", "test_files": tests}
+        coverage = {name: {"passed": 1, "skipped": 0, "failed": 0} for name in tests}
+        typed_outcomes.update(coverage)
+        typed_methods[method] = {
+            "status": "passed",
+            "test_files": tests,
+            "coverage": coverage,
+        }
         is_compatible = method == "server/diagnostics"
         method_rows.append(
             {
@@ -317,6 +368,7 @@ def test_first_native_fixture_extends_existing_diagnostics_source(
                 "schema_fingerprint": schema_fingerprint if is_compatible else None,
                 "schema_diff": {"comparison": "test"},
                 "typed_regressions": "passed",
+                "typed_regression_coverage": coverage,
                 "smoke_strategy": catalog_row["smoke_strategy"],
                 "smoke": {
                     "status": "passed"
@@ -340,6 +392,7 @@ def test_first_native_fixture_extends_existing_diagnostics_source(
             "candidate_version": version,
             "status": "passed",
             "test_files": typed_files,
+            "test_outcomes": typed_outcomes,
             "methods": typed_methods,
         },
         "generated_files_sha256": {},
@@ -432,6 +485,17 @@ def test_first_native_fixture_extends_existing_diagnostics_source(
         ).read_text()
     )
     assert len(proposed_fixture["methods"]) == len(catalog["methods"])
+    diagnostics_row = next(
+        row
+        for row in proposed_fixture["methods"]
+        if row["method"] == "server/diagnostics"
+    )
+    assert (
+        diagnostics_row["typed_regression_coverage"][
+            "tests/test_codex_qualification.py"
+        ]["passed"]
+        == 1
+    )
     assert (
         sum(
             row["status"] == "compatible_pending_review"

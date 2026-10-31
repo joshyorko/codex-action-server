@@ -11,6 +11,47 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 CATALOG = ROOT / "ci/codex_qualification/native_methods.json"
+OUTCOMES = ("passed", "skipped", "failed")
+
+
+class RegressionOutcomeCollector:
+    """Count actual pytest outcomes for each catalogued regression file."""
+
+    def __init__(self, paths: list[str]):
+        self.files = {name: {outcome: 0 for outcome in OUTCOMES} for name in paths}
+
+    def pytest_runtest_logreport(self, report):
+        name = report.nodeid.split("::", 1)[0].replace("\\", "/")
+        counts = self.files.get(name)
+        if counts is None:
+            return
+        if report.outcome == "failed":
+            counts["failed"] += 1
+        elif report.outcome == "skipped":
+            counts["skipped"] += 1
+        elif report.when == "call" and report.outcome == "passed":
+            counts["passed"] += 1
+
+
+def _method_status(pytest_succeeded: bool, coverage: dict[str, dict[str, int]]) -> str:
+    if not isinstance(coverage, dict) or not coverage:
+        return "not_run"
+    for counts in coverage.values():
+        if (
+            not isinstance(counts, dict)
+            or set(counts) != set(OUTCOMES)
+            or any(
+                type(counts.get(key)) is not int or counts[key] < 0 for key in OUTCOMES
+            )
+        ):
+            return "invalid_evidence"
+        if counts["failed"]:
+            return "failed"
+    if not pytest_succeeded:
+        return "failed"
+    if not any(counts["passed"] for counts in coverage.values()):
+        return "not_run"
+    return "passed"
 
 
 def _sha256(path: Path) -> str:
@@ -73,12 +114,25 @@ def main() -> int:
     sys.path.insert(0, str(ROOT / "src"))
     import pytest
 
-    result = pytest.main(["-q", "-rs", *paths])
-    status = "passed" if result == pytest.ExitCode.OK else "failed"
+    outcomes = RegressionOutcomeCollector(paths)
+    result = pytest.main(["-q", "-rs", *paths], plugins=[outcomes])
+    pytest_succeeded = result == pytest.ExitCode.OK
+    has_passed_tests = any(row["passed"] for row in outcomes.files.values())
+    status = (
+        "failed"
+        if result != pytest.ExitCode.OK
+        else "passed"
+        if has_passed_tests
+        else "not_run"
+    )
     evidence["status"] = status
     evidence["pytest_exit_code"] = int(result)
+    evidence["test_outcomes"] = outcomes.files
     for row in evidence["methods"].values():
-        row["status"] = status
+        row["coverage"] = {name: outcomes.files[name] for name in row["test_files"]}
+        row["status"] = _method_status(pytest_succeeded, row["coverage"])
+        if status != "passed" and row["status"] == "passed":
+            row["status"] = status
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(evidence, indent=2, sort_keys=True) + "\n")
     return int(result)
