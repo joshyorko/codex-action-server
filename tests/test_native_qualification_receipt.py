@@ -105,6 +105,146 @@ def _write_receipt_inputs(root: Path):
     )
 
 
+def _build_synthetic_full_surface_receipt(root: Path):
+    """Generate a test-only receipt from the real CAS method catalog."""
+    version = "9.9.9"
+    source_tag = f"rust-v{version}"
+    source_url = (
+        f"https://github.com/openai/codex/releases/download/{source_tag}/"
+        "codex-x86_64-unknown-linux-musl.tar.gz"
+    )
+    qualification_run = (
+        "https://github.com/joshyorko/codex-action-server/actions/runs/999999999"
+    )
+    fixture_relative = f"tests/fixtures/protocol/codex_{version}_native_methods.json"
+    fixture_path = root / fixture_relative
+    fixture_path.parent.mkdir(parents=True)
+
+    catalog = json.loads(
+        (ROOT / "ci/codex_qualification/native_methods.json").read_text()
+    )
+    catalog_path = root / "ci/codex_qualification/native_methods.json"
+    catalog_path.parent.mkdir(parents=True)
+    catalog_path.write_text(json.dumps(catalog, sort_keys=True))
+
+    methods = []
+    approvals = []
+    for row in catalog["methods"]:
+        method = row["method"]
+        fingerprint = {
+            "request_sha256": hashlib.sha256(f"request:{method}".encode()).hexdigest(),
+            "response_sha256": hashlib.sha256(
+                f"response:{method}".encode()
+            ).hexdigest(),
+        }
+        request_schema = row["request_schema"]
+        response_schema = row["response_schema"]
+        methods.append(
+            {
+                "method": method,
+                "classification": row["classification"],
+                "request_schema": request_schema,
+                "response_schema": response_schema,
+                "status": "compatible_pending_review",
+                "smoke_strategy": row["smoke_strategy"],
+                "owning_typed_actions": row["owning_typed_actions"],
+                "typed_regressions": "passed",
+                "smoke": {
+                    "status": "passed"
+                    if row["smoke_strategy"] == "disposable_protocol_smoke"
+                    else "typed_action_regressions_passed"
+                },
+                "regression_tests": row["regression_tests"],
+                "schema_fingerprint": fingerprint,
+                "schemas": {
+                    request_schema: {"type": "object"},
+                    response_schema: {"type": "object"},
+                },
+            }
+        )
+        if row["classification"] == "experimental":
+            approvals.append(
+                {
+                    "version": version,
+                    "method": method,
+                    "provenance_ref": version,
+                    "method_evidence_ref": fixture_relative,
+                    "schema_fingerprint": fingerprint,
+                }
+            )
+
+    fixture = {
+        "schema_version": 1,
+        "native_version": version,
+        "source_tag": source_tag,
+        "source_url": source_url,
+        "source_asset_sha256": "a" * 64,
+        "source_asset_id": "999999999",
+        "binary_sha256": "b" * 64,
+        "qualification_run": qualification_run,
+        "typed_regression_status": "passed",
+        "methods": methods,
+    }
+    fixture_path.write_text(json.dumps(fixture, sort_keys=True) + "\n")
+
+    manifest = {
+        "schema_version": 1,
+        "sources": {
+            version: {
+                "kind": "native_methods_fixture",
+                "fixture": fixture_relative,
+                "native_methods_fixture": fixture_relative,
+                "native_methods_qualification_run": qualification_run,
+                "source_tag": source_tag,
+                "source_url": source_url,
+                "source_asset_sha256": "a" * 64,
+                "source_asset_id": "999999999",
+                "binary_sha256": "b" * 64,
+            }
+        },
+        "approvals": approvals,
+    }
+    manifest_path = root / "ci/codex_qualification/approved_methods.json"
+    manifest_path.write_text(json.dumps(manifest, sort_keys=True))
+
+    commit = "e" * 40
+    return receipt.build_receipt(
+        root,
+        repository="joshyorko/codex-action-server",
+        source_commit=commit,
+        image="ghcr.io/joshyorko/codex-action-server",
+        image_digest="sha256:" + "f" * 64,
+        image_revision=commit,
+        qualification_run_url="https://github.com/joshyorko/codex-action-server/actions/runs/123",
+        required_ci_url="https://github.com/joshyorko/codex-action-server/actions/runs/124",
+        publication_run_url="https://github.com/joshyorko/codex-action-server/actions/runs/125",
+        comparison_url=f"https://github.com/joshyorko/codex-action-server/compare/{'d' * 40}...{commit}",
+    )
+
+
+def test_full_surface_receipt_matches_generated_consumer_fixture(tmp_path):
+    value = _build_synthetic_full_surface_receipt(tmp_path)
+    assert value is not None
+    assert len(value["qualification"]["surface"]["methods"]) == 58
+    assert len(value["qualification"]["method_verdicts"]) == 58
+    assert len(value["qualification"]["behavior_coverage"]) == 58
+    assert value["qualification"]["withheld_methods"] == []
+    assert value["qualification"]["native_release"]["version"] == "9.9.9"
+    assert value["receipt_sha256"] == receipt._canonical_receipt_digest(value)
+
+    fixture_path = ROOT / "tests/fixtures/contracts/cas-qualified-release-v1.json"
+    assert json.loads(fixture_path.read_text()) == value
+
+    import jsonschema
+
+    schema = json.loads(
+        (ROOT / ".github/schemas/cas-qualified-release-v1.schema.json").read_text()
+    )
+    jsonschema.Draft202012Validator(
+        schema, format_checker=jsonschema.FormatChecker()
+    ).validate(value)
+
+
 def test_receipt_binds_merged_qualification_to_one_published_image(tmp_path):
     _write_receipt_inputs(tmp_path)
     commit = "e" * 40
