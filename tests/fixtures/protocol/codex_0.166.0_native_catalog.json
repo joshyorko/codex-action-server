@@ -4995,8 +4995,10 @@
       "reason_code": "schema_changed",
       "regression_tests": [
         "tests/test_action_server_validation.py",
+        "tests/test_action_transport_failures.py",
         "tests/test_control_actions.py",
         "tests/test_mcp_annotations.py",
+        "tests/test_mcp_status_bounds.py",
         "tests/test_package_composition.py",
         "tests/test_protocol_contracts.py",
         "tests/test_rpc_lifecycle.py"
@@ -5938,6 +5940,11 @@
           "passed": 2,
           "skipped": 1
         },
+        "tests/test_action_transport_failures.py": {
+          "failed": 0,
+          "passed": 4,
+          "skipped": 0
+        },
         "tests/test_control_actions.py": {
           "failed": 0,
           "passed": 19,
@@ -5946,6 +5953,11 @@
         "tests/test_mcp_annotations.py": {
           "failed": 0,
           "passed": 79,
+          "skipped": 0
+        },
+        "tests/test_mcp_status_bounds.py": {
+          "failed": 0,
+          "passed": 16,
           "skipped": 0
         },
         "tests/test_package_composition.py": {
@@ -61694,6 +61706,7 @@
       "reason_code": "schema_changed",
       "regression_tests": [
         "tests/test_action_server_validation.py",
+        "tests/test_action_transport_failures.py",
         "tests/test_actions.py",
         "tests/test_capability_metadata.py",
         "tests/test_container_image.py",
@@ -70234,6 +70247,11 @@
           "failed": 0,
           "passed": 2,
           "skipped": 1
+        },
+        "tests/test_action_transport_failures.py": {
+          "failed": 0,
+          "passed": 4,
+          "skipped": 0
         },
         "tests/test_actions.py": {
           "failed": 0,
@@ -95426,6 +95444,7 @@
       "reason_code": "schema_changed",
       "regression_tests": [
         "tests/test_action_server_validation.py",
+        "tests/test_action_transport_failures.py",
         "tests/test_actions.py",
         "tests/test_control_actions.py",
         "tests/test_dispatch_policy.py",
@@ -95895,6 +95914,11 @@
           "passed": 2,
           "skipped": 1
         },
+        "tests/test_action_transport_failures.py": {
+          "failed": 0,
+          "passed": 4,
+          "skipped": 0
+        },
         "tests/test_actions.py": {
           "failed": 0,
           "passed": 13,
@@ -95958,6 +95982,7 @@
       "reason_code": "schema_changed",
       "regression_tests": [
         "tests/test_action_server_validation.py",
+        "tests/test_action_transport_failures.py",
         "tests/test_actions.py",
         "tests/test_capability_metadata.py",
         "tests/test_container_image.py",
@@ -106306,6 +106331,11 @@
           "failed": 0,
           "passed": 2,
           "skipped": 1
+        },
+        "tests/test_action_transport_failures.py": {
+          "failed": 0,
+          "passed": 4,
+          "skipped": 0
         },
         "tests/test_actions.py": {
           "failed": 0,
@@ -136793,7 +136823,7 @@
     }
   ],
   "native_version": "0.166.0",
-  "qualification_run": "https://github.com/joshyorko/codex-action-server/actions/runs/42086486983",
+  "qualification_run": "https://github.com/joshyorko/codex-action-server/actions/runs/42088828364",
   "schema_version": 1,
   "source_asset_id": "689712643",
   "source_asset_sha256": "a0bf572d2f93f056c6712a6da348e96078dc84f3885fd7be67807ef389cb3978",
@@ -136802,6 +136832,7 @@
   "typed_regression_status": "passed",
   "typed_regression_test_files_sha256": {
     "tests/test_action_server_validation.py": "063784545f7269e9c0b7c68e7a9360fca1ba65e6521542c4c1600ffefab2edc6",
+    "tests/test_action_transport_failures.py": "21cd3d77f95b0c2ad0e79fa8263e45940d3c7cedb16c5a031949ec966d88d9a3",
     "tests/test_actions.py": "09494a91360ffcffd24bed1f3fcd93dfc26962a73a655824061e3a3117c08728",
     "tests/test_capability_metadata.py": "956d583b8f7e675b0973227a1d6deff9a6664c5b429cb2adb9f0daa28c517a5f",
     "tests/test_codex_qualification.py": "dcf17920d7ebb94e30e497081a6d9359db7f0f95651ad13e9a9111ee954ff745",
@@ -136812,6 +136843,7 @@
     "tests/test_exposure_profiles.py": "c1c18289fe77d8e5d3cb8bfdddcc4c17fd84a2ebddcb25327f58960f53cb0f71",
     "tests/test_http_boot.py": "cacc652bb81f2175432d5391524926e748d71304442c4a805554c54f18987ee4",
     "tests/test_mcp_annotations.py": "5ce4fba40576680bb5241106e9fdcc3bd94699e49cd42747da1d5e6f55f56113",
+    "tests/test_mcp_status_bounds.py": "d669fdea9da3b634c1cd02736508a7240e7ec75869a0414474d5d43b99474b84",
     "tests/test_method_qualification_manifest.py": "60bad9579816b8e31f14345c45396986b23d3d8a9fb12f99e38f9a0135288aa9",
     "tests/test_model_selection.py": "ad52a2af9c5baf55babbc1ed2faf261b44198e82e96c21a56c2d1348082f68a1",
     "tests/test_native_capabilities.py": "49d74201f8716e6f6fa9cad57f6839cb6c686ab19c0bf409cd17a097c46e3574",
