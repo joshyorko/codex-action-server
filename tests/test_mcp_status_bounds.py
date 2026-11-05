@@ -1,6 +1,7 @@
 """Bounded, read-only MCP status inventory responses."""
 
 import json
+from concurrent.futures import ThreadPoolExecutor
 from unittest.mock import patch
 
 import pytest
@@ -112,3 +113,74 @@ def test_mcp_status_preserves_native_page_and_detail_with_bounded_schema(limit, 
     assert "receipt-secret" not in repr(response.model_dump(mode="json"))
     assert "event-secret" not in repr(response.model_dump(mode="json"))
     assert "native-secret" not in repr(response.model_dump(mode="json"))
+
+
+def test_mcp_status_preserves_opaque_cursor_without_clipping():
+    module = load_actions()
+    cursor = "opaque-" + "🔑" * 3000
+    client = StatusClient({"data": [], "nextCursor": cursor})
+    with (
+        patch.object(module, "Client", return_value=client),
+        patch.object(module, "resolve_target", return_value="fixture"),
+    ):
+        response = module.list_mcp_server_status(
+            module.McpServerStatusListRequest(target="local", limit=1)
+        )
+    assert response.result.result["nextCursor"] == cursor
+
+
+@pytest.mark.parametrize("cursor", [42, {}, "🔑" * 70_000])
+def test_mcp_status_refuses_invalid_or_oversized_cursor(cursor):
+    module = load_actions()
+    client = StatusClient({"data": [], "nextCursor": cursor})
+    with (
+        patch.object(module, "Client", return_value=client),
+        patch.object(module, "resolve_target", return_value="fixture"),
+        pytest.raises(module.ActionError, match="Native MCP status") as error,
+    ):
+        module.list_mcp_server_status(
+            module.McpServerStatusListRequest(target="local", limit=1)
+        )
+    assert "🔑" not in str(error.value)
+
+
+@pytest.mark.parametrize("native", [{}, {"data": None}, {"data": [42]}])
+def test_malformed_mcp_status_does_not_poison_following_read(native):
+    module = load_actions()
+    clients = [
+        StatusClient(native),
+        StatusClient({"data": [], "nextCursor": None}),
+    ]
+    with (
+        patch.object(module, "Client", side_effect=clients),
+        patch.object(module, "resolve_target", return_value="fixture"),
+    ):
+        request = module.McpServerStatusListRequest(target="local", limit=1)
+        with pytest.raises(module.ActionError, match="Native MCP status"):
+            module.list_mcp_server_status(request)
+        assert module.list_mcp_server_status(request).result.result == {
+            "data": [],
+            "nextCursor": None,
+        }
+
+
+def test_mcp_status_concurrent_reads_do_not_mutate_native_inventory():
+    module = load_actions()
+    native = {
+        "data": [{"name": "fixture", "tools": {"t": _deep_schema(80)}}],
+        "nextCursor": "opaque",
+    }
+    original = json.dumps(native)
+    with (
+        patch.object(module, "Client", side_effect=lambda _: StatusClient(native)),
+        patch.object(module, "resolve_target", return_value="fixture"),
+        ThreadPoolExecutor(max_workers=4) as pool,
+    ):
+        request = module.McpServerStatusListRequest(target="local", limit=1)
+        responses = list(
+            pool.map(lambda _: module.list_mcp_server_status(request), range(8))
+        )
+    assert json.dumps(native) == original
+    assert all(
+        response.result.result == responses[0].result.result for response in responses
+    )

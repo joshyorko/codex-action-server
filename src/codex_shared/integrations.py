@@ -62,6 +62,14 @@ def _bounded_mcp_status_result(result: Any) -> dict[str, Any]:
         raise RpcError("Native MCP status page exceeds the 100-server limit")
     if any(not isinstance(server, dict) for server in servers):
         raise RpcError("Native MCP status page contains an invalid server entry")
+    cursor = result.get("nextCursor")
+    if cursor is not None and not isinstance(cursor, str):
+        raise RpcError("Native MCP status response contains an invalid cursor")
+    if (
+        len(json.dumps(cursor, ensure_ascii=False).encode("utf-8"))
+        > _MCP_STATUS_MAX_BYTES
+    ):
+        raise RpcError("Native MCP status cursor exceeds the bounded response limit")
 
     for per_server_budget in (1024, 512, 256, 128, 64):
         for max_string_chars in (2048, 1024, 512, 256):
@@ -145,7 +153,10 @@ def _bounded_mcp_status_result(result: Any) -> dict[str, Any]:
                 key=lambda key: (_MCP_STATUS_PRIORITY.get(key, 100), str(key)),
             )
             for key in ordered_keys:
-                if key == "data":
+                if key == "nextCursor":
+                    # Opaque continuation tokens must survive projection byte-for-byte.
+                    bounded_result[key] = cursor
+                elif key == "data":
                     bounded_result[key] = [
                         visit(
                             server,
