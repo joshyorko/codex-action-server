@@ -182,7 +182,20 @@ def test_only_publication_has_registry_write_permission():
             assert step["with"]["persist-credentials"] == "false"
 
 
-def _run_handoff_step(tmp_path, *, main_sha, pending_workflow=""):
+def _run_handoff_step(
+    tmp_path, *, main_sha, pending_workflow="", complete_surface=False
+):
+    from test_native_qualification_receipt import _write_receipt_inputs
+
+    source_root = tmp_path / "source"
+    _write_receipt_inputs(source_root)
+    if not complete_surface:
+        fixture = (
+            source_root / "tests/fixtures/protocol/codex_0.166.0_native_methods.json"
+        )
+        value = json.loads(fixture.read_text())
+        value["methods"][0]["status"] = "needs_review"
+        fixture.write_text(json.dumps(value))
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     gh = bin_dir / "gh"
@@ -244,6 +257,7 @@ exec "$REAL_GIT" "$@"
         "MOCK_MAIN_SHA": main_sha,
         "MOCK_PREVIOUS_SHA": "a" * 40,
         "MOCK_PENDING_WORKFLOW": pending_workflow,
+        "MOCK_SOURCE_ROOT": str(source_root),
         "RUNNER_TEMP": str(temp),
         "GITHUB_OUTPUT": str(output),
         "GITHUB_STEP_SUMMARY": str(summary),
@@ -253,6 +267,7 @@ exec "$REAL_GIT" "$@"
         for step in workflow()["jobs"]["publish"]["steps"]
         if step.get("id") == "handoff"
     )
+    script = script.replace("--root .", '--root "$MOCK_SOURCE_ROOT"')
     result = subprocess.run(
         ["bash", "-c", script], env=env, text=True, capture_output=True
     )
@@ -278,6 +293,19 @@ def test_handoff_does_not_emit_artifact_for_incomplete_merged_surface(tmp_path):
     assert "status=skipped_incomplete_qualification" in output.read_text()
     assert "no receipt emitted" in summary.read_text()
     assert not (temp / "qualified-release.json").exists()
+
+
+def test_handoff_emits_a_receipt_only_for_complete_qualified_source(tmp_path):
+    commit = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()
+    result, output, _, temp = _run_handoff_step(
+        tmp_path, main_sha=commit, complete_surface=True
+    )
+    assert result.returncode == 0, result.stderr
+    assert json.loads(result.stdout)["status"] == "created"
+    assert "status=created" in output.read_text()
+    receipt = json.loads((temp / "qualified-release.json").read_text())
+    assert receipt["source"]["revision"] == commit
+    assert receipt["qualification"]["withheld_methods"] == []
 
 
 @pytest.mark.parametrize("pending_workflow", ["123", "124"])
@@ -357,6 +385,63 @@ def test_read_only_qualification_runs_cannot_displace_other_prs_or_writers():
     }
     assert len(writer_groups) == 1
     assert groups.isdisjoint(writer_groups)
+
+
+def test_writer_history_distinguishes_merged_and_unmerged_human_commits(tmp_path):
+    checkout = next(
+        step
+        for step in qualification_workflow()["jobs"]["open-qualified-pr"]["steps"]
+        if step.get("uses", "").startswith("actions/checkout@")
+    )
+    upstream = tmp_path / "upstream"
+    upstream.mkdir()
+    client = tmp_path / "client"
+    client.mkdir()
+
+    def git(root, *arguments):
+        return subprocess.check_output(
+            [
+                "git",
+                "-C",
+                str(root),
+                "-c",
+                "user.name=Human fixture",
+                "-c",
+                "user.email=human@example.test",
+                "-c",
+                "commit.gpgsign=false",
+                "-c",
+                "core.hooksPath=/dev/null",
+                *arguments,
+            ],
+            text=True,
+            stderr=subprocess.DEVNULL,
+        ).strip()
+
+    branch = "codex-qualification/codex-0.166.0"
+    git(upstream, "init", "--initial-branch=main")
+    git(upstream, "commit", "--allow-empty", "-m", "Base")
+    git(upstream, "checkout", "-b", branch)
+    git(upstream, "commit", "--allow-empty", "-m", "Human qualification")
+    git(upstream, "checkout", "main")
+    git(upstream, "merge", "--no-ff", "--no-edit", branch)
+    git(client, "init")
+    git(client, "remote", "add", "origin", upstream.as_uri())
+    depth = int(checkout.get("with", {}).get("fetch-depth", "1"))
+    depth_arguments = [] if depth == 0 else [f"--depth={depth}"]
+    git(client, "fetch", *depth_arguments, "origin", "main")
+    git(client, "checkout", "-B", "main", "FETCH_HEAD")
+    git(client, "fetch", "origin", branch)
+    assert git(client, "rev-list", f"origin/main..origin/{branch}") == ""
+    git(upstream, "checkout", branch)
+    unmerged = git(upstream, "commit", "--allow-empty", "-m", "New human work")
+    assert unmerged
+    git(client, "fetch", "origin", branch)
+    assert git(client, "rev-list", f"origin/main..origin/{branch}")
+    assert (
+        git(client, "show", "-s", "--format=%ae", f"origin/{branch}")
+        == "human@example.test"
+    )
 
 
 @pytest.mark.parametrize(
