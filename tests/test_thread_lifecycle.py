@@ -35,6 +35,29 @@ class LifecycleClient(FakeClient):
         raise AssertionError(method)
 
 
+def test_unarchive_dispatch_checks_identity_and_sends_only_the_exact_thread(
+    tmp_path, monkeypatch
+):
+    monkeypatch.setenv("CODEX_ACTION_RECEIPTS", str(tmp_path))
+    module = load_actions()
+    client = LifecycleClient()
+    with patch.object(module, "Client", return_value=client):
+        result = module.unarchive_thread(
+            module.ThreadMutationRequest(
+                target="local",
+                cwd="/trusted",
+                thread_id="thread-1",
+                request_id="unarchive",
+            )
+        ).result.result
+    assert client.calls == [
+        ("thread/read", {"threadId": "thread-1", "includeTurns": False}),
+        ("thread/unarchive", {"threadId": "thread-1"}),
+    ]
+    assert result["dispatch"]["state"] == "accepted"
+    assert result["dispatch"]["thread_id"] == "thread-1"
+
+
 def test_lifecycle_actions_send_only_typed_native_fields(tmp_path, monkeypatch):
     monkeypatch.setenv("CODEX_ACTION_RECEIPTS", str(tmp_path))
     module = load_actions()

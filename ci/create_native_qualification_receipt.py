@@ -9,6 +9,8 @@ import json
 from pathlib import Path
 import re
 
+from native_compatibility_review import reviewed_schema_change
+
 _VERSION = re.compile(r"(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\Z")
 _SHA = re.compile(r"[0-9a-f]{64}\Z")
 _COMMIT = re.compile(r"[0-9a-f]{40}\Z")
@@ -116,6 +118,87 @@ def _method_rows(
             raise ValueError(
                 f"native method typed regressions are missing for {version}/{method}"
             )
+        review = row.get("compatibility_review")
+        reason = row.get("reason_code")
+        if reason in {"reviewed_consumed_contract", "reviewed_exact_version_probe"}:
+            if (
+                not isinstance(review, dict)
+                or review.get("kind") != reason
+                or review.get("method") != method
+            ):
+                raise ValueError(
+                    f"native compatibility review is missing for {version}/{method}"
+                )
+            reference = (
+                review.get("review_file")
+                if reason == "reviewed_consumed_contract"
+                else review.get("fixture")
+            )
+            digest = (
+                review.get("review_file_sha256")
+                if reason == "reviewed_consumed_contract"
+                else review.get("fixture_sha256")
+            )
+            if (
+                not isinstance(reference, str)
+                or _sha256(_repo_file(root, reference)) != digest
+            ):
+                raise ValueError(
+                    f"native compatibility review hash is stale for {version}/{method}"
+                )
+            if (
+                reason == "reviewed_consumed_contract"
+                and reviewed_schema_change(
+                    root,
+                    method,
+                    version,
+                    fixture.get("binary_sha256"),
+                    fixture.get("source_asset_sha256"),
+                    fixture.get("source_asset_id"),
+                    row.get("schema_fingerprint"),
+                    row.get("regression_tests"),
+                )
+                != review
+            ):
+                raise ValueError(
+                    f"native reviewed source hash is stale for {version}/{method}"
+                )
+            for name, fingerprint in review.get("source_files_sha256", {}).items():
+                if _sha256(_repo_file(root, name)) != fingerprint:
+                    raise ValueError(
+                        f"native reviewed source hash is stale for {version}/{method}/{name}"
+                    )
+        positive = row.get("native_positive")
+        if (
+            reason == "reviewed_consumed_contract"
+            and row.get("smoke_strategy") != "disposable_protocol_smoke"
+            and positive is None
+        ):
+            raise ValueError(
+                f"native positive behavior is missing for {version}/{method}"
+            )
+        if positive is not None:
+            if (
+                not isinstance(positive, dict)
+                or positive.get("status") != "passed"
+                or positive.get("positive") is not True
+                or positive.get("native_version") != version
+                or positive.get("binary_sha256") != fixture.get("binary_sha256")
+                or any(
+                    positive.get(key) != row.get("schema_fingerprint", {}).get(key)
+                    for key in ("request_sha256", "response_sha256")
+                )
+            ):
+                raise ValueError(
+                    f"native positive behavior provenance is invalid for {version}/{method}"
+                )
+            script = positive.get("fixture")
+            if not isinstance(script, str) or _sha256(
+                _repo_file(root, script)
+            ) != positive.get("fixture_sha256"):
+                raise ValueError(
+                    f"native positive fixture hash is stale for {version}/{method}"
+                )
         expected_tests = expected_row.get("regression_tests")
         coverage = row.get("typed_regression_coverage")
         if (

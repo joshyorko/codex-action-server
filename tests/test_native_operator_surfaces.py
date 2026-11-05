@@ -64,6 +64,28 @@ class NativeSurfaceClient(FakeClient):
         raise AssertionError(method)
 
 
+def test_plugin_read_requires_an_explicit_bounded_remote_marketplace():
+    module = load_actions()
+    with pytest.raises(ValueError):
+        module.PluginReadRequest(target="local", plugin_name="docs")
+    for source in ("", "x" * 257):
+        with pytest.raises(ValueError):
+            module.PluginReadRequest(
+                target="local", plugin_name="docs", remote_marketplace_name=source
+            )
+    client = NativeSurfaceClient(None)
+    with patch.object(module, "Client", return_value=client):
+        response = module.read_plugin(
+            module.PluginReadRequest(
+                target="local", plugin_name="docs", remote_marketplace_name="curated"
+            )
+        )
+    assert client.calls == [
+        ("plugin/read", {"pluginName": "docs", "remoteMarketplaceName": "curated"})
+    ]
+    assert response.result.result == {"plugin": {"name": "docs"}}
+
+
 def test_reads_are_target_and_cwd_scoped_with_exact_native_params():
     module = load_actions()
     client = NativeSurfaceClient(None)
@@ -77,7 +99,11 @@ def test_reads_are_target_and_cwd_scoped_with_exact_native_params():
         module.list_skills(module.CwdInventoryRequest(target="local", cwd="/trusted"))
         module.list_hooks(module.CwdInventoryRequest(target="local", cwd="/trusted"))
         module.list_plugins(module.CwdInventoryRequest(target="local", cwd="/trusted"))
-        module.read_plugin(module.PluginReadRequest(target="local", plugin_name="docs"))
+        module.read_plugin(
+            module.PluginReadRequest(
+                target="local", plugin_name="docs", remote_marketplace_name="curated"
+            )
+        )
         module.list_apps(
             module.AppsListRequest(
                 target="local",
@@ -115,7 +141,10 @@ def test_reads_are_target_and_cwd_scoped_with_exact_native_params():
     assert client.calls[3][1] == {"cwds": ["/trusted"]}
     assert client.calls[4][1] == {"cwds": ["/trusted"]}
     assert client.calls[5][1] == {"cwds": ["/trusted"]}
-    assert client.calls[6][1] == {"pluginName": "docs"}
+    assert client.calls[6][1] == {
+        "pluginName": "docs",
+        "remoteMarketplaceName": "curated",
+    }
     assert client.calls[8][1] == {"limit": 10, "threadId": "thread-1"}
     assert client.calls[10][1] == {
         "threadId": "thread-1",

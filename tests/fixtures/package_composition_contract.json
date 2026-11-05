@@ -330,7 +330,7 @@
         "payload": "PluginReadRequest"
       },
       "output_schema_sha256": "fa690fdd67143783030a92cec2fc870cfbf061404d0d1e8c5bff6b0e1b42f33e",
-      "payload_schema_sha256": "79f5c155098aad9858fceeda60053a1ac0b75ec217a8b0e7d193ba0c3a0cbe36",
+      "payload_schema_sha256": "fe6e8fba9191c4bb580b37cfe85df8346f2a13ca48282de7c312a92a1de3c4d3",
       "return": "Response[RpcEnvelope]"
     },
     "read_server_diagnostics": {

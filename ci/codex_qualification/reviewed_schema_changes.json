@@ -1,0 +1,688 @@
+{
+  "schema_version": 1,
+  "versions": {
+    "0.166.0": {
+      "binary_sha256": "b8a11fedf24b2dfb59a70c9e52b030f9a508dcd49cd2dd0d41956f4c785156b8",
+      "methods": {
+        "account/rateLimits/read": {
+          "request_fields": [
+            "{}"
+          ],
+          "response_fields": [
+            "entire dict through RpcEnvelope.result"
+          ],
+          "schema_fingerprint": {
+            "request_sha256": "072f813ca1c696831a7f2fbd934feaa8cad228a6b3d44a4be8877547c796341b",
+            "response_sha256": "9c0def7f8ab2396122af939dffbf01b34b8d66082fe4129dd20917bfd4313fdc"
+          },
+          "source_files_sha256": {
+            "src/codex_actions.py": "c97eaae2d19e95590025de2d45736fcb3ec1baba496a12b438a5d8022d75f772",
+            "src/codex_rpc.py": "c3d45e1b3ec78df03e559fcbd41491887e4d050f2350996d73d029b88cb530b5",
+            "src/codex_shared/common.py": "398da2027ddaa116370587d3d76b5523a7463283b29d1b2b5bfbf433cc8cae91",
+            "src/codex_shared/inspection.py": "3bd5fa64610f4f0c1d12b57bdc193f265a9417e016e914044788137a0868cc0c",
+            "src/codex_shared/models.py": "c869b958617f8cd5672ed07adb92f3a72418850ffcdecc3063ffbe2da19cb07e"
+          },
+          "summary": "/response/definitions/PlanType/enum adds sci,sci_plus; consumed CAS fields remain compatible.",
+          "tests": [
+            "tests/test_native_operator_surfaces.py::test_reads_are_target_and_cwd_scoped_with_exact_native_params"
+          ]
+        },
+        "account/usage/read": {
+          "request_fields": [
+            "{} or threadId after thread id/cwd guard"
+          ],
+          "response_fields": [
+            "entire dict through RpcEnvelope.result"
+          ],
+          "schema_fingerprint": {
+            "request_sha256": "a992c6ea0fe02b0e9f46b18afb51b8ee2635e7f0c7d546f71e7f95e2a98bebba",
+            "response_sha256": "e725ed04b39667eec1494f1f269d4afc7b27034477c1f5429a3051b8721741de"
+          },
+          "source_files_sha256": {
+            "src/codex_actions.py": "c97eaae2d19e95590025de2d45736fcb3ec1baba496a12b438a5d8022d75f772",
+            "src/codex_rpc.py": "c3d45e1b3ec78df03e559fcbd41491887e4d050f2350996d73d029b88cb530b5",
+            "src/codex_shared/common.py": "398da2027ddaa116370587d3d76b5523a7463283b29d1b2b5bfbf433cc8cae91",
+            "src/codex_shared/inspection.py": "3bd5fa64610f4f0c1d12b57bdc193f265a9417e016e914044788137a0868cc0c",
+            "src/codex_shared/models.py": "c869b958617f8cd5672ed07adb92f3a72418850ffcdecc3063ffbe2da19cb07e"
+          },
+          "summary": "/response/definitions/ThreadUsage/properties/nativeUsageUsdMicros adds nullable integer; consumed CAS fields remain compatible.",
+          "tests": [
+            "tests/test_capability_metadata.py::test_control_only_native_projection_retains_guard_reads_but_not_unrelated_reads",
+            "tests/test_native_capabilities.py::test_inventory_reports_selected_control_package_and_actual_guard_methods",
+            "tests/test_native_operator_surfaces.py::test_reads_are_target_and_cwd_scoped_with_exact_native_params"
+          ]
+        },
+        "hooks/list": {
+          "request_fields": [
+            "cwds=[validated absolute cwd]"
+          ],
+          "response_fields": [
+            "entire dict; no event enum or environment validation"
+          ],
+          "schema_fingerprint": {
+            "request_sha256": "7f7f9f554df5ea7cd95fd9623bdfaf31e74e99ce1a13287becf40970b2547939",
+            "response_sha256": "44220325afe944298cabc29067cf29bdb5201167ebdc6cabf658c40fdb425c94"
+          },
+          "source_files_sha256": {
+            "src/codex_actions.py": "c97eaae2d19e95590025de2d45736fcb3ec1baba496a12b438a5d8022d75f772",
+            "src/codex_rpc.py": "c3d45e1b3ec78df03e559fcbd41491887e4d050f2350996d73d029b88cb530b5",
+            "src/codex_shared/common.py": "398da2027ddaa116370587d3d76b5523a7463283b29d1b2b5bfbf433cc8cae91",
+            "src/codex_shared/integrations.py": "534b3ecbce9f4ecba85ee0e59a74467c06bdfe0b039e030d6632d4def5a595a7",
+            "src/codex_shared/models.py": "c869b958617f8cd5672ed07adb92f3a72418850ffcdecc3063ffbe2da19cb07e"
+          },
+          "summary": "/request/properties/threadId adds optional nullable string; /response/definitions/HookEventName/enum adds preModelRequest,postModelRequest; /response/definitions/HookMetadata/properties/environmentId adds nullable string; consumed CAS fields remain compatible.",
+          "tests": [
+            "tests/test_native_operator_surfaces.py::test_reads_are_target_and_cwd_scoped_with_exact_native_params"
+          ]
+        },
+        "mcpServerStatus/list": {
+          "request_fields": [
+            "optional threadId,limit,cursor,detail"
+          ],
+          "response_fields": [
+            "data list, server dict shape, nextCursor string/null",
+            "all metadata recursively bounded and credential-shaped keys redacted by _bounded_mcp_status_result at integrations.py:56"
+          ],
+          "schema_fingerprint": {
+            "request_sha256": "30b978c6502b37c9f0002aeba241f41c91d4c6adf0f92d89242b62ffde415a2d",
+            "response_sha256": "c5a6c05092a9b1fa90c7cb3a319685a769a67c16e19048e8bbab5007b358be74"
+          },
+          "source_files_sha256": {
+            "src/codex_actions.py": "c97eaae2d19e95590025de2d45736fcb3ec1baba496a12b438a5d8022d75f772",
+            "src/codex_rpc.py": "c3d45e1b3ec78df03e559fcbd41491887e4d050f2350996d73d029b88cb530b5",
+            "src/codex_shared/common.py": "398da2027ddaa116370587d3d76b5523a7463283b29d1b2b5bfbf433cc8cae91",
+            "src/codex_shared/integrations.py": "534b3ecbce9f4ecba85ee0e59a74467c06bdfe0b039e030d6632d4def5a595a7",
+            "src/codex_shared/models.py": "c869b958617f8cd5672ed07adb92f3a72418850ffcdecc3063ffbe2da19cb07e"
+          },
+          "summary": "/response/definitions/McpServerStatus/properties/toolListMeta adds unrestricted JSON; consumed CAS fields remain compatible.",
+          "tests": [
+            "tests/test_action_server_validation.py::ActionServerValidationTests::test_real_loopback_mcp_uses_typed_actions_and_isolated_native_fixture",
+            "tests/test_action_transport_failures.py::test_read_action_sanitizes_native_handshake_failure",
+            "tests/test_control_actions.py::test_read_only_priority_actions_are_typed_and_target_scoped",
+            "tests/test_mcp_status_bounds.py::test_mcp_status_preserves_native_page_and_detail_with_bounded_schema",
+            "tests/test_mcp_status_bounds.py::test_mcp_status_preserves_opaque_cursor_without_clipping",
+            "tests/test_mcp_status_bounds.py::test_mcp_status_redacts_credential_shaped_root_metadata",
+            "tests/test_mcp_status_bounds.py::test_mcp_status_refuses_invalid_or_oversized_cursor",
+            "tests/test_mcp_status_bounds.py::test_malformed_mcp_status_does_not_poison_following_read"
+          ]
+        },
+        "modelProvider/capabilities/read": {
+          "request_fields": [
+            "{}"
+          ],
+          "response_fields": [
+            "entire dict; namespaceTools not consumed"
+          ],
+          "schema_fingerprint": {
+            "request_sha256": "9db732188a15476cabb42cf05e495ae0803a1ada993fca7348c21c30a998388d",
+            "response_sha256": "96979d0111a38cb35a313e111c2f7c449441aee7fd51e1757f2d11c2213d4e77"
+          },
+          "source_files_sha256": {
+            "src/codex_actions.py": "c97eaae2d19e95590025de2d45736fcb3ec1baba496a12b438a5d8022d75f772",
+            "src/codex_rpc.py": "c3d45e1b3ec78df03e559fcbd41491887e4d050f2350996d73d029b88cb530b5",
+            "src/codex_shared/common.py": "398da2027ddaa116370587d3d76b5523a7463283b29d1b2b5bfbf433cc8cae91",
+            "src/codex_shared/inspection.py": "3bd5fa64610f4f0c1d12b57bdc193f265a9417e016e914044788137a0868cc0c",
+            "src/codex_shared/models.py": "c869b958617f8cd5672ed07adb92f3a72418850ffcdecc3063ffbe2da19cb07e"
+          },
+          "summary": "/response/properties/namespaceTools removed; /response/required removes namespaceTools; consumed CAS fields remain compatible.",
+          "tests": [
+            "tests/test_action_server_validation.py::ActionServerValidationTests::test_real_loopback_mcp_uses_typed_actions_and_isolated_native_fixture",
+            "tests/test_control_actions.py::test_read_only_priority_actions_are_typed_and_target_scoped",
+            "tests/test_protocol_contracts.py::NativeProtocolContractTests::test_read_only_inventory_actions_use_empty_native_params",
+            "tests/test_rpc_lifecycle.py::NativeLifecycleTests::test_priority_native_methods_are_bounded_and_workstream_scoped"
+          ]
+        },
+        "plugin/read": {
+          "request_fields": [
+            "pluginName",
+            "remoteMarketplaceName"
+          ],
+          "response_fields": [
+            "plugin (bounded native result)"
+          ],
+          "schema_fingerprint": {
+            "request_sha256": "f15952a2828c90501cc32f347c1e1691ea65cd2d97f503ab40e7be08757de74d",
+            "response_sha256": "fecc4792b298b66cad24b418f9c34d80ffe3dcf1572d9d05fd5a4ac1f824acb7"
+          },
+          "source_files_sha256": {
+            "src/codex_actions.py": "c97eaae2d19e95590025de2d45736fcb3ec1baba496a12b438a5d8022d75f772",
+            "src/codex_rpc.py": "c3d45e1b3ec78df03e559fcbd41491887e4d050f2350996d73d029b88cb530b5",
+            "src/codex_shared/common.py": "398da2027ddaa116370587d3d76b5523a7463283b29d1b2b5bfbf433cc8cae91",
+            "src/codex_shared/integrations.py": "534b3ecbce9f4ecba85ee0e59a74467c06bdfe0b039e030d6632d4def5a595a7",
+            "src/codex_shared/models.py": "c869b958617f8cd5672ed07adb92f3a72418850ffcdecc3063ffbe2da19cb07e"
+          },
+          "summary": "Remote plugin details now require an explicit bounded remoteMarketplaceName, validated before dispatch; plugin metadata extensions are preserved.",
+          "tests": [
+            "tests/test_native_operator_surfaces.py::test_plugin_read_requires_an_explicit_bounded_remote_marketplace",
+            "tests/test_native_operator_surfaces.py::test_reads_are_target_and_cwd_scoped_with_exact_native_params"
+          ]
+        },
+        "review/start": {
+          "request_fields": [
+            "threadId",
+            "target"
+          ],
+          "response_fields": [
+            "$.reviewThreadId",
+            "$.turn.id",
+            "$ (native result forwarded)"
+          ],
+          "schema_fingerprint": {
+            "request_sha256": "cac942a9a9f53da711217f3cc4de72ff39cd2db7fe78f1b504ee602c53bde15c",
+            "response_sha256": "634eea6283cc09012d3aa3d80c28c1c4c5c1037bbc662ecfba0601d834a12ce5"
+          },
+          "source_files_sha256": {
+            "src/codex_actions.py": "c97eaae2d19e95590025de2d45736fcb3ec1baba496a12b438a5d8022d75f772",
+            "src/codex_rpc.py": "c3d45e1b3ec78df03e559fcbd41491887e4d050f2350996d73d029b88cb530b5",
+            "src/codex_shared/common.py": "398da2027ddaa116370587d3d76b5523a7463283b29d1b2b5bfbf433cc8cae91",
+            "src/codex_shared/execution.py": "2606b8f8c7f796c9c3dfe52d889c7887755acfc5552fb0a92985a0b58c0a884f",
+            "src/codex_shared/models.py": "c869b958617f8cd5672ed07adb92f3a72418850ffcdecc3063ffbe2da19cb07e"
+          },
+          "summary": "CAS inline-only request remains compatible after detached delivery removal; positive native review requires a loaded thread.",
+          "tests": [
+            "tests/test_native_operator_surfaces.py::test_review_and_mcp_tool_calls_are_consequential_and_receipt_protected"
+          ]
+        },
+        "skills/list": {
+          "request_fields": [
+            "cwds=[validated absolute cwd]"
+          ],
+          "response_fields": [
+            "entire dict; returned skill paths not validated or opened"
+          ],
+          "schema_fingerprint": {
+            "request_sha256": "1d245374e64c5acc9739dfc68a4fe5114c6c9147af04c480886f1846d2ca6239",
+            "response_sha256": "d11084bd4bfa50f747e880ab9a08eb8e8073c67d67c79907f4cff090db7b48f4"
+          },
+          "source_files_sha256": {
+            "src/codex_actions.py": "c97eaae2d19e95590025de2d45736fcb3ec1baba496a12b438a5d8022d75f772",
+            "src/codex_rpc.py": "c3d45e1b3ec78df03e559fcbd41491887e4d050f2350996d73d029b88cb530b5",
+            "src/codex_shared/common.py": "398da2027ddaa116370587d3d76b5523a7463283b29d1b2b5bfbf433cc8cae91",
+            "src/codex_shared/integrations.py": "534b3ecbce9f4ecba85ee0e59a74467c06bdfe0b039e030d6632d4def5a595a7",
+            "src/codex_shared/models.py": "c869b958617f8cd5672ed07adb92f3a72418850ffcdecc3063ffbe2da19cb07e"
+          },
+          "summary": "/response/definitions/SkillMetadata/properties/path/$ref changes AbsolutePathBuf to LegacyAppPathString (string); consumed CAS fields remain compatible.",
+          "tests": [
+            "tests/test_native_operator_surfaces.py::test_reads_are_target_and_cwd_scoped_with_exact_native_params"
+          ]
+        },
+        "thread/fork": {
+          "request_fields": [
+            "threadId",
+            "cwd",
+            "excludeTurns",
+            "lastTurnId",
+            "model",
+            "modelProvider"
+          ],
+          "response_fields": [
+            "$.thread.id",
+            "$.thread.cwd",
+            "$ (native result forwarded)",
+            "$.model",
+            "$.modelProvider",
+            "$.reasoningEffort",
+            "$.approvalPolicy",
+            "$.sandbox",
+            "$.thread.model",
+            "$.thread.modelProvider",
+            "$.thread.reasoningEffort",
+            "$.thread.approvalPolicy",
+            "$.thread.sandbox"
+          ],
+          "schema_fingerprint": {
+            "request_sha256": "9c85b0347ef12c9a7eef7f08b3710d859569a16414bdf0f18254b0c42560a47e",
+            "response_sha256": "a6123e7d199a8da6849389a2495b8b80dbb13c918fcd5c1241040544b14fa88d"
+          },
+          "source_files_sha256": {
+            "src/codex_actions.py": "c97eaae2d19e95590025de2d45736fcb3ec1baba496a12b438a5d8022d75f772",
+            "src/codex_rpc.py": "c3d45e1b3ec78df03e559fcbd41491887e4d050f2350996d73d029b88cb530b5",
+            "src/codex_shared/common.py": "398da2027ddaa116370587d3d76b5523a7463283b29d1b2b5bfbf433cc8cae91",
+            "src/codex_shared/models.py": "c869b958617f8cd5672ed07adb92f3a72418850ffcdecc3063ffbe2da19cb07e",
+            "src/codex_shared/organization.py": "f69a86f57adda2a535b18cd851d5c90f3b1ee353dc00ee4e5667f0a7c37811a4"
+          },
+          "summary": "New optional fork controls do not alter the CAS bounded existing request or forked thread identity consumers.",
+          "tests": [
+            "tests/test_thread_lifecycle.py::test_lifecycle_actions_send_only_typed_native_fields"
+          ]
+        },
+        "thread/goal/clear": {
+          "request_fields": [
+            "threadId"
+          ],
+          "response_fields": [
+            "$ (native result forwarded; CAS does not independently inspect cleared)"
+          ],
+          "schema_fingerprint": {
+            "request_sha256": "9f40b83771b3cc733e05579041600db6371968e1547ef9626a589525022cb8ae",
+            "response_sha256": "2652c2d0072be8ccb71c8dcaaa054aa74f974e68156a73451baf72c8597669c2"
+          },
+          "source_files_sha256": {
+            "src/codex_actions.py": "c97eaae2d19e95590025de2d45736fcb3ec1baba496a12b438a5d8022d75f772",
+            "src/codex_rpc.py": "c3d45e1b3ec78df03e559fcbd41491887e4d050f2350996d73d029b88cb530b5",
+            "src/codex_shared/common.py": "398da2027ddaa116370587d3d76b5523a7463283b29d1b2b5bfbf433cc8cae91",
+            "src/codex_shared/execution.py": "2606b8f8c7f796c9c3dfe52d889c7887755acfc5552fb0a92985a0b58c0a884f",
+            "src/codex_shared/models.py": "c869b958617f8cd5672ed07adb92f3a72418850ffcdecc3063ffbe2da19cb07e"
+          },
+          "summary": "Optional origin addition is structurally compatible; omitted-origin native clear removes an existing owned goal.",
+          "tests": [
+            "tests/test_control_actions.py::test_settings_and_goal_actions_use_native_typed_boundaries"
+          ]
+        },
+        "thread/goal/set": {
+          "request_fields": [
+            "threadId",
+            "objective",
+            "status",
+            "tokenBudget"
+          ],
+          "response_fields": [
+            "$.goal",
+            "$.goal.threadId",
+            "$ (native result forwarded)"
+          ],
+          "schema_fingerprint": {
+            "request_sha256": "36c1f1935e1a352865512433aae44c9fffde4a7fa3db127449da088a8a212287",
+            "response_sha256": "b1c61b6068b3b73dd3d97b38f8a269593f8f7added4643bfdb2016315b71ad8e"
+          },
+          "source_files_sha256": {
+            "src/codex_actions.py": "c97eaae2d19e95590025de2d45736fcb3ec1baba496a12b438a5d8022d75f772",
+            "src/codex_rpc.py": "c3d45e1b3ec78df03e559fcbd41491887e4d050f2350996d73d029b88cb530b5",
+            "src/codex_shared/common.py": "398da2027ddaa116370587d3d76b5523a7463283b29d1b2b5bfbf433cc8cae91",
+            "src/codex_shared/execution.py": "2606b8f8c7f796c9c3dfe52d889c7887755acfc5552fb0a92985a0b58c0a884f",
+            "src/codex_shared/models.py": "c869b958617f8cd5672ed07adb92f3a72418850ffcdecc3063ffbe2da19cb07e"
+          },
+          "summary": "Optional origin addition leaves CAS objective/status/tokenBudget and required goal identity consumers unchanged.",
+          "tests": [
+            "tests/test_control_actions.py::test_settings_and_goal_actions_use_native_typed_boundaries",
+            "tests/test_control_actions.py::test_goal_set_rejects_a_native_response_without_matching_goal_identity",
+            "tests/test_protocol_contracts.py::NativeProtocolContractTests::test_page_and_goal_actions_map_all_wire_fields"
+          ]
+        },
+        "thread/items/list": {
+          "request_fields": [
+            "threadId,optional turnId,limit,cursor,sortDirection after thread id/cwd guard"
+          ],
+          "response_fields": [
+            "raw page dict"
+          ],
+          "schema_fingerprint": {
+            "request_sha256": "d5cf9784413f1d1abba756e04e48b273a9d12ab2c5675442e91b6a4ee55e19f0",
+            "response_sha256": "5bcd27fa23f443b790dcae8d0045a700b4aff6025602b032cb2c558694c921e6"
+          },
+          "source_files_sha256": {
+            "src/codex_actions.py": "c97eaae2d19e95590025de2d45736fcb3ec1baba496a12b438a5d8022d75f772",
+            "src/codex_rpc.py": "c3d45e1b3ec78df03e559fcbd41491887e4d050f2350996d73d029b88cb530b5",
+            "src/codex_shared/common.py": "398da2027ddaa116370587d3d76b5523a7463283b29d1b2b5bfbf433cc8cae91",
+            "src/codex_shared/models.py": "c869b958617f8cd5672ed07adb92f3a72418850ffcdecc3063ffbe2da19cb07e",
+            "src/codex_shared/threads.py": "eb1243d7724394e5fc679a2d17e3853d9c73ab72e9b2c944397c4741852fc0e6"
+          },
+          "summary": "/response/definitions/ThreadItem/properties adds startedAtMs,completedAtMs; /response/definitions/ThreadItem/oneOf[subAgentActivity] adds model,reasoningEffort; /response/definitions/ThreadItem/oneOf[imageGeneration] changes required result to anyOf fileId/result, adds generationId,inputImages; /response/definitions/MessagePhase/oneOf adds partial_answer; consumed CAS fields remain compatible.",
+          "tests": [
+            "tests/test_action_server_validation.py::ActionServerValidationTests::test_real_loopback_mcp_uses_typed_actions_and_isolated_native_fixture",
+            "tests/test_capability_metadata.py::test_capability_records_preserve_composite_native_operations",
+            "tests/test_container_image.py::test_production_image_mcp_native_socket_and_persistent_receipt",
+            "tests/test_control_actions.py::test_paginated_thread_turns_and_items_keep_exact_thread_cwd_guard",
+            "tests/test_http_boot.py::test_standalone_http_boot_catalog_and_safe_diagnostics",
+            "tests/test_protocol_contracts.py::NativeProtocolContractTests::test_page_and_goal_actions_map_all_wire_fields",
+            "tests/test_protocol_contracts.py::NativeProtocolContractTests::test_pagination_contracts_keep_opaque_cursors_and_native_page_fields",
+            "tests/test_rpc_lifecycle.py::NativeLifecycleTests::test_priority_native_methods_are_bounded_and_workstream_scoped"
+          ]
+        },
+        "thread/list": {
+          "request_fields": [
+            "cwd,limit,optional cursor"
+          ],
+          "response_fields": [
+            "entire dict; new readStates preserved"
+          ],
+          "schema_fingerprint": {
+            "request_sha256": "1781b1778cb08619f0bf12528b128e55648b86569114196b1b5ec565b9b7935d",
+            "response_sha256": "0a4820f94729dd2799d141e1ac8d375ac54bb6ab2d75a4684f5c73623df536ba"
+          },
+          "source_files_sha256": {
+            "src/codex_actions.py": "c97eaae2d19e95590025de2d45736fcb3ec1baba496a12b438a5d8022d75f772",
+            "src/codex_rpc.py": "c3d45e1b3ec78df03e559fcbd41491887e4d050f2350996d73d029b88cb530b5",
+            "src/codex_shared/common.py": "398da2027ddaa116370587d3d76b5523a7463283b29d1b2b5bfbf433cc8cae91",
+            "src/codex_shared/models.py": "c869b958617f8cd5672ed07adb92f3a72418850ffcdecc3063ffbe2da19cb07e",
+            "src/codex_shared/threads.py": "eb1243d7724394e5fc679a2d17e3853d9c73ab72e9b2c944397c4741852fc0e6"
+          },
+          "summary": "/request/properties adds ancestorThreadId,attachedToThreadId,excludedThreadIds,parentThreadId,projectId; /response/properties/readStates adds optional nullable map; shared Thread,Turn,ThreadItem,CodexErrorInfo additions listed below; consumed CAS fields remain compatible.",
+          "tests": [
+            "tests/test_action_server_validation.py::ActionServerValidationTests::test_real_loopback_mcp_uses_typed_actions_and_isolated_native_fixture",
+            "tests/test_actions.py::ActionContractTests::test_discovery_is_typed_and_target_scoped",
+            "tests/test_actions.py::ActionContractTests::test_entrypoints_do_not_accept_raw_method_or_shell_arguments",
+            "tests/test_container_image.py::test_production_image_mcp_native_socket_and_persistent_receipt",
+            "tests/test_http_boot.py::test_standalone_http_boot_catalog_and_safe_diagnostics",
+            "tests/test_protocol_contracts.py::NativeProtocolContractTests::test_pagination_contracts_keep_opaque_cursors_and_native_page_fields",
+            "tests/test_provider_acceptance_contract.py::test_provider_smoke_gates_diagnostics_by_exact_native_version",
+            "tests/test_rpc_lifecycle.py::NativeLifecycleTests::test_priority_native_methods_are_bounded_and_workstream_scoped"
+          ]
+        },
+        "thread/metadata/update": {
+          "request_fields": [
+            "threadId",
+            "gitInfo"
+          ],
+          "response_fields": [
+            "$ (native result forwarded)",
+            "$.model",
+            "$.modelProvider",
+            "$.reasoningEffort",
+            "$.approvalPolicy",
+            "$.sandbox",
+            "$.thread.model",
+            "$.thread.modelProvider",
+            "$.thread.reasoningEffort",
+            "$.thread.approvalPolicy",
+            "$.thread.sandbox"
+          ],
+          "schema_fingerprint": {
+            "request_sha256": "acde30f30f11984fce6d96f52858348db92ce9ee7ea18a8fca19689ec8aabbbe",
+            "response_sha256": "b770b975eff9355c0e13ee0fd7368018aba34c9ec27445f22d3dc987b2bebfbe"
+          },
+          "source_files_sha256": {
+            "src/codex_actions.py": "c97eaae2d19e95590025de2d45736fcb3ec1baba496a12b438a5d8022d75f772",
+            "src/codex_rpc.py": "c3d45e1b3ec78df03e559fcbd41491887e4d050f2350996d73d029b88cb530b5",
+            "src/codex_shared/common.py": "398da2027ddaa116370587d3d76b5523a7463283b29d1b2b5bfbf433cc8cae91",
+            "src/codex_shared/models.py": "c869b958617f8cd5672ed07adb92f3a72418850ffcdecc3063ffbe2da19cb07e",
+            "src/codex_shared/organization.py": "f69a86f57adda2a535b18cd851d5c90f3b1ee353dc00ee4e5667f0a7c37811a4"
+          },
+          "summary": "Optional daybreakEnabled/projectId additions leave typed Git patch/null-clearing request unchanged.",
+          "tests": [
+            "tests/test_thread_lifecycle.py::test_lifecycle_actions_send_only_typed_native_fields",
+            "tests/test_thread_lifecycle.py::test_metadata_update_maps_only_fields_in_pinned_native_schema"
+          ]
+        },
+        "thread/read": {
+          "request_fields": [
+            "threadId,includeTurns"
+          ],
+          "response_fields": [
+            "thread.id and thread.cwd exact identity required; complete raw result retained"
+          ],
+          "schema_fingerprint": {
+            "request_sha256": "dfe040c6ac71d30795b8be3f3ff232e66f362a37f883b491e5d1ea367f470db4",
+            "response_sha256": "25f3eb2888f592c7810420b054aba8ffb5fa134dd2a2d1cce5a90c2f038be7f6"
+          },
+          "source_files_sha256": {
+            "src/codex_actions.py": "c97eaae2d19e95590025de2d45736fcb3ec1baba496a12b438a5d8022d75f772",
+            "src/codex_rpc.py": "c3d45e1b3ec78df03e559fcbd41491887e4d050f2350996d73d029b88cb530b5",
+            "src/codex_shared/common.py": "398da2027ddaa116370587d3d76b5523a7463283b29d1b2b5bfbf433cc8cae91",
+            "src/codex_shared/coordination.py": "d67a7102bb561d2619451f32ad44cf3c0699661fb2f45a319539ecab85bac37c",
+            "src/codex_shared/execution.py": "2606b8f8c7f796c9c3dfe52d889c7887755acfc5552fb0a92985a0b58c0a884f",
+            "src/codex_shared/inspection.py": "3bd5fa64610f4f0c1d12b57bdc193f265a9417e016e914044788137a0868cc0c",
+            "src/codex_shared/integrations.py": "534b3ecbce9f4ecba85ee0e59a74467c06bdfe0b039e030d6632d4def5a595a7",
+            "src/codex_shared/models.py": "c869b958617f8cd5672ed07adb92f3a72418850ffcdecc3063ffbe2da19cb07e",
+            "src/codex_shared/organization.py": "f69a86f57adda2a535b18cd851d5c90f3b1ee353dc00ee4e5667f0a7c37811a4",
+            "src/codex_shared/queues.py": "e6509ee08e5fa3675a7b90a63d05dba40e40d51a4dca10bea96b5b97a9a577bf",
+            "src/codex_shared/threads.py": "eb1243d7724394e5fc679a2d17e3853d9c73ab72e9b2c944397c4741852fc0e6"
+          },
+          "summary": "/response/properties/readState adds optional nullable read revision/unread position; /response/definitions/Thread/properties adds canAcceptDirectInput,daybreakEnabled,environments,extra; shared Turn,ThreadItem,CodexErrorInfo additions listed below; consumed CAS fields remain compatible.",
+          "tests": [
+            "tests/test_action_server_validation.py::ActionServerValidationTests::test_real_loopback_mcp_uses_typed_actions_and_isolated_native_fixture",
+            "tests/test_action_transport_failures.py::test_dispatch_handshake_failure_records_unknown_without_redispatch",
+            "tests/test_actions.py::ActionContractTests::test_read_requires_and_verifies_workstream_cwd",
+            "tests/test_actions.py::ActionContractTests::test_read_rejects_a_thread_from_another_workstream",
+            "tests/test_actions.py::ActionContractTests::test_read_rejects_a_different_returned_thread_id",
+            "tests/test_actions.py::ActionContractTests::test_mutation_rejects_a_different_returned_thread_id",
+            "tests/test_actions.py::ActionContractTests::test_mutations_read_and_verify_cwd_before_native_request",
+            "tests/test_actions.py::ActionContractTests::test_thread_start_and_resume_are_explicit_lifecycle_operations"
+          ]
+        },
+        "thread/resume": {
+          "request_fields": [
+            "threadId",
+            "cwd",
+            "excludeTurns",
+            "model",
+            "modelProvider",
+            "approvalPolicy",
+            "sandbox"
+          ],
+          "response_fields": [
+            "$.thread.id",
+            "$.thread.cwd",
+            "$ (native result forwarded)",
+            "$.model",
+            "$.modelProvider",
+            "$.reasoningEffort",
+            "$.approvalPolicy",
+            "$.sandbox",
+            "$.thread.model",
+            "$.thread.modelProvider",
+            "$.thread.reasoningEffort",
+            "$.thread.approvalPolicy",
+            "$.thread.sandbox"
+          ],
+          "schema_fingerprint": {
+            "request_sha256": "8152ea774ace4eb5623081abd64a1135f28cbff1e73ca641cfb80ac16f6eed32",
+            "response_sha256": "98166feff59447179d8598f2dc96f6bf204758f8483aef7cc1137f4407c9195e"
+          },
+          "source_files_sha256": {
+            "src/codex_actions.py": "c97eaae2d19e95590025de2d45736fcb3ec1baba496a12b438a5d8022d75f772",
+            "src/codex_rpc.py": "c3d45e1b3ec78df03e559fcbd41491887e4d050f2350996d73d029b88cb530b5",
+            "src/codex_shared/common.py": "398da2027ddaa116370587d3d76b5523a7463283b29d1b2b5bfbf433cc8cae91",
+            "src/codex_shared/execution.py": "2606b8f8c7f796c9c3dfe52d889c7887755acfc5552fb0a92985a0b58c0a884f",
+            "src/codex_shared/models.py": "c869b958617f8cd5672ed07adb92f3a72418850ffcdecc3063ffbe2da19cb07e"
+          },
+          "summary": "Optional history/page/path/permissions/workspace additions preserve CAS attach-only identity and settings mapping.",
+          "tests": [
+            "tests/test_protocol_contracts.py::NativeProtocolContractTests::test_thread_resume_maps_provider_and_preserves_same_thread_identity",
+            "tests/test_control_actions.py::test_resume_maps_native_model_provider_and_omits_unset_overrides",
+            "tests/test_rpc_lifecycle.py::NativeLifecycleTests::test_existing_thread_still_uses_native_resume_once"
+          ]
+        },
+        "thread/revert": {
+          "request_fields": [
+            "threadId",
+            "beforeTurnId"
+          ],
+          "response_fields": [
+            "$ (native result forwarded)",
+            "$.model",
+            "$.modelProvider",
+            "$.reasoningEffort",
+            "$.approvalPolicy",
+            "$.sandbox",
+            "$.thread.model",
+            "$.thread.modelProvider",
+            "$.thread.reasoningEffort",
+            "$.thread.approvalPolicy",
+            "$.thread.sandbox"
+          ],
+          "schema_fingerprint": {
+            "request_sha256": "3a5e85a67906c8ea3ad9f5065559d263d968a28a957739e7a1d9e4e1981e4eb8",
+            "response_sha256": "45a5e054149b1e7a320a60600c43f28ade05a2a73f61351d7f0f6c6f3765593a"
+          },
+          "source_files_sha256": {
+            "src/codex_actions.py": "c97eaae2d19e95590025de2d45736fcb3ec1baba496a12b438a5d8022d75f772",
+            "src/codex_rpc.py": "c3d45e1b3ec78df03e559fcbd41491887e4d050f2350996d73d029b88cb530b5",
+            "src/codex_shared/common.py": "398da2027ddaa116370587d3d76b5523a7463283b29d1b2b5bfbf433cc8cae91",
+            "src/codex_shared/models.py": "c869b958617f8cd5672ed07adb92f3a72418850ffcdecc3063ffbe2da19cb07e",
+            "src/codex_shared/organization.py": "f69a86f57adda2a535b18cd851d5c90f3b1ee353dc00ee4e5667f0a7c37811a4"
+          },
+          "summary": "Request is unchanged; new Thread/Turn/item response data does not change the CAS before-turn mapping.",
+          "tests": [
+            "tests/test_thread_lifecycle.py::test_lifecycle_actions_send_only_typed_native_fields"
+          ]
+        },
+        "thread/start": {
+          "request_fields": [
+            "cwd",
+            "model",
+            "modelProvider",
+            "approvalPolicy",
+            "sandbox",
+            "dynamicTools"
+          ],
+          "response_fields": [
+            "$.thread.id",
+            "$.thread.cwd",
+            "$ (native result forwarded)",
+            "$.model",
+            "$.modelProvider",
+            "$.reasoningEffort",
+            "$.approvalPolicy",
+            "$.sandbox",
+            "$.thread.model",
+            "$.thread.modelProvider",
+            "$.thread.reasoningEffort",
+            "$.thread.approvalPolicy",
+            "$.thread.sandbox"
+          ],
+          "schema_fingerprint": {
+            "request_sha256": "80a40a7fac15b4bf70efb7f893fb353acc0a0d30c68f54aee4f01923deca85de",
+            "response_sha256": "d82d7322a000e715eeac6ae4f7398fc78fc29b4e9a7e8d17aba034ec8d51e348"
+          },
+          "source_files_sha256": {
+            "src/codex_actions.py": "c97eaae2d19e95590025de2d45736fcb3ec1baba496a12b438a5d8022d75f772",
+            "src/codex_rpc.py": "c3d45e1b3ec78df03e559fcbd41491887e4d050f2350996d73d029b88cb530b5",
+            "src/codex_shared/common.py": "398da2027ddaa116370587d3d76b5523a7463283b29d1b2b5bfbf433cc8cae91",
+            "src/codex_shared/execution.py": "2606b8f8c7f796c9c3dfe52d889c7887755acfc5552fb0a92985a0b58c0a884f",
+            "src/codex_shared/models.py": "c869b958617f8cd5672ed07adb92f3a72418850ffcdecc3063ffbe2da19cb07e"
+          },
+          "summary": "Existing identity/settings and optional fixed callback registration remain compatible with newly exposed optional start controls.",
+          "tests": [
+            "tests/test_protocol_contracts.py::NativeProtocolContractTests::test_thread_start_maps_provider_and_effort_to_supported_boundaries",
+            "tests/test_control_actions.py::test_new_thread_turn_materializes_fresh_thread_on_one_native_connection",
+            "tests/test_control_actions.py::test_fixed_callback_registration_preserves_settings_and_same_connection_wait",
+            "tests/test_rpc_lifecycle.py::NativeLifecycleTests::test_created_thread_stays_on_connection_until_first_turn_materializes_rollout"
+          ]
+        },
+        "thread/turns/list": {
+          "request_fields": [
+            "threadId,optional limit,cursor,sortDirection,itemsView after thread id/cwd guard"
+          ],
+          "response_fields": [
+            "raw page dict"
+          ],
+          "schema_fingerprint": {
+            "request_sha256": "2a8b93d7d4437cc25e16a1dde16d8db3c338d39e16c5eece2a56e943a21577d7",
+            "response_sha256": "7953d842384fbc572c0b33f03c0fb1c6b746d3a3cc9c25302e6a03f9dce6d46a"
+          },
+          "source_files_sha256": {
+            "src/codex_actions.py": "c97eaae2d19e95590025de2d45736fcb3ec1baba496a12b438a5d8022d75f772",
+            "src/codex_rpc.py": "c3d45e1b3ec78df03e559fcbd41491887e4d050f2350996d73d029b88cb530b5",
+            "src/codex_shared/common.py": "398da2027ddaa116370587d3d76b5523a7463283b29d1b2b5bfbf433cc8cae91",
+            "src/codex_shared/models.py": "c869b958617f8cd5672ed07adb92f3a72418850ffcdecc3063ffbe2da19cb07e",
+            "src/codex_shared/threads.py": "eb1243d7724394e5fc679a2d17e3853d9c73ab72e9b2c944397c4741852fc0e6"
+          },
+          "summary": "/response/definitions/Turn/properties/rootTurnId adds nullable string; shared ThreadItem,CodexErrorInfo additions listed below; consumed CAS fields remain compatible.",
+          "tests": [
+            "tests/test_action_server_validation.py::ActionServerValidationTests::test_real_loopback_mcp_uses_typed_actions_and_isolated_native_fixture",
+            "tests/test_capability_metadata.py::test_capability_records_preserve_composite_native_operations",
+            "tests/test_container_image.py::test_production_image_mcp_native_socket_and_persistent_receipt",
+            "tests/test_control_actions.py::test_paginated_thread_turns_and_items_keep_exact_thread_cwd_guard",
+            "tests/test_http_boot.py::test_standalone_http_boot_catalog_and_safe_diagnostics",
+            "tests/test_protocol_contracts.py::NativeProtocolContractTests::test_page_and_goal_actions_map_all_wire_fields",
+            "tests/test_protocol_contracts.py::NativeProtocolContractTests::test_pagination_contracts_keep_opaque_cursors_and_native_page_fields",
+            "tests/test_rpc_lifecycle.py::NativeLifecycleTests::test_priority_native_methods_are_bounded_and_workstream_scoped"
+          ]
+        },
+        "thread/unarchive": {
+          "request_fields": [
+            "threadId"
+          ],
+          "response_fields": [
+            "$ (native result forwarded)",
+            "$.model",
+            "$.modelProvider",
+            "$.reasoningEffort",
+            "$.approvalPolicy",
+            "$.sandbox",
+            "$.thread.model",
+            "$.thread.modelProvider",
+            "$.thread.reasoningEffort",
+            "$.thread.approvalPolicy",
+            "$.thread.sandbox"
+          ],
+          "schema_fingerprint": {
+            "request_sha256": "a1d5d847b61ea16ab09d5b9d1c1461134a7829292aae02a7e11b0a69b00c76ca",
+            "response_sha256": "0c5f690638a2404859478916136b2218d61d13bde7e5e28b187a6b2c6c35f7c3"
+          },
+          "source_files_sha256": {
+            "src/codex_actions.py": "c97eaae2d19e95590025de2d45736fcb3ec1baba496a12b438a5d8022d75f772",
+            "src/codex_rpc.py": "c3d45e1b3ec78df03e559fcbd41491887e4d050f2350996d73d029b88cb530b5",
+            "src/codex_shared/common.py": "398da2027ddaa116370587d3d76b5523a7463283b29d1b2b5bfbf433cc8cae91",
+            "src/codex_shared/models.py": "c869b958617f8cd5672ed07adb92f3a72418850ffcdecc3063ffbe2da19cb07e",
+            "src/codex_shared/organization.py": "f69a86f57adda2a535b18cd851d5c90f3b1ee353dc00ee4e5667f0a7c37811a4"
+          },
+          "summary": "Request unchanged and shared response extensions are forwarded without closed-world item parsing.",
+          "tests": [
+            "tests/test_thread_lifecycle.py::test_lifecycle_identity_mismatch_fails_before_native_mutation",
+            "tests/test_thread_lifecycle.py::test_unarchive_dispatch_checks_identity_and_sends_only_the_exact_thread"
+          ]
+        },
+        "turn/start": {
+          "request_fields": [
+            "threadId",
+            "cwd",
+            "input",
+            "model",
+            "effort",
+            "approvalPolicy",
+            "sandboxPolicy"
+          ],
+          "response_fields": [
+            "$.turn.id",
+            "$.turn.status",
+            "$ (native result forwarded)",
+            "turn/completed.params.threadId",
+            "turn/completed.params.turn.id",
+            "turn/completed.params.turn.status"
+          ],
+          "schema_fingerprint": {
+            "request_sha256": "c7483aee79757d260c4fc1bb5c68b1a8d6f72846388e9f1e88d6f76f423287c8",
+            "response_sha256": "85da8d16c86432da14440504ae1e76d13527058920d4ed81632dd50c3fbd054d"
+          },
+          "source_files_sha256": {
+            "src/codex_actions.py": "c97eaae2d19e95590025de2d45736fcb3ec1baba496a12b438a5d8022d75f772",
+            "src/codex_rpc.py": "c3d45e1b3ec78df03e559fcbd41491887e4d050f2350996d73d029b88cb530b5",
+            "src/codex_shared/common.py": "398da2027ddaa116370587d3d76b5523a7463283b29d1b2b5bfbf433cc8cae91",
+            "src/codex_shared/execution.py": "2606b8f8c7f796c9c3dfe52d889c7887755acfc5552fb0a92985a0b58c0a884f",
+            "src/codex_shared/models.py": "c869b958617f8cd5672ed07adb92f3a72418850ffcdecc3063ffbe2da19cb07e"
+          },
+          "summary": "Optional context/environment/mode/metadata/root fields preserve existing typed text and execution-policy request plus acknowledgement/wait fields.",
+          "tests": [
+            "tests/test_actions.py::ActionContractTests::test_start_turn_resumes_same_connection_and_can_wait",
+            "tests/test_control_actions.py::test_new_thread_turn_materializes_fresh_thread_on_one_native_connection",
+            "tests/test_rpc_lifecycle.py::NativeLifecycleTests::test_created_thread_stays_on_connection_until_first_turn_materializes_rollout"
+          ]
+        },
+        "turn/steer": {
+          "request_fields": [
+            "threadId",
+            "expectedTurnId",
+            "input"
+          ],
+          "response_fields": [
+            "$ (native result forwarded; CAS does not independently check turnId)"
+          ],
+          "schema_fingerprint": {
+            "request_sha256": "202bc34e1f268b69e28c75f2ddd8b4990562eef114aca4663d9596f59d425bf8",
+            "response_sha256": "866ba9a77c12b5d570c837d58f73bf40b24e50fa93404bdf792dd984d313b1aa"
+          },
+          "source_files_sha256": {
+            "src/codex_actions.py": "c97eaae2d19e95590025de2d45736fcb3ec1baba496a12b438a5d8022d75f772",
+            "src/codex_rpc.py": "c3d45e1b3ec78df03e559fcbd41491887e4d050f2350996d73d029b88cb530b5",
+            "src/codex_shared/common.py": "398da2027ddaa116370587d3d76b5523a7463283b29d1b2b5bfbf433cc8cae91",
+            "src/codex_shared/coordination.py": "d67a7102bb561d2619451f32ad44cf3c0699661fb2f45a319539ecab85bac37c",
+            "src/codex_shared/execution.py": "2606b8f8c7f796c9c3dfe52d889c7887755acfc5552fb0a92985a0b58c0a884f",
+            "src/codex_shared/models.py": "c869b958617f8cd5672ed07adb92f3a72418850ffcdecc3063ffbe2da19cb07e"
+          },
+          "summary": "Optional context/provider metadata fields leave exact active-turn/text request and opaque native acknowledgement compatible.",
+          "tests": [
+            "tests/test_actions.py::ActionContractTests::test_mutations_read_and_verify_cwd_before_native_request",
+            "tests/test_protocol_contracts.py::NativeProtocolContractTests::test_public_models_do_not_offer_unsupported_provider_or_steer_overrides"
+          ]
+        }
+      },
+      "native_version": "0.166.0",
+      "source_asset_id": "689712643",
+      "source_asset_sha256": "a0bf572d2f93f056c6712a6da348e96078dc84f3885fd7be67807ef389cb3978",
+      "source_tag": "rust-v0.166.0",
+      "source_url": "https://github.com/openai/codex/releases/download/rust-v0.166.0/codex-x86_64-unknown-linux-musl.tar.gz"
+    }
+  }
+}

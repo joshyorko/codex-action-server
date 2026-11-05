@@ -10,6 +10,8 @@ from pathlib import Path
 import re
 import sys
 
+from native_compatibility_review import exact_reviewed_probe, reviewed_schema_change
+
 ROOT = Path(__file__).resolve().parents[1]
 CATALOG = ROOT / "ci/codex_qualification/native_methods.json"
 MANIFEST = ROOT / "ci/codex_qualification/approved_methods.json"
@@ -156,7 +158,12 @@ def _validate_method_evidence(
 
         if evidence.get("status") != "compatible_pending_review":
             continue
-        if evidence.get("reason_code") != "schema_and_behavior_passed":
+        reason = evidence.get("reason_code")
+        if reason not in {
+            "schema_and_behavior_passed",
+            "reviewed_exact_version_probe",
+            "reviewed_consumed_contract",
+        }:
             raise ValueError(f"compatible method has no pass reason for {method}")
         fingerprint = evidence.get("schema_fingerprint")
         if not isinstance(fingerprint, dict) or any(
@@ -168,6 +175,7 @@ def _validate_method_evidence(
         if catalog_row["smoke_strategy"] == "disposable_protocol_smoke":
             if evidence.get("smoke", {}).get("status") != "passed":
                 raise ValueError(f"native protocol smoke did not pass for {method}")
+        parsed_schemas = {}
         for key in ("request_schema", "response_schema"):
             schema_name = catalog_row[key]
             schema_path = artifact / "candidate-schemas" / f"{schema_name}.json"
@@ -183,6 +191,67 @@ def _validate_method_evidence(
                 raise ValueError(
                     f"candidate schema fingerprint mismatch for {schema_name}"
                 )
+            parsed_schemas[key] = schema
+        if reason in {"reviewed_exact_version_probe", "reviewed_consumed_contract"}:
+            arguments = (
+                ROOT,
+                method,
+                provenance["version"],
+                provenance["binary_sha256"],
+                provenance["source_asset_sha256"],
+                str(provenance["source_asset_id"]),
+            )
+            if reason == "reviewed_exact_version_probe":
+                reviewed = exact_reviewed_probe(
+                    ROOT,
+                    _read_json(MANIFEST),
+                    method,
+                    provenance["version"],
+                    provenance["binary_sha256"],
+                    provenance["source_asset_sha256"],
+                    str(provenance["source_asset_id"]),
+                    parsed_schemas["request_schema"],
+                    parsed_schemas["response_schema"],
+                )
+            else:
+                reviewed = reviewed_schema_change(
+                    *arguments, fingerprint, catalog_row["regression_tests"]
+                )
+            if reviewed is None or evidence.get("compatibility_review") != reviewed:
+                raise ValueError(f"compatible method review is invalid for {method}")
+        positive = evidence.get("native_positive")
+        if (
+            reason == "reviewed_consumed_contract"
+            and catalog_row["smoke_strategy"] != "disposable_protocol_smoke"
+            and positive is None
+        ):
+            raise ValueError(f"native positive behavior is missing for {method}")
+        if positive is not None:
+            script = positive.get("fixture") if isinstance(positive, dict) else None
+            label = {
+                "ci/probe_stable_native.py": "stable",
+                "ci/probe_account_native.py": "account",
+            }.get(script)
+            if label is None:
+                raise ValueError(f"native positive fixture is invalid for {method}")
+            raw = _read_json(artifact / f"{label}-native-behavior.json")
+            process = _read_json(artifact / f"{label}-native-process.json")
+            original = raw.get("methods", {}).get(method)
+            if (
+                not isinstance(original, dict)
+                or original.get("status") != "passed"
+                or original.get("positive") is not True
+                or any(positive.get(key) != value for key, value in original.items())
+                or positive.get("binary_sha256") != provenance["binary_sha256"]
+                or positive.get("native_version") != provenance["version"]
+                or positive.get("fixture_sha256") != _sha256(_safe_repo_file(script))
+                or positive.get("subprocess_exit") != process.get("exit_code")
+                or any(
+                    positive.get(key) != fingerprint[key]
+                    for key in ("request_sha256", "response_sha256")
+                )
+            ):
+                raise ValueError(f"native positive provenance is invalid for {method}")
     return [by_method[method] for method in expected]
 
 
@@ -299,6 +368,9 @@ def prepare_proposal(artifact: Path, output: Path, run_url: str) -> dict:
             if schema_path.is_file():
                 schemas[schema_name] = _read_json(schema_path)
         fixture_row["schemas"] = schemas
+        for key in ("compatibility_review", "native_positive"):
+            if key in row:
+                fixture_row[key] = row[key]
         fixture_methods.append(fixture_row)
 
     typed = provenance["typed_regression_evidence"]

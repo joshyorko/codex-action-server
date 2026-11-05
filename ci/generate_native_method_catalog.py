@@ -144,7 +144,10 @@ def _regression_files(method: str, owners: list[str]) -> list[str]:
         for path in tests
         if any(needle in path.read_text(errors="ignore") for needle in needles)
     ]
-    required = ["tests/test_protocol_contracts.py"]
+    required = [
+        "tests/test_protocol_contracts.py",
+        "tests/test_native_compatibility_review.py",
+    ]
     return sorted(set(required + matched))
 
 

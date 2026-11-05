@@ -251,13 +251,19 @@ def read_plugin(payload: PluginReadRequest) -> Response[RpcEnvelope]:
     """Read one named plugin from the native plugin catalog.
 
     Args:
-        payload: Configured target and exact native plugin name.
+        payload: Configured target, exact plugin name, and remote marketplace.
     """
     return _run(
         "read_plugin",
         payload.target,
         lambda client: _bounded_native_result(
-            client.request("plugin/read", {"pluginName": payload.plugin_name})
+            client.request(
+                "plugin/read",
+                {
+                    "pluginName": payload.plugin_name,
+                    "remoteMarketplaceName": payload.remote_marketplace_name,
+                },
+            )
         ),
         include_receipts=False,
     )

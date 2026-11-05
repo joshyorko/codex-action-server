@@ -3,6 +3,7 @@ import hashlib
 import importlib.util
 from pathlib import Path
 import shutil
+import subprocess
 import tempfile
 
 import pytest
@@ -56,6 +57,79 @@ def test_schema_normalization_preserves_contract_changes():
     baseline = {"type": ["integer", "null"]}
     changed = {"type": "integer"}
     assert qualification.normalize(baseline) != qualification.normalize(changed)
+
+
+def test_candidate_schema_export_uses_the_declared_schema_identifier(tmp_path):
+    source = tmp_path / "NullableGetAccountRateLimitsParams.json"
+    schema = {"title": "Nullable_GetAccountRateLimitsParams", "type": "object"}
+    source.write_text(json.dumps(schema))
+    output = tmp_path / "artifact"
+    qualification._copy_candidate_schemas({schema["title"]: (schema, source)}, output)
+    exported = output / "candidate-schemas" / f"{schema['title']}.json"
+    assert exported.read_bytes() == source.read_bytes()
+    assert not (exported.parent / source.name).exists()
+
+
+@pytest.mark.parametrize(
+    "field,value",
+    [
+        ("positive", False),
+        ("native_version", "0.167.0"),
+        ("binary_sha256", "e" * 64),
+        ("request_sha256", "f" * 64),
+    ],
+)
+def test_native_positive_requires_current_method_binary_and_schema(field, value):
+    fingerprint = {"request_sha256": "a" * 64, "response_sha256": "b" * 64}
+    proof = {
+        "status": "passed",
+        "positive": True,
+        "native_version": "0.166.0",
+        "binary_sha256": "c" * 64,
+        **fingerprint,
+    }
+    assert (
+        qualification._positive_behavior(
+            {"thread/start": proof}, "thread/start", "0.166.0", "c" * 64, fingerprint
+        )
+        == proof
+    )
+    assert (
+        qualification._positive_behavior(
+            {"thread/start": {**proof, field: value}},
+            "thread/start",
+            "0.166.0",
+            "c" * 64,
+            fingerprint,
+        )
+        is None
+    )
+
+
+def test_failed_native_probe_cannot_reuse_a_previous_output(tmp_path, monkeypatch):
+    binary = tmp_path / "codex"
+    binary.write_bytes(b"synthetic candidate")
+    digest = hashlib.sha256(binary.read_bytes()).hexdigest()
+    stale = {
+        "native_version": "0.166.0",
+        "binary_sha256": digest,
+        "cleanup": "native-process-exited-provider-closed-home-removed",
+        "methods": {"thread/start": {"status": "passed", "positive": True}},
+    }
+    (tmp_path / "stable-native-behavior.json").write_text(json.dumps(stale))
+    monkeypatch.setattr(
+        qualification.subprocess,
+        "run",
+        lambda *args, **kwargs: subprocess.CompletedProcess(
+            args[0], 1, "", "fixture setup failed"
+        ),
+    )
+    assert (
+        qualification._native_behavior(
+            binary, tmp_path / "schemas", tmp_path, "0.166.0"
+        )
+        == {}
+    )
 
 
 def test_0166_diagnostics_fixture_matches_reviewed_contract():

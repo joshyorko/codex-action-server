@@ -240,3 +240,7 @@ values and the corresponding rollback command from the live deployment source;
 do not infer them from a branch name or a mutable image tag. This change does
 not alter target configuration, native Codex, Executor, or tunnel state. Do not
 claim live acceptance based on fixture tests alone.
+
+## Remote plugin details
+
+`read_plugin` requires both `plugin_name` and `remote_marketplace_name` (1-256 characters each). The native API requires an explicit source; CAS forwards the bounded remote marketplace name and does not expose a filesystem marketplace selector.

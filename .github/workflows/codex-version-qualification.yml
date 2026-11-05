@@ -31,6 +31,9 @@ on:
       - '.github/workflows/container.yml'
   pull_request:
     paths:
+      - 'ci/*.py'
+      - 'tests/test_native_compatibility_review.py'
+      - 'tests/test_native_receipt_review_bindings.py'
       - 'src/codex_rpc.py'
       - 'src/codex_shared/**'
       - 'tests/fixtures/protocol/**'
