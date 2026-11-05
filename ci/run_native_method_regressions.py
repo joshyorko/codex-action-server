@@ -19,18 +19,60 @@ class RegressionOutcomeCollector:
 
     def __init__(self, paths: list[str]):
         self.files = {name: {outcome: 0 for outcome in OUTCOMES} for name in paths}
+        self.nodes = {}
 
     def pytest_runtest_logreport(self, report):
         name = report.nodeid.split("::", 1)[0].replace("\\", "/")
         counts = self.files.get(name)
         if counts is None:
             return
+        node = self.nodes.setdefault(
+            report.nodeid.replace("\\", "/"), {outcome: 0 for outcome in OUTCOMES}
+        )
         if report.outcome == "failed":
             counts["failed"] += 1
+            node["failed"] += 1
         elif report.outcome == "skipped":
             counts["skipped"] += 1
+            node["skipped"] += 1
         elif report.when == "call" and report.outcome == "passed":
             counts["passed"] += 1
+            node["passed"] += 1
+
+
+def reviewed_node_counts(required: list[str], outcomes: dict) -> dict | None:
+    """Require actual passing execution of every explicitly reviewed test node."""
+    if not isinstance(required, list) or not required or not isinstance(outcomes, dict):
+        return None
+    selected = {}
+    for node in required:
+        if not isinstance(node, str):
+            return None
+        matches = [
+            counts
+            for name, counts in outcomes.items()
+            if isinstance(name, str) and (name == node or name.startswith(node + "["))
+        ]
+        if not matches:
+            return None
+        totals = {outcome: 0 for outcome in OUTCOMES}
+        for counts in matches:
+            if (
+                not isinstance(counts, dict)
+                or set(counts) != set(OUTCOMES)
+                or any(
+                    type(counts.get(key)) is not int or counts[key] < 0
+                    for key in OUTCOMES
+                )
+                or counts["passed"] == 0
+                or counts["failed"]
+                or counts["skipped"]
+            ):
+                return None
+            for key in OUTCOMES:
+                totals[key] += counts[key]
+        selected[node] = totals
+    return selected
 
 
 def _method_status(pytest_succeeded: bool, coverage: dict[str, dict[str, int]]) -> str:
@@ -128,6 +170,7 @@ def main() -> int:
     evidence["status"] = status
     evidence["pytest_exit_code"] = int(result)
     evidence["test_outcomes"] = outcomes.files
+    evidence["test_node_outcomes"] = outcomes.nodes
     for row in evidence["methods"].values():
         row["coverage"] = {name: outcomes.files[name] for name in row["test_files"]}
         row["status"] = _method_status(pytest_succeeded, row["coverage"])

@@ -70,3 +70,31 @@ def test_collector_counts_only_test_call_outcomes():
         "skipped": 1,
         "failed": 0,
     }
+    assert regressions.reviewed_node_counts(
+        ["tests/test_contracts.py::test_pass"], collector.nodes
+    ) == {
+        "tests/test_contracts.py::test_pass": {"passed": 1, "skipped": 0, "failed": 0}
+    }
+    assert (
+        regressions.reviewed_node_counts(
+            ["tests/test_contracts.py::test_skip"], collector.nodes
+        )
+        is None
+    )
+    assert (
+        regressions.reviewed_node_counts(
+            ["tests/test_contracts.py::test_missing"], collector.nodes
+        )
+        is None
+    )
+
+
+def test_reviewed_parameterized_nodes_require_every_case_to_pass():
+    name = "tests/test_contracts.py::test_contract"
+    outcomes = {
+        name + "[a]": {"passed": 1, "skipped": 0, "failed": 0},
+        name + "[b]": {"passed": 1, "skipped": 0, "failed": 0},
+    }
+    assert regressions.reviewed_node_counts([name], outcomes)[name]["passed"] == 2
+    outcomes[name + "[b]"] = {"passed": 0, "skipped": 1, "failed": 0}
+    assert regressions.reviewed_node_counts([name], outcomes) is None

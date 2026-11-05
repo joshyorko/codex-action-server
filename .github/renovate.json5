@@ -13,6 +13,12 @@
   "platformAutomerge": false,
   "dependencyDashboardApproval": true,
   "prCreation": "status-success",
+  "vulnerabilityAlerts": {
+    "dependencyDashboardApproval": true,
+    "prCreation": "status-success",
+    "automerge": false,
+    "platformAutomerge": false
+  },
   "prConcurrentLimit": 1,
   "prHourlyLimit": 1,
   "packageRules": [

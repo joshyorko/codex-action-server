@@ -12,9 +12,13 @@ import select
 import shutil
 import signal
 import subprocess
+import sys
 import tempfile
 import time
 from pathlib import Path
+
+from native_compatibility_review import exact_reviewed_probe, reviewed_schema_change
+from run_native_method_regressions import reviewed_node_counts
 
 ROOT = Path(__file__).resolve().parents[1]
 BASELINE = ROOT / "tests/fixtures/protocol/codex_0.162.1_server_diagnostics.json"
@@ -330,8 +334,8 @@ def _write_json(path: Path, value):
 def _copy_candidate_schemas(files, output: Path):
     destination = output / "candidate-schemas"
     destination.mkdir(parents=True, exist_ok=True)
-    for _, path in files.values():
-        shutil.copyfile(path, destination / path.name)
+    for name, (_, path) in files.items():
+        shutil.copyfile(path, destination / f"{name}.json")
 
 
 def _load_method_catalog() -> list[dict]:
@@ -617,6 +621,97 @@ def _smoke_params(method: str, temporary: Path) -> dict[str, object]:
     }.get(method, {})
 
 
+def _native_behavior(binary: Path, generated: Path, output: Path, version: str) -> dict:
+    methods = {}
+    binary_sha = sha256_file(binary)
+    for name in ("stable", "account"):
+        script = ROOT / f"ci/probe_{name}_native.py"
+        destination = output / f"{name}-native-behavior.json"
+        try:
+            destination.unlink(missing_ok=True)
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    "-B",
+                    str(script),
+                    "--repo",
+                    str(ROOT),
+                    "--binary",
+                    str(binary),
+                    "--schemas",
+                    str(generated),
+                    "--version",
+                    version,
+                    "--output",
+                    str(destination),
+                ],
+                cwd=ROOT,
+                timeout=180,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+            (output / f"{name}-native-stdout.log").write_text(completed.stdout)
+            (output / f"{name}-native-stderr.log").write_text(completed.stderr)
+            _write_json(
+                output / f"{name}-native-process.json",
+                {"exit_code": completed.returncode},
+            )
+            result = json.loads(destination.read_text())
+            if (
+                result.get("native_version") != version
+                or result.get("binary_sha256") != binary_sha
+                or result.get("fatal")
+                or result.get("setup_or_transport_failure")
+            ):
+                continue
+            if (
+                name == "stable"
+                and result.get("cleanup")
+                != "native-process-exited-provider-closed-home-removed"
+            ):
+                continue
+            if name == "account" and result.get("status") != "passed":
+                continue
+            for method, proof in result.get("methods", {}).items():
+                if (
+                    isinstance(proof, dict)
+                    and proof.get("status") == "passed"
+                    and proof.get("positive") is True
+                ):
+                    methods[method] = {
+                        **proof,
+                        "fixture": script.relative_to(ROOT).as_posix(),
+                        "fixture_sha256": sha256_file(script),
+                        "binary_sha256": binary_sha,
+                        "native_version": version,
+                        "subprocess_exit": completed.returncode,
+                    }
+        except (OSError, ValueError, subprocess.SubprocessError):
+            continue
+    return methods
+
+
+def _positive_behavior(
+    proofs: dict, method: str, version: str, binary_sha: str, fingerprints: dict
+) -> dict | None:
+    proof = proofs.get(method)
+    if (
+        not isinstance(proof, dict)
+        or proof.get("status") != "passed"
+        or proof.get("positive") is not True
+    ):
+        return None
+    if (
+        proof.get("native_version") != version
+        or proof.get("binary_sha256") != binary_sha
+        or proof.get("request_sha256") != fingerprints["request_sha256"]
+        or proof.get("response_sha256") != fingerprints["response_sha256"]
+    ):
+        return None
+    return proof
+
+
 def build_method_evidence(
     binary: Path,
     generated_files: dict,
@@ -628,11 +723,13 @@ def build_method_evidence(
     typed_regression_evidence: dict,
     temporary: Path,
     diagnostics_smoke: dict[str, object],
+    native_behavior_evidence: dict | None = None,
 ) -> dict:
     """Evaluate every CAS-consumed method independently and fail closed."""
     output.mkdir(parents=True, exist_ok=True)
     catalog = _load_method_catalog()
     manifest = json.loads(APPROVALS.read_text())
+    binary_sha = sha256_file(binary)
     results = []
     used_schemas = {}
     for row in catalog:
@@ -675,8 +772,22 @@ def build_method_evidence(
             "response_sha256": sha256_file(response_path),
         }
         evidence["schema_fingerprint"] = candidate_hashes
+        native_positive = _positive_behavior(
+            native_behavior_evidence or {},
+            row["method"],
+            version,
+            binary_sha,
+            candidate_hashes,
+        )
         if row["smoke_strategy"] == "disposable_protocol_smoke":
-            if row["method"] == METHOD:
+            if native_positive:
+                smoke = {
+                    "method": row["method"],
+                    "status": "passed",
+                    "fixture": native_positive["fixture"],
+                    "positive": True,
+                }
+            elif row["method"] == METHOD:
                 smoke = diagnostics_smoke
             else:
                 method_home = temporary / f"smoke-{len(results)}"
@@ -702,6 +813,37 @@ def build_method_evidence(
                         "failure": type(error).__name__,
                     }
             evidence["smoke"] = smoke
+        review = exact_reviewed_probe(
+            ROOT,
+            manifest,
+            row["method"],
+            version,
+            binary_sha,
+            asset_sha256.removeprefix("sha256:"),
+            str(asset_id),
+            request_schema,
+            response_schema,
+        ) or reviewed_schema_change(
+            ROOT,
+            row["method"],
+            version,
+            binary_sha,
+            asset_sha256.removeprefix("sha256:"),
+            str(asset_id),
+            candidate_hashes,
+            row["regression_tests"],
+        )
+        if review:
+            evidence["compatibility_review"] = review
+        reviewed_counts = None
+        if review and review["kind"] == "reviewed_consumed_contract":
+            reviewed_counts = reviewed_node_counts(
+                review["tests"], typed_regression_evidence.get("test_node_outcomes")
+            )
+            if reviewed_counts is not None:
+                evidence["reviewed_test_outcomes"] = reviewed_counts
+        if native_positive:
+            evidence["native_positive"] = native_positive
         baseline = _latest_method_contract(manifest, row["method"], version)
         if baseline is None:
             evidence.update(
@@ -714,8 +856,17 @@ def build_method_evidence(
                     "response": normalize(response_schema),
                 },
             }
-            results.append(evidence)
-            continue
+            if review is None:
+                results.append(evidence)
+                continue
+            baseline = (
+                version,
+                candidate_hashes,
+                {
+                    row["request_schema"]: request_schema,
+                    row["response_schema"]: response_schema,
+                },
+            )
 
         baseline_version, baseline_hashes, baseline_schemas = baseline
         if baseline_schemas:
@@ -756,7 +907,7 @@ def build_method_evidence(
             }
         evidence["schema_diff"] = schema_diff
 
-        if not request_identical or not response_identical:
+        if (not request_identical or not response_identical) and review is None:
             evidence.update(status="needs_review", reason_code="schema_changed")
         elif evidence["typed_regressions"] != "passed":
             reason = (
@@ -768,6 +919,26 @@ def build_method_evidence(
             )
             evidence.update(status="unqualified", reason_code=reason)
         elif (
+            review
+            and review["kind"] == "reviewed_consumed_contract"
+            and reviewed_counts is None
+        ):
+            evidence.update(
+                status="unqualified", reason_code="reviewed_test_nodes_not_passed"
+            )
+        elif (
+            review
+            and review["kind"] == "reviewed_consumed_contract"
+            and native_positive is None
+            and not (
+                row["smoke_strategy"] == "disposable_protocol_smoke"
+                and evidence["smoke"].get("status") == "passed"
+            )
+        ):
+            evidence.update(
+                status="unqualified", reason_code="reviewed_native_positive_missing"
+            )
+        elif (
             row["smoke_strategy"] == "disposable_protocol_smoke"
             and evidence["smoke"].get("status") != "passed"
         ):
@@ -775,7 +946,7 @@ def build_method_evidence(
         else:
             evidence.update(
                 status="compatible_pending_review",
-                reason_code="schema_and_behavior_passed",
+                reason_code=review["kind"] if review else "schema_and_behavior_passed",
             )
             if row["smoke_strategy"] == "typed_read_fixture":
                 evidence["smoke"] = {
@@ -970,6 +1141,11 @@ def main() -> int:
             typed_regression_evidence=typed_regression_evidence,
             temporary=temporary_path / "method-smoke",
             diagnostics_smoke=live_smoke,
+            native_behavior_evidence=_native_behavior(
+                args.binary, generated, args.output, args.version
+            )
+            if files
+            else {},
         )
         catalog_schema_names = {
             name

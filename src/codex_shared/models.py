@@ -490,6 +490,7 @@ class CwdInventoryRequest(StrictModel):
 class PluginReadRequest(StrictModel):
     target: TargetName
     plugin_name: str = Field(min_length=1, max_length=256)
+    remote_marketplace_name: str = Field(min_length=1, max_length=256)
 
 
 class AppsListRequest(StrictModel):

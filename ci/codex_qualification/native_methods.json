@@ -28,6 +28,7 @@
       ],
       "regression_tests": [
         "tests/test_mcp_annotations.py",
+        "tests/test_native_compatibility_review.py",
         "tests/test_native_operator_surfaces.py",
         "tests/test_package_composition.py",
         "tests/test_protocol_contracts.py"
@@ -67,6 +68,7 @@
         "tests/test_capability_metadata.py",
         "tests/test_mcp_annotations.py",
         "tests/test_native_capabilities.py",
+        "tests/test_native_compatibility_review.py",
         "tests/test_native_operator_surfaces.py",
         "tests/test_package_composition.py",
         "tests/test_protocol_contracts.py"
@@ -104,6 +106,7 @@
       ],
       "regression_tests": [
         "tests/test_mcp_annotations.py",
+        "tests/test_native_compatibility_review.py",
         "tests/test_native_operator_surfaces.py",
         "tests/test_package_composition.py",
         "tests/test_protocol_contracts.py"
@@ -144,8 +147,10 @@
         "tests/test_exposure_profiles.py",
         "tests/test_mcp_annotations.py",
         "tests/test_native_capabilities.py",
+        "tests/test_native_compatibility_review.py",
         "tests/test_native_operator_surfaces.py",
         "tests/test_native_qualification_receipt.py",
+        "tests/test_native_receipt_review_bindings.py",
         "tests/test_native_wire_contract_fixtures.py",
         "tests/test_package_composition.py",
         "tests/test_protocol_contracts.py"
@@ -185,6 +190,7 @@
       ],
       "regression_tests": [
         "tests/test_mcp_annotations.py",
+        "tests/test_native_compatibility_review.py",
         "tests/test_native_operator_surfaces.py",
         "tests/test_package_composition.py",
         "tests/test_protocol_contracts.py"
@@ -222,6 +228,7 @@
       ],
       "regression_tests": [
         "tests/test_mcp_annotations.py",
+        "tests/test_native_compatibility_review.py",
         "tests/test_native_operator_surfaces.py",
         "tests/test_package_composition.py",
         "tests/test_protocol_contracts.py"
@@ -259,6 +266,7 @@
       "regression_tests": [
         "tests/test_codex_qualification.py",
         "tests/test_mcp_annotations.py",
+        "tests/test_native_compatibility_review.py",
         "tests/test_native_operator_surfaces.py",
         "tests/test_package_composition.py",
         "tests/test_protocol_contracts.py"
@@ -300,6 +308,7 @@
         "tests/test_control_actions.py",
         "tests/test_mcp_annotations.py",
         "tests/test_mcp_status_bounds.py",
+        "tests/test_native_compatibility_review.py",
         "tests/test_package_composition.py",
         "tests/test_protocol_contracts.py",
         "tests/test_rpc_lifecycle.py"
@@ -340,6 +349,7 @@
         "tests/test_codex_qualification.py",
         "tests/test_control_actions.py",
         "tests/test_mcp_annotations.py",
+        "tests/test_native_compatibility_review.py",
         "tests/test_package_composition.py",
         "tests/test_protocol_contracts.py",
         "tests/test_rpc_lifecycle.py"
@@ -379,6 +389,7 @@
         "tests/test_action_server_validation.py",
         "tests/test_control_actions.py",
         "tests/test_mcp_annotations.py",
+        "tests/test_native_compatibility_review.py",
         "tests/test_package_composition.py",
         "tests/test_protocol_contracts.py",
         "tests/test_rpc_lifecycle.py"
@@ -416,6 +427,7 @@
       ],
       "regression_tests": [
         "tests/test_mcp_annotations.py",
+        "tests/test_native_compatibility_review.py",
         "tests/test_native_operator_surfaces.py",
         "tests/test_package_composition.py",
         "tests/test_protocol_contracts.py"
@@ -453,7 +465,9 @@
       ],
       "regression_tests": [
         "tests/test_mcp_annotations.py",
+        "tests/test_native_compatibility_review.py",
         "tests/test_native_operator_surfaces.py",
+        "tests/test_native_receipt_review_bindings.py",
         "tests/test_package_composition.py",
         "tests/test_protocol_contracts.py"
       ],
@@ -489,6 +503,7 @@
       ],
       "regression_tests": [
         "tests/test_mcp_annotations.py",
+        "tests/test_native_compatibility_review.py",
         "tests/test_native_operator_surfaces.py",
         "tests/test_package_composition.py",
         "tests/test_protocol_contracts.py"
@@ -531,6 +546,7 @@
         "tests/test_control_actions.py",
         "tests/test_mcp_annotations.py",
         "tests/test_native_capabilities.py",
+        "tests/test_native_compatibility_review.py",
         "tests/test_native_diagnostics_0162.py",
         "tests/test_package_composition.py",
         "tests/test_protocol_contracts.py",
@@ -572,6 +588,7 @@
       ],
       "regression_tests": [
         "tests/test_mcp_annotations.py",
+        "tests/test_native_compatibility_review.py",
         "tests/test_native_operator_surfaces.py",
         "tests/test_package_composition.py",
         "tests/test_protocol_contracts.py"
@@ -608,6 +625,7 @@
       ],
       "regression_tests": [
         "tests/test_mcp_annotations.py",
+        "tests/test_native_compatibility_review.py",
         "tests/test_package_composition.py",
         "tests/test_protocol_contracts.py",
         "tests/test_thread_lifecycle.py"
@@ -644,6 +662,7 @@
       ],
       "regression_tests": [
         "tests/test_mcp_annotations.py",
+        "tests/test_native_compatibility_review.py",
         "tests/test_package_composition.py",
         "tests/test_protocol_contracts.py",
         "tests/test_thread_attachments.py"
@@ -681,6 +700,7 @@
       ],
       "regression_tests": [
         "tests/test_mcp_annotations.py",
+        "tests/test_native_compatibility_review.py",
         "tests/test_package_composition.py",
         "tests/test_protocol_contracts.py",
         "tests/test_thread_attachments.py"
@@ -717,6 +737,7 @@
       ],
       "regression_tests": [
         "tests/test_mcp_annotations.py",
+        "tests/test_native_compatibility_review.py",
         "tests/test_package_composition.py",
         "tests/test_protocol_contracts.py",
         "tests/test_thread_attachments.py"
@@ -772,6 +793,7 @@
       "regression_tests": [
         "tests/test_capability_metadata.py",
         "tests/test_mcp_annotations.py",
+        "tests/test_native_compatibility_review.py",
         "tests/test_native_operator_surfaces.py",
         "tests/test_native_wire_contract_fixtures.py",
         "tests/test_package_composition.py",
@@ -811,6 +833,7 @@
       ],
       "regression_tests": [
         "tests/test_mcp_annotations.py",
+        "tests/test_native_compatibility_review.py",
         "tests/test_native_operator_surfaces.py",
         "tests/test_native_wire_contract_fixtures.py",
         "tests/test_package_composition.py",
@@ -850,6 +873,7 @@
       ],
       "regression_tests": [
         "tests/test_mcp_annotations.py",
+        "tests/test_native_compatibility_review.py",
         "tests/test_package_composition.py",
         "tests/test_protocol_contracts.py",
         "tests/test_thread_lifecycle.py"
@@ -886,6 +910,7 @@
       ],
       "regression_tests": [
         "tests/test_mcp_annotations.py",
+        "tests/test_native_compatibility_review.py",
         "tests/test_package_composition.py",
         "tests/test_protocol_contracts.py",
         "tests/test_thread_lifecycle.py",
@@ -924,6 +949,7 @@
       ],
       "regression_tests": [
         "tests/test_mcp_annotations.py",
+        "tests/test_native_compatibility_review.py",
         "tests/test_package_composition.py",
         "tests/test_protocol_contracts.py",
         "tests/test_thread_lifecycle.py"
@@ -962,6 +988,7 @@
         "tests/test_action_server_validation.py",
         "tests/test_control_actions.py",
         "tests/test_mcp_annotations.py",
+        "tests/test_native_compatibility_review.py",
         "tests/test_package_composition.py",
         "tests/test_protocol_contracts.py",
         "tests/test_rpc_lifecycle.py"
@@ -1001,6 +1028,7 @@
         "tests/test_action_server_validation.py",
         "tests/test_control_actions.py",
         "tests/test_mcp_annotations.py",
+        "tests/test_native_compatibility_review.py",
         "tests/test_package_composition.py",
         "tests/test_protocol_contracts.py",
         "tests/test_rpc_lifecycle.py"
@@ -1039,6 +1067,7 @@
         "tests/test_action_server_validation.py",
         "tests/test_control_actions.py",
         "tests/test_mcp_annotations.py",
+        "tests/test_native_compatibility_review.py",
         "tests/test_package_composition.py",
         "tests/test_protocol_contracts.py",
         "tests/test_rpc_lifecycle.py"
@@ -1076,6 +1105,7 @@
       "regression_tests": [
         "tests/test_coordination.py",
         "tests/test_mcp_annotations.py",
+        "tests/test_native_compatibility_review.py",
         "tests/test_package_composition.py",
         "tests/test_protocol_contracts.py",
         "tests/test_thread_injection.py"
@@ -1136,6 +1166,7 @@
         "tests/test_control_actions.py",
         "tests/test_http_boot.py",
         "tests/test_mcp_annotations.py",
+        "tests/test_native_compatibility_review.py",
         "tests/test_package_composition.py",
         "tests/test_protocol_contracts.py",
         "tests/test_rpc_lifecycle.py",
@@ -1179,6 +1210,7 @@
         "tests/test_container_image.py",
         "tests/test_http_boot.py",
         "tests/test_mcp_annotations.py",
+        "tests/test_native_compatibility_review.py",
         "tests/test_package_composition.py",
         "tests/test_protocol_contracts.py",
         "tests/test_provider_acceptance_contract.py",
@@ -1221,6 +1253,7 @@
         "tests/test_action_server_validation.py",
         "tests/test_control_actions.py",
         "tests/test_mcp_annotations.py",
+        "tests/test_native_compatibility_review.py",
         "tests/test_package_composition.py",
         "tests/test_protocol_contracts.py",
         "tests/test_rpc_lifecycle.py"
@@ -1257,6 +1290,7 @@
       ],
       "regression_tests": [
         "tests/test_mcp_annotations.py",
+        "tests/test_native_compatibility_review.py",
         "tests/test_package_composition.py",
         "tests/test_protocol_contracts.py",
         "tests/test_thread_lifecycle.py"
@@ -1293,6 +1327,7 @@
       ],
       "regression_tests": [
         "tests/test_mcp_annotations.py",
+        "tests/test_native_compatibility_review.py",
         "tests/test_package_composition.py",
         "tests/test_protocol_contracts.py",
         "tests/test_thread_lifecycle.py"
@@ -1331,6 +1366,7 @@
         "tests/test_coordination.py",
         "tests/test_mcp_annotations.py",
         "tests/test_native_capabilities.py",
+        "tests/test_native_compatibility_review.py",
         "tests/test_native_wire_contract_fixtures.py",
         "tests/test_package_composition.py",
         "tests/test_protocol_contracts.py",
@@ -1371,6 +1407,7 @@
       "regression_tests": [
         "tests/test_mcp_annotations.py",
         "tests/test_native_capabilities.py",
+        "tests/test_native_compatibility_review.py",
         "tests/test_native_wire_contract_fixtures.py",
         "tests/test_package_composition.py",
         "tests/test_protocol_contracts.py",
@@ -1412,6 +1449,7 @@
       "regression_tests": [
         "tests/test_mcp_annotations.py",
         "tests/test_native_capabilities.py",
+        "tests/test_native_compatibility_review.py",
         "tests/test_native_wire_contract_fixtures.py",
         "tests/test_package_composition.py",
         "tests/test_protocol_contracts.py",
@@ -1452,6 +1490,7 @@
       "regression_tests": [
         "tests/test_mcp_annotations.py",
         "tests/test_native_capabilities.py",
+        "tests/test_native_compatibility_review.py",
         "tests/test_native_wire_contract_fixtures.py",
         "tests/test_package_composition.py",
         "tests/test_protocol_contracts.py",
@@ -1493,6 +1532,7 @@
         "tests/test_exposure_profiles.py",
         "tests/test_mcp_annotations.py",
         "tests/test_native_capabilities.py",
+        "tests/test_native_compatibility_review.py",
         "tests/test_native_wire_contract_fixtures.py",
         "tests/test_package_composition.py",
         "tests/test_protocol_contracts.py",
@@ -1533,6 +1573,7 @@
       "regression_tests": [
         "tests/test_mcp_annotations.py",
         "tests/test_native_capabilities.py",
+        "tests/test_native_compatibility_review.py",
         "tests/test_native_wire_contract_fixtures.py",
         "tests/test_package_composition.py",
         "tests/test_protocol_contracts.py",
@@ -2347,6 +2388,7 @@
         "tests/test_mcp_annotations.py",
         "tests/test_model_selection.py",
         "tests/test_native_capabilities.py",
+        "tests/test_native_compatibility_review.py",
         "tests/test_native_operator_surfaces.py",
         "tests/test_native_qualification_receipt.py",
         "tests/test_package_composition.py",
@@ -2439,6 +2481,7 @@
         "tests/test_http_boot.py",
         "tests/test_mcp_annotations.py",
         "tests/test_model_selection.py",
+        "tests/test_native_compatibility_review.py",
         "tests/test_package_composition.py",
         "tests/test_protocol_contracts.py",
         "tests/test_rpc_lifecycle.py",
@@ -2476,6 +2519,7 @@
       ],
       "regression_tests": [
         "tests/test_mcp_annotations.py",
+        "tests/test_native_compatibility_review.py",
         "tests/test_package_composition.py",
         "tests/test_protocol_contracts.py",
         "tests/test_thread_lifecycle.py"
@@ -2515,6 +2559,7 @@
         "tests/test_mcp_annotations.py",
         "tests/test_method_qualification_manifest.py",
         "tests/test_native_capabilities.py",
+        "tests/test_native_compatibility_review.py",
         "tests/test_native_wire_contract_fixtures.py",
         "tests/test_package_composition.py",
         "tests/test_protocol_contracts.py",
@@ -2557,6 +2602,7 @@
       "regression_tests": [
         "tests/test_mcp_annotations.py",
         "tests/test_method_qualification_manifest.py",
+        "tests/test_native_compatibility_review.py",
         "tests/test_native_wire_contract_fixtures.py",
         "tests/test_package_composition.py",
         "tests/test_protocol_contracts.py",
@@ -2596,6 +2642,7 @@
       ],
       "regression_tests": [
         "tests/test_mcp_annotations.py",
+        "tests/test_native_compatibility_review.py",
         "tests/test_native_wire_contract_fixtures.py",
         "tests/test_package_composition.py",
         "tests/test_protocol_contracts.py",
@@ -2673,6 +2720,7 @@
         "tests/test_dispatch_policy.py",
         "tests/test_mcp_annotations.py",
         "tests/test_native_capabilities.py",
+        "tests/test_native_compatibility_review.py",
         "tests/test_native_wire_contract_fixtures.py",
         "tests/test_package_composition.py",
         "tests/test_protocol_contracts.py",
@@ -2733,12 +2781,14 @@
         "tests/test_action_transport_failures.py",
         "tests/test_actions.py",
         "tests/test_capability_metadata.py",
+        "tests/test_codex_qualification.py",
         "tests/test_container_image.py",
         "tests/test_control_actions.py",
         "tests/test_dispatch_actions.py",
         "tests/test_dispatch_policy.py",
         "tests/test_http_boot.py",
         "tests/test_mcp_annotations.py",
+        "tests/test_native_compatibility_review.py",
         "tests/test_package_composition.py",
         "tests/test_protocol_contracts.py",
         "tests/test_rpc_lifecycle.py",
@@ -2778,6 +2828,7 @@
       "regression_tests": [
         "tests/test_mcp_annotations.py",
         "tests/test_native_capabilities.py",
+        "tests/test_native_compatibility_review.py",
         "tests/test_native_wire_contract_fixtures.py",
         "tests/test_package_composition.py",
         "tests/test_protocol_contracts.py",
@@ -2841,6 +2892,7 @@
         "tests/test_control_actions.py",
         "tests/test_http_boot.py",
         "tests/test_mcp_annotations.py",
+        "tests/test_native_compatibility_review.py",
         "tests/test_package_composition.py",
         "tests/test_protocol_contracts.py",
         "tests/test_rpc_lifecycle.py",
@@ -2878,6 +2930,7 @@
       ],
       "regression_tests": [
         "tests/test_mcp_annotations.py",
+        "tests/test_native_compatibility_review.py",
         "tests/test_package_composition.py",
         "tests/test_protocol_contracts.py",
         "tests/test_thread_lifecycle.py"
@@ -2914,6 +2967,7 @@
       ],
       "regression_tests": [
         "tests/test_mcp_annotations.py",
+        "tests/test_native_compatibility_review.py",
         "tests/test_package_composition.py",
         "tests/test_protocol_contracts.py",
         "tests/test_thread_sections.py"
@@ -2950,6 +3004,7 @@
       ],
       "regression_tests": [
         "tests/test_mcp_annotations.py",
+        "tests/test_native_compatibility_review.py",
         "tests/test_package_composition.py",
         "tests/test_protocol_contracts.py",
         "tests/test_thread_sections.py"
@@ -3005,6 +3060,7 @@
       "regression_tests": [
         "tests/test_capability_metadata.py",
         "tests/test_mcp_annotations.py",
+        "tests/test_native_compatibility_review.py",
         "tests/test_package_composition.py",
         "tests/test_protocol_contracts.py",
         "tests/test_thread_read_surfaces.py",
@@ -3042,6 +3098,7 @@
       ],
       "regression_tests": [
         "tests/test_mcp_annotations.py",
+        "tests/test_native_compatibility_review.py",
         "tests/test_package_composition.py",
         "tests/test_protocol_contracts.py",
         "tests/test_thread_sections.py"
@@ -3083,6 +3140,7 @@
         "tests/test_coordination.py",
         "tests/test_http_boot.py",
         "tests/test_mcp_annotations.py",
+        "tests/test_native_compatibility_review.py",
         "tests/test_package_composition.py",
         "tests/test_protocol_contracts.py"
       ],
@@ -3121,6 +3179,7 @@
         "tests/test_control_actions.py",
         "tests/test_mcp_annotations.py",
         "tests/test_native_capabilities.py",
+        "tests/test_native_compatibility_review.py",
         "tests/test_native_wire_contract_fixtures.py",
         "tests/test_package_composition.py",
         "tests/test_protocol_contracts.py",
@@ -3188,6 +3247,7 @@
         "tests/test_mcp_annotations.py",
         "tests/test_model_selection.py",
         "tests/test_native_capabilities.py",
+        "tests/test_native_compatibility_review.py",
         "tests/test_package_composition.py",
         "tests/test_protocol_contracts.py",
         "tests/test_rpc_lifecycle.py",
@@ -3246,6 +3306,7 @@
         "tests/test_coordination.py",
         "tests/test_http_boot.py",
         "tests/test_mcp_annotations.py",
+        "tests/test_native_compatibility_review.py",
         "tests/test_package_composition.py",
         "tests/test_protocol_contracts.py"
       ],

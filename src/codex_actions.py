@@ -321,7 +321,7 @@ def read_plugin(payload: PluginReadRequest) -> Response[RpcEnvelope]:
     """Read one named plugin from the native plugin catalog.
 
     Args:
-        payload: Configured target and exact native plugin name.
+        payload: Configured target, exact plugin name, and remote marketplace.
     """
     return integrations.read_plugin(payload)
 

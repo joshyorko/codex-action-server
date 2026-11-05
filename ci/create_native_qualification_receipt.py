@@ -9,6 +9,9 @@ import json
 from pathlib import Path
 import re
 
+from native_compatibility_review import exact_reviewed_probe, reviewed_schema_change
+from run_native_method_regressions import reviewed_node_counts
+
 _VERSION = re.compile(r"(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\Z")
 _SHA = re.compile(r"[0-9a-f]{64}\Z")
 _COMMIT = re.compile(r"[0-9a-f]{40}\Z")
@@ -116,6 +119,113 @@ def _method_rows(
             raise ValueError(
                 f"native method typed regressions are missing for {version}/{method}"
             )
+        review = row.get("compatibility_review")
+        reason = row.get("reason_code")
+        if reason in {"reviewed_consumed_contract", "reviewed_exact_version_probe"}:
+            if (
+                not isinstance(review, dict)
+                or review.get("kind") != reason
+                or review.get("method") != method
+            ):
+                raise ValueError(
+                    f"native compatibility review is missing for {version}/{method}"
+                )
+            reference = (
+                review.get("review_file")
+                if reason == "reviewed_consumed_contract"
+                else review.get("fixture")
+            )
+            digest = (
+                review.get("review_file_sha256")
+                if reason == "reviewed_consumed_contract"
+                else review.get("fixture_sha256")
+            )
+            if (
+                not isinstance(reference, str)
+                or _sha256(_repo_file(root, reference)) != digest
+            ):
+                raise ValueError(
+                    f"native compatibility review hash is stale for {version}/{method}"
+                )
+            if (
+                reason == "reviewed_consumed_contract"
+                and reviewed_schema_change(
+                    root,
+                    method,
+                    version,
+                    fixture.get("binary_sha256"),
+                    fixture.get("source_asset_sha256"),
+                    fixture.get("source_asset_id"),
+                    row.get("schema_fingerprint"),
+                    row.get("regression_tests"),
+                )
+                != review
+            ):
+                raise ValueError(
+                    f"native reviewed source hash is stale for {version}/{method}"
+                )
+            if reason == "reviewed_consumed_contract":
+                counts = reviewed_node_counts(
+                    review["tests"], fixture.get("reviewed_test_node_outcomes")
+                )
+                if counts is None or counts != row.get("reviewed_test_outcomes"):
+                    raise ValueError(
+                        f"native reviewed test nodes did not pass for {version}/{method}"
+                    )
+            if (
+                reason == "reviewed_exact_version_probe"
+                and exact_reviewed_probe(
+                    root,
+                    _read_json(root / "ci/codex_qualification/approved_methods.json"),
+                    method,
+                    version,
+                    fixture.get("binary_sha256"),
+                    fixture.get("source_asset_sha256"),
+                    fixture.get("source_asset_id"),
+                    row.get("schemas", {}).get(row.get("request_schema")),
+                    row.get("schemas", {}).get(row.get("response_schema")),
+                )
+                != review
+            ):
+                raise ValueError(
+                    f"native exact-version probe is invalid for {version}/{method}"
+                )
+            for name, fingerprint in review.get("source_files_sha256", {}).items():
+                if _sha256(_repo_file(root, name)) != fingerprint:
+                    raise ValueError(
+                        f"native reviewed source hash is stale for {version}/{method}/{name}"
+                    )
+        positive = row.get("native_positive")
+        if (
+            reason == "reviewed_consumed_contract"
+            and row.get("smoke_strategy") != "disposable_protocol_smoke"
+            and positive is None
+        ):
+            raise ValueError(
+                f"native positive behavior is missing for {version}/{method}"
+            )
+        if positive is not None:
+            if (
+                not isinstance(positive, dict)
+                or positive.get("status") != "passed"
+                or positive.get("positive") is not True
+                or positive.get("native_version") != version
+                or positive.get("binary_sha256") != fixture.get("binary_sha256")
+                or any(
+                    positive.get(key) != row.get("schema_fingerprint", {}).get(key)
+                    for key in ("request_sha256", "response_sha256")
+                )
+            ):
+                raise ValueError(
+                    f"native positive behavior provenance is invalid for {version}/{method}"
+                )
+            script = positive.get("fixture")
+            if not isinstance(script, str) or _sha256(
+                _repo_file(root, script)
+            ) != positive.get("fixture_sha256"):
+                raise ValueError(
+                    f"native positive fixture hash is stale for {version}/{method}"
+                )
         expected_tests = expected_row.get("regression_tests")
         coverage = row.get("typed_regression_coverage")
         if (
@@ -228,6 +338,101 @@ def _matches_reviewed_probe(
     return probe.get("protocol_smoke", {}).get("status") == "passed"
 
 
+def _validate_current_qualification(
+    root: Path, artifact: Path, fixture: dict, catalog: dict, merged_rows: dict
+) -> None:
+    """Bind the merged snapshot to the exact successful main-run artifact."""
+    artifact = artifact.resolve()
+    report = _read_json(_repo_file(artifact, "native-methods.json"))
+    provenance = _read_json(_repo_file(artifact, "provenance.json"))
+    version = fixture["native_version"]
+    identity = {
+        "version": version,
+        **{
+            key: fixture[key]
+            for key in (
+                "binary_sha256",
+                "source_tag",
+                "source_url",
+                "source_asset_sha256",
+                "source_asset_id",
+            )
+        },
+    }
+    if any(
+        report.get(key) != value or provenance.get(key) != value
+        for key, value in identity.items()
+    ):
+        raise ValueError("current qualification artifact release provenance mismatch")
+    rows = report.get("methods")
+    if not isinstance(rows, list) or len(rows) != len(merged_rows):
+        raise ValueError("current qualification artifact is incomplete")
+    current = {row.get("method"): row for row in rows if isinstance(row, dict)}
+    if (
+        len(current) != len(rows)
+        or set(current) != set(merged_rows)
+        or any(row.get("status") != "compatible_pending_review" for row in rows)
+    ):
+        raise ValueError("current qualification artifact is incomplete")
+    typed = provenance.get("typed_regression_evidence")
+    if (
+        not isinstance(typed, dict)
+        or typed.get("status") != "passed"
+        or typed.get("candidate_version") != version
+    ):
+        raise ValueError("current qualification typed regressions did not pass")
+    materialized = []
+    for method, row in current.items():
+        if row.get("schema_fingerprint") != merged_rows[method].get(
+            "schema_fingerprint"
+        ):
+            raise ValueError(f"current qualification schema differs for {method}")
+        schemas = {}
+        for kind in ("request", "response"):
+            name = row.get(f"{kind}_schema")
+            if (
+                not isinstance(name, str)
+                or re.fullmatch(r"[A-Za-z0-9_]+", name) is None
+            ):
+                raise ValueError("current qualification schema identifier is invalid")
+            path = _repo_file(artifact, f"candidate-schemas/{name}.json")
+            schemas[name] = _read_json(path)
+            if _sha256(path) != row["schema_fingerprint"][f"{kind}_sha256"] or schemas[
+                name
+            ] != merged_rows[method].get("schemas", {}).get(name):
+                raise ValueError(f"current qualification schema differs for {method}")
+        typed_method = typed.get("methods", {}).get(method, {})
+        if (
+            typed_method.get("status") != "passed"
+            or typed_method.get("test_files") != row.get("regression_tests")
+            or row.get("typed_regression_coverage") != typed_method.get("coverage")
+        ):
+            raise ValueError(
+                f"current qualification method test evidence differs for {method}"
+            )
+        review = row.get("compatibility_review", {})
+        if review.get("kind") == "reviewed_consumed_contract":
+            passed = reviewed_node_counts(
+                review.get("tests"), typed.get("test_node_outcomes")
+            )
+            if passed is None or passed != row.get("reviewed_test_outcomes"):
+                raise ValueError(
+                    f"current qualification reviewed test nodes did not pass for {method}"
+                )
+        materialized.append({**row, "schemas": schemas})
+    current_fixture = {
+        **fixture,
+        "methods": materialized,
+        "typed_regression_test_files_sha256": typed.get("test_files"),
+        "reviewed_test_node_outcomes": {
+            node: counts
+            for row in materialized
+            for node, counts in row.get("reviewed_test_outcomes", {}).items()
+        },
+    }
+    _method_rows(current_fixture, catalog, version, root)
+
+
 def build_receipt(
     root: Path,
     *,
@@ -240,6 +445,7 @@ def build_receipt(
     required_ci_url: str,
     publication_run_url: str,
     comparison_url: str,
+    qualification_artifact: Path | None = None,
 ) -> dict | None:
     """Bind complete merged method qualification to one published image.
 
@@ -352,6 +558,10 @@ def build_receipt(
     rows = _method_rows(fixture, catalog, version, root)
     if any(row.get("status") != "compatible_pending_review" for row in rows.values()):
         return None
+    if qualification_artifact is not None:
+        _validate_current_qualification(
+            root, qualification_artifact, fixture, catalog, rows
+        )
 
     approvals_by_method = {}
     for approval in manifest.get("approvals", []):
@@ -473,6 +683,7 @@ def main() -> int:
     parser.add_argument("--required-ci-url", required=True)
     parser.add_argument("--publication-run-url", required=True)
     parser.add_argument("--comparison-url", required=True)
+    parser.add_argument("--qualification-artifact", required=True, type=Path)
     parser.add_argument("--output", required=True, type=Path)
     args = parser.parse_args()
     receipt = build_receipt(
@@ -486,6 +697,7 @@ def main() -> int:
         required_ci_url=args.required_ci_url,
         publication_run_url=args.publication_run_url,
         comparison_url=args.comparison_url,
+        qualification_artifact=args.qualification_artifact,
     )
     if receipt is None:
         print(json.dumps({"status": "skipped_incomplete_qualification"}))
