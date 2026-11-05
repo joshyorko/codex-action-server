@@ -6,6 +6,7 @@ from actions import Response
 from typing import Any
 from capability_registration import action
 from codex_shared import execution
+from codex_shared import coordination
 from codex_shared import inspection
 from codex_shared import integrations
 from codex_shared import organization
@@ -16,6 +17,7 @@ from codex_shared.models import AccountUsageRequest as AccountUsageRequest
 from codex_shared.models import AppReadRequest as AppReadRequest
 from codex_shared.models import AppsListRequest as AppsListRequest
 from codex_shared.models import ConnectionInfo as ConnectionInfo
+from codex_shared.models import CoordinationRelayRequest as CoordinationRelayRequest
 from codex_shared.models import (
     CreateThreadAndStartTurnRequest as CreateThreadAndStartTurnRequest,
 )
@@ -108,6 +110,18 @@ from codex_shared.models import TurnItemsView as TurnItemsView
 from codex_shared.models import TurnSettingsUpdateRequest as TurnSettingsUpdateRequest
 from codex_shared.models import TurnStartRequest as TurnStartRequest
 from codex_shared.models import TurnSteerRequest as TurnSteerRequest
+
+
+@action(package="codex-action-server")
+def relay_coordination_message(
+    payload: CoordinationRelayRequest,
+) -> Response[RpcEnvelope]:
+    """Relay bounded operator text between explicitly authorized native peers.
+
+    Args:
+        payload: Exact peers, safe mode, text and a durable request ID.
+    """
+    return coordination.relay_coordination_message(payload)
 
 
 @action(package="codex-action-server")

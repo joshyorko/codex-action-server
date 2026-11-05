@@ -19,7 +19,7 @@ def test_compatibility_wrappers_preserve_signatures_and_delegate_once():
     module = load_actions()
     wrappers = ast.parse((ROOT / "src" / "codex_actions.py").read_text())
     endpoints = [node for node in wrappers.body if isinstance(node, ast.FunctionDef)]
-    assert len(endpoints) == 64
+    assert len(endpoints) == 65
     for node in endpoints:
         assert len(node.decorator_list) == 1
         assert (
@@ -52,12 +52,12 @@ sys.path.insert(0, sys.argv[2])
 from actions._hooks import on_action_func_found
 registered = []
 with on_action_func_found.register(lambda func, options: registered.append(func)):
-    for group in ('models', 'common', 'inspection', 'threads', 'execution', 'organization', 'queues', 'integrations'):
+    for group in ('models', 'common', 'inspection', 'threads', 'execution', 'organization', 'queues', 'integrations', 'coordination'):
         importlib.import_module('codex_shared.' + group)
     assert registered == [], registered
     import codex_actions
-assert len(registered) == 64, len(registered)
-assert len({function.__name__ for function in registered}) == 64
+assert len(registered) == 65, len(registered)
+assert len({function.__name__ for function in registered}) == 65
 assert all(function.__module__ == 'codex_actions' for function in registered)
 assert all(function.__code__.co_filename == sys.argv[2] + '/codex_actions.py' for function in registered)
 """
