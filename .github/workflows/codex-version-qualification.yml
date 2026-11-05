@@ -64,7 +64,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: codex-version-qualification
+  group: codex-version-qualification-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || (github.event_name == 'workflow_dispatch' && github.ref_name != github.event.repository.default_branch && format('verify-{0}', github.ref)) || 'maintenance' }}
   cancel-in-progress: false
 
 jobs:
