@@ -5,7 +5,7 @@ from __future__ import annotations
 from actions import ActionError
 from typing import Any
 from codex_rpc import Client, NativeVersionNotQualified
-from websockets.exceptions import ConnectionClosed
+from websockets.exceptions import ConnectionClosed, InvalidHandshake
 from codex_shared.models import ConnectionInfo
 from codex_shared.models import EffectiveConfiguration
 from pathlib import Path
@@ -231,6 +231,7 @@ def _run(
         KeyError,
         subprocess.SubprocessError,
         ConnectionClosed,
+        InvalidHandshake,
     ) as error:
         raise ActionError(
             f"{operation} failed closed ({type(error).__name__}); inspect target diagnostics"
@@ -311,6 +312,7 @@ def _dispatch_run(operation, payload, callback):
                 KeyError,
                 subprocess.SubprocessError,
                 ConnectionClosed,
+                InvalidHandshake,
             ) as error:
                 receipt.update(error_code=type(error).__name__)
                 envelope = RpcEnvelope(
