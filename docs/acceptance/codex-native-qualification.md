@@ -43,3 +43,11 @@ truth above. The pull-request run generated the candidate PR artifact; the
 default-branch write job was skipped by design, so publication permissions and
 idempotent PR updates remain unverified. Dakota device probes and the Executor
 502 reproduction remain operational work, not CI qualification.
+
+## Codex 0.166.0 exposed-method qualification
+
+`tests/fixtures/protocol/codex_0.166.0_native_methods.json` retains the exact reviewed binary/source provenance, per-method request/response schemas, and positive disposable RPC evidence. The generator checks each approved method independently; negative results do not grant admission.
+
+`ci/qualify_native_methods.py` reproduces the probes using an isolated credential-free HOME/CODEX_HOME and loopback-only provider fixtures. Mutating probes operate only on freshly created fixture threads, submissions and native-owned sleep processes, which are cleaned up. Queue state and terminal termination are checked for their actual effects.
+
+The turn-settings probe requires `features.step_model_switching=true` in the disposable fixture. Method qualification does not enable that feature, change operator configuration, or restart a production Codex daemon. Runtime feature/permission checks still apply.

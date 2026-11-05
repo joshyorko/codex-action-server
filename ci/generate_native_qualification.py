@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 from pathlib import Path
 import re
@@ -99,6 +100,65 @@ def load_approvals() -> dict[str, set[str]]:
             expected = (
                 hashes.get("ServerDiagnosticsParams.json"),
                 hashes.get("ServerDiagnosticsResponse.json"),
+            )
+        elif source.get("kind") == "native_methods_fixture":
+            if source_data.get("native_version") != version:
+                raise ValueError(
+                    f"native version provenance mismatch for Codex {version}"
+                )
+            for key in (
+                "binary_sha256",
+                "source_tag",
+                "source_url",
+                "source_asset_sha256",
+                "source_asset_id",
+            ):
+                value = source.get(key)
+                if (
+                    not isinstance(value, str)
+                    or not value
+                    or source_data.get(key) != value
+                ):
+                    raise ValueError(f"{key} provenance mismatch for Codex {version}")
+                if key in {
+                    "binary_sha256",
+                    "source_asset_sha256",
+                } and not _SHA256.fullmatch(value):
+                    raise ValueError(f"{key} provenance mismatch for Codex {version}")
+            if (
+                "qualification_run" in source
+                and source_data.get("qualification_run") != source["qualification_run"]
+            ):
+                raise ValueError(
+                    f"qualification_run provenance mismatch for Codex {version}"
+                )
+            if source_data.get("typed_regression_tests") != "passed":
+                raise ValueError(
+                    f"passed typed regressions required for Codex {version}"
+                )
+            methods = source_data.get("methods")
+            contract = methods.get(method) if isinstance(methods, dict) else None
+            if not isinstance(contract, dict):
+                raise ValueError(f"method qualification missing for {version}/{method}")
+            smoke = contract.get("protocol_smoke")
+            if (
+                not isinstance(smoke, dict)
+                or smoke.get("status") != "passed"
+                or smoke.get("positive") is not True
+            ):
+                raise ValueError(
+                    f"positive live method evidence required for {version}/{method}"
+                )
+            schemas = (contract.get("request_schema"), contract.get("response_schema"))
+            if not all(isinstance(schema, dict) for schema in schemas):
+                raise ValueError(
+                    f"request and response schema objects required for {version}/{method}"
+                )
+            expected = tuple(
+                hashlib.sha256(
+                    json.dumps(schema, sort_keys=True, separators=(",", ":")).encode()
+                ).hexdigest()
+                for schema in schemas
             )
         else:
             raise ValueError(f"unknown provenance kind for Codex {version}")

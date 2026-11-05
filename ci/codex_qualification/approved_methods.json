@@ -217,13 +217,139 @@
       "version": "0.162.1"
     },
     {
+      "version": "0.166.0",
+      "method": "app/read",
+      "provenance_ref": "0.166.0",
+      "schema_fingerprint": {
+        "request_sha256": "661118ff1ffee8bc51eea15ad32f5c879d4177baf84964cc0ab1c7739bed1380",
+        "response_sha256": "4f443f4e92ec1d47195ea8e0c76de5297544f3d06ab316bfa712d93615783a64"
+      }
+    },
+    {
+      "version": "0.166.0",
       "method": "server/diagnostics",
       "provenance_ref": "0.166.0",
       "schema_fingerprint": {
-        "request_sha256": "5a4235de371d1a58a45300e14fbfbc9ab0a3ecef3078ae35d60f1470b6e4e4f1",
-        "response_sha256": "0b3b35e623761a05bcd4a20085be8395986d2b98037c8ebda4dcda2204689d1d"
-      },
-      "version": "0.166.0"
+        "request_sha256": "ebe2180b467f6053c0474a7386bf0dbbdb88f0b76b7d34d8df0ce53d558c7595",
+        "response_sha256": "273ba6dabb7b2390665f9d5a22a870fca7ac0cc8debd68704cbc2b6a6a0985e9"
+      }
+    },
+    {
+      "version": "0.166.0",
+      "method": "thread/backgroundTerminals/list",
+      "provenance_ref": "0.166.0",
+      "schema_fingerprint": {
+        "request_sha256": "5c4a447d0567346ac53bb1ecbfd3665ce8a6dd353f881dc561313bd3b4a9b056",
+        "response_sha256": "e17052c6a5043b1cb1027cb258641402f6c52bbbcf162f5d92d9f76bbd3c4eb0"
+      }
+    },
+    {
+      "version": "0.166.0",
+      "method": "thread/backgroundTerminals/terminate",
+      "provenance_ref": "0.166.0",
+      "schema_fingerprint": {
+        "request_sha256": "65f55f1a37d32ba51cc0be5ed36f3e0499192d02cd4e13fdc8c09391c52923e1",
+        "response_sha256": "da81243c008d84b9b1b7cd3f2e9b76d28019bef575f0378469c96af565f73420"
+      }
+    },
+    {
+      "version": "0.166.0",
+      "method": "thread/queue/add",
+      "provenance_ref": "0.166.0",
+      "schema_fingerprint": {
+        "request_sha256": "31dfb7d3d00c219468943ee4df2ddffd4d43ce6d92ecd3edc54f029d68bfe94e",
+        "response_sha256": "e26efb7710e419c9a79d446d022e11a6526759f6a9c35e41f7063e1510a462e7"
+      }
+    },
+    {
+      "version": "0.166.0",
+      "method": "thread/queue/delete",
+      "provenance_ref": "0.166.0",
+      "schema_fingerprint": {
+        "request_sha256": "91f21777b2f447a958629e1a9d30ef42863cc440c3fac05cb4f310c7d4816869",
+        "response_sha256": "f13b12564221360b04fcdaed83518385b4c05eda608ce8623ee36307c31d41b8"
+      }
+    },
+    {
+      "version": "0.166.0",
+      "method": "thread/queue/list",
+      "provenance_ref": "0.166.0",
+      "schema_fingerprint": {
+        "request_sha256": "ef50536f8495f68ef05deecf174ceedeab0c006db29e4a0cd5546cf9fea4a77f",
+        "response_sha256": "f62582b174afdfc326780e6b017a970c4ee6757e32a1978c327edcfd7b06e3af"
+      }
+    },
+    {
+      "version": "0.166.0",
+      "method": "thread/queue/reorder",
+      "provenance_ref": "0.166.0",
+      "schema_fingerprint": {
+        "request_sha256": "c9b0338cee7413f52926c2766428d74c5ba27deef7748d4f8c9193b7e520c6d7",
+        "response_sha256": "776494f252b020aa94cb5a9142f94f528d0bf0234a201f1b7a1c9818ee3c3714"
+      }
+    },
+    {
+      "version": "0.166.0",
+      "method": "thread/queue/start",
+      "provenance_ref": "0.166.0",
+      "schema_fingerprint": {
+        "request_sha256": "cd1087cbb22c440e174c54973044e186b4d18be3b8fb81d1def8fa465b310ade",
+        "response_sha256": "b49675f35ab7fe2db4c0fe1c50f9b613b5aaa63197ca6db16fa5f7a3f7260c4b"
+      }
+    },
+    {
+      "version": "0.166.0",
+      "method": "thread/queue/update",
+      "provenance_ref": "0.166.0",
+      "schema_fingerprint": {
+        "request_sha256": "217b9ff41d1ace241fcc0945d77d8934c5550d1d8c837ad1aa5bc82012761b17",
+        "response_sha256": "9c7109a1650fb66ef48bfe3b52b5bf86381c9383e27351171fe68d2ecdce894f"
+      }
+    },
+    {
+      "version": "0.166.0",
+      "method": "thread/search",
+      "provenance_ref": "0.166.0",
+      "schema_fingerprint": {
+        "request_sha256": "15dccac6efb10ac954f9225d738c5d5868fb50c8d9f246ef73768faa6010f40f",
+        "response_sha256": "a72439e714171442385ec57df2e74aef754932b85042a940c69270470ac5fad5"
+      }
+    },
+    {
+      "version": "0.166.0",
+      "method": "thread/searchOccurrences",
+      "provenance_ref": "0.166.0",
+      "schema_fingerprint": {
+        "request_sha256": "0443b2513dbbbd8032b3d61e726a377731541ea7be3abbe805ec708312384b81",
+        "response_sha256": "583794706fc1ee7234dd3f644f1762ad53100423e70aedb5bdf9618588f71cb7"
+      }
+    },
+    {
+      "version": "0.166.0",
+      "method": "thread/settings/update",
+      "provenance_ref": "0.166.0",
+      "schema_fingerprint": {
+        "request_sha256": "1705efbea904949fd24ab838048852bf9e217de67f17e19bcd2141fe1788a612",
+        "response_sha256": "edc3bf70fdc241ad4ef08e182c3bee8b04ccbda5fd7082afe501f0d5186c56cc"
+      }
+    },
+    {
+      "version": "0.166.0",
+      "method": "thread/timeline/list",
+      "provenance_ref": "0.166.0",
+      "schema_fingerprint": {
+        "request_sha256": "cf260254425984af002e471a512403a091a82a071556c6d99e73c54f57e2e8ce",
+        "response_sha256": "7874150d931f104e4df08864036d2d19c4728c705f6f0307829e02b96b92538a"
+      }
+    },
+    {
+      "version": "0.166.0",
+      "method": "turn/settings/update",
+      "provenance_ref": "0.166.0",
+      "schema_fingerprint": {
+        "request_sha256": "845ee4bf1d071239705815ae6ead94be2a7cc2678d4e41a10ee5d4fb17c24e69",
+        "response_sha256": "95efb82458c568e6b29521c0602605e6d01059da87ef4b1abdfc70015c3e5485"
+      }
     }
   ],
   "schema_version": 1,
@@ -250,13 +376,12 @@
     },
     "0.166.0": {
       "binary_sha256": "b8a11fedf24b2dfb59a70c9e52b030f9a508dcd49cd2dd0d41956f4c785156b8",
-      "fixture": "tests/fixtures/protocol/codex_0.166.0_server_diagnostics.json",
-      "kind": "diagnostics_fixture",
-      "qualification_run": "https://github.com/joshyorko/codex-action-server/actions/runs/41070538834",
-      "source_asset_id": "689712643",
-      "source_asset_sha256": "a0bf572d2f93f056c6712a6da348e96078dc84f3885fd7be67807ef389cb3978",
       "source_tag": "rust-v0.166.0",
-      "source_url": "https://github.com/openai/codex/releases/download/rust-v0.166.0/codex-x86_64-unknown-linux-musl.tar.gz"
+      "source_url": "https://github.com/openai/codex/releases/download/rust-v0.166.0/codex-x86_64-unknown-linux-musl.tar.gz",
+      "source_asset_sha256": "a0bf572d2f93f056c6712a6da348e96078dc84f3885fd7be67807ef389cb3978",
+      "source_asset_id": "689712643",
+      "kind": "native_methods_fixture",
+      "fixture": "tests/fixtures/protocol/codex_0.166.0_native_methods.json"
     }
   }
 }
