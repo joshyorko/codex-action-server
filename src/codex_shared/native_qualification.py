@@ -43,7 +43,21 @@ REVIEWED_EXPERIMENTAL_METHODS_BY_NATIVE_VERSION = {
     ),
     "0.166.0": frozenset(
         {
+            "app/read",
             "server/diagnostics",
+            "thread/backgroundTerminals/list",
+            "thread/backgroundTerminals/terminate",
+            "thread/queue/add",
+            "thread/queue/delete",
+            "thread/queue/list",
+            "thread/queue/reorder",
+            "thread/queue/start",
+            "thread/queue/update",
+            "thread/search",
+            "thread/searchOccurrences",
+            "thread/settings/update",
+            "thread/timeline/list",
+            "turn/settings/update",
         }
     ),
 }
