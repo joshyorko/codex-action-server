@@ -319,6 +319,46 @@ def test_codex_qualification_is_scheduled_serial_and_fail_closed():
     assert "cancel-in-progress" not in open_pr
 
 
+def _qualification_concurrency_group(event, ref, pr_number=0):
+    template = qualification_workflow()["concurrency"]["group"]
+    if "${{" not in template:
+        return template
+    expression = re.search(r"\$\{\{(.*?)\}\}", template).group(1)
+    context = {
+        "github.event.repository.default_branch": "main",
+        "github.event.pull_request.number": pr_number,
+        "github.event_name": event,
+        "github.ref_name": ref.removeprefix("refs/heads/"),
+        "github.ref": ref,
+    }
+    for key, value in context.items():
+        expression = expression.replace(key, repr(value))
+    expression = expression.replace("&&", " and ").replace("||", " or ")
+    group = eval(
+        expression.strip(),
+        {"__builtins__": {}, "format": lambda pattern, value: pattern.format(value)},
+    )
+    return template.split("${{", 1)[0] + group
+
+
+def test_read_only_qualification_runs_cannot_displace_other_prs_or_writers():
+    groups = {
+        _qualification_concurrency_group("pull_request", "refs/heads/main", number)
+        for number in (26, 29, 30)
+    }
+    groups.update(
+        _qualification_concurrency_group("workflow_dispatch", f"refs/heads/{branch}")
+        for branch in ("candidate-a", "candidate-b")
+    )
+    assert len(groups) == 5
+    writer_groups = {
+        _qualification_concurrency_group(event, "refs/heads/main")
+        for event in ("schedule", "workflow_dispatch", "push")
+    }
+    assert len(writer_groups) == 1
+    assert groups.isdisjoint(writer_groups)
+
+
 @pytest.mark.parametrize(
     "state,ref,current_head,success,pushes",
     [
