@@ -191,7 +191,7 @@ jobs:
                 required_ci_run="$(jq -r .html_url <<<"$required_ci")"
                 break
               fi
-              if [[ "$qualification_state" == completed:* || "$required_ci_state" == completed:* ]]; then
+              if [[ ( "$qualification_state" == completed:* && "$qualification_state" != completed:success ) || ( "$required_ci_state" == completed:* && "$required_ci_state" != completed:success ) ]]; then
                 echo "A required exact-commit workflow completed without success; no qualification receipt emitted." >> "$GITHUB_STEP_SUMMARY"
                 echo "status=skipped_failed_validation" >> "$GITHUB_OUTPUT"
                 exit 0

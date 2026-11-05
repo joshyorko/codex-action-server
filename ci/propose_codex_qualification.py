@@ -362,6 +362,29 @@ def prepare_proposal(artifact: Path, output: Path, run_url: str) -> dict:
                 raise ValueError(
                     "existing native-method fixture conflicts with this source"
                 )
+            if isinstance(current.get("methods"), dict):
+                # Keep the independently reviewed exposed-method probes and
+                # their approvals intact when extending catalog evidence.
+                fixture_relative = (
+                    f"tests/fixtures/protocol/codex_{version}_native_catalog.json"
+                )
+                had_native_fixture = False
+                approved = {
+                    item["method"]
+                    for item in manifest["approvals"]
+                    if item.get("version") == version
+                }
+                if all(row["method"] in approved for row in qualified):
+                    result = {
+                        "status": "already-approved",
+                        "version": version,
+                        "qualified_methods": [row["method"] for row in qualified],
+                        "new_approvals": [],
+                        "withheld_methods": method_report.get("withheld_methods", []),
+                        "files": [],
+                    }
+                    _write_json(output / "proposal.json", result)
+                    return result
     else:
         manifest["sources"][version] = {
             **source_fields,
@@ -456,7 +479,7 @@ def prepare_proposal(artifact: Path, output: Path, run_url: str) -> dict:
         "withheld_methods": method_report.get("withheld_methods", []),
         "files": files,
     }
-    if had_native_fixture and not new_approvals:
+    if had_native_fixture and not new_approvals and fixture == old_fixture:
         result.update(status="already-approved", files=[])
         for relative in (fixture_relative,):
             (output / relative).unlink(missing_ok=True)

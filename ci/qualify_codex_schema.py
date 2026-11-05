@@ -412,6 +412,19 @@ def _latest_method_contract(
         version_key = _version_key(version)
         if version_key is None or version_key >= candidate_key:
             continue
+        bundle_schemas = _bundle_schemas(source, method)
+        if bundle_schemas:
+            row = next(row for row in _load_method_catalog() if row["method"] == method)
+            fingerprint = {
+                key: hashlib.sha256(
+                    json.dumps(bundle_schemas[row[name]], sort_keys=True).encode()
+                ).hexdigest()
+                for key, name in (
+                    ("request_sha256", "request_schema"),
+                    ("response_sha256", "response_schema"),
+                )
+            }
+            options.append((version_key, 1, version, fingerprint, bundle_schemas))
         fixture_ref = source.get("native_methods_fixture")
         if not fixture_ref and source.get("kind") == "native_methods_fixture":
             fixture_ref = source.get("fixture")
@@ -461,6 +474,48 @@ def _latest_method_contract(
     return version, fingerprint, schemas
 
 
+def _bundle_schemas(source: dict, method: str) -> dict[str, dict]:
+    relative = source.get("schema_bundle_fixture")
+    if not isinstance(relative, str):
+        return {}
+    path = (ROOT / relative).resolve()
+    if ROOT not in path.parents or sha256_file(path) != source.get(
+        "schema_bundle_sha256"
+    ):
+        raise ValueError("pinned schema bundle provenance mismatch")
+    definitions = json.loads(path.read_text()).get("definitions", {})
+    row = next(row for row in _load_method_catalog() if row["method"] == method)
+    schemas = {}
+    for key in ("request_schema", "response_schema"):
+        name = row[key]
+        schema = definitions.get(name) or definitions.get(
+            name.replace("Nullable_", "Nullable")
+        )
+        if not isinstance(schema, dict):
+            return {}
+        dependencies = {}
+
+        def collect(value):
+            if isinstance(value, dict):
+                ref = value.get("$ref", "")
+                dependency = ref.removeprefix("#/definitions/")
+                if ref.startswith("#/definitions/") and dependency not in dependencies:
+                    dependencies[dependency] = definitions[dependency]
+                    collect(definitions[dependency])
+                for child in value.values():
+                    collect(child)
+            elif isinstance(value, list):
+                for child in value:
+                    collect(child)
+
+        collect(schema)
+        schemas[name] = {
+            **schema,
+            **({"definitions": dependencies} if dependencies else {}),
+        }
+    return schemas
+
+
 def _baseline_schemas(manifest: dict, version: str, method: str) -> dict[str, dict]:
     source = manifest["sources"].get(version, {})
     fixture_ref = source.get("native_methods_fixture") or source.get("fixture", "")
@@ -471,6 +526,15 @@ def _baseline_schemas(manifest: dict, version: str, method: str) -> dict[str, di
         fixture = json.loads(fixture_path.read_text())
     except (OSError, json.JSONDecodeError):
         return {}
+    if isinstance(fixture.get("methods"), dict):
+        row = fixture["methods"].get(method)
+        if isinstance(row, dict):
+            return {
+                schema["title"]: schema
+                for key in ("request_schema", "response_schema")
+                if isinstance(schema := row.get(key), dict)
+                and isinstance(schema.get("title"), str)
+            }
     if isinstance(fixture.get("methods"), list):
         row = next(
             (item for item in fixture["methods"] if item.get("method") == method),

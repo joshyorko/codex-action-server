@@ -10,6 +10,12 @@ derives it from the consumed method definitions and fails if the code surface
 cannot be represented. The RCC `check-catalog` task checks the generated file
 against the current source.
 
+The complete stable schema bundle from immutable upstream commit
+`d27764b82f7118f674371e6d6e76271d9d606edb` supplies the 0.160.1 stable-method
+baseline. Its source URL and byte digest are pinned in the approval manifest;
+referenced definitions are retained during comparison. Changed schemas still
+require review, and a baseline does not grant experimental runtime admission.
+
 `ci/codex_qualification/approved_methods.json` remains the sole approval
 source. Exact native-version/method approvals include request and response
 schema fingerprints and fixture provenance. The generated runtime admission
@@ -31,6 +37,9 @@ fail-closed. Compatible proposals are deduplicated and require human review.
 Unavailable or incompatible candidates produce a deduplicated blocker with
 sanitized evidence. Human-authored branch changes and concurrent runs are
 preserved rather than overwritten or cancelled.
+Bot-created PRs receive explicit verification workflow dispatches for their
+candidate branch because `GITHUB_TOKEN` writes do not trigger push/PR workflows.
+These dispatches cannot publish an image or run the default-branch PR writer.
 
 ## Immutable downstream handoff
 
@@ -39,6 +48,7 @@ The `container-image` workflow emits
 Actions artifact named `qualified-release.json`. It does so only for an exact
 `main` commit whose qualification and required CI push runs both succeeded,
 whose merged native fixture covers the complete catalog with passing evidence,
+whose mapped regression-file hashes match the current source tree,
 whose experimental methods have exact approval fingerprints, and whose
 published GHCR digest and image revision match that commit. Partial qualification
 or any withheld method produces no artifact.
@@ -75,7 +85,7 @@ The retained diagnostics-only fixture for Codex 0.166.0 is not a full native
 method qualification. It cannot produce a downstream receipt or expand runtime
 admission by itself.
 
-## Reproducible candidate check
+## Historical candidate check before exposed-method qualification
 
 The implementation was exercised against the official `rust-v0.166.0` Linux
 asset (release asset ID `689712643`, asset SHA-256
@@ -88,7 +98,7 @@ smoke passed. The mapped typed suite passed **440 tests** with **20 documented
 environment/runtime skips** and produced passed evidence for all 58 catalog
 methods across 32 test files.
 
-The candidate evidence reported **1 compatible method** (`server/diagnostics`)
+Before PR #27 added the reviewed exposed-method fixture, the candidate evidence reported **1 compatible method** (`server/diagnostics`)
 and **57 withheld methods**: 43 lacked a reviewed baseline and 14 had changed
 schemas. The proposal helper prepared only the individually compatible method;
 it added no new runtime approvals. This incomplete candidate correctly cannot
@@ -100,3 +110,27 @@ emit the downstream receipt. Reproducible evidence output hashes:
 - `typed-regression-evidence.json`: `77497fd29e250daebca632e9b03573a608b227e2e61466bd9f83b2d33af602f0`
 
 These are candidate-run outputs, not merged approvals or deployment evidence.
+
+Qualification run [41070538834](https://github.com/joshyorko/codex-action-server/actions/runs/41070538834)
+verified the official release asset, matched the diagnostics schemas to 0.162.1,
+passed typed regressions, and completed a disposable live `server/diagnostics`
+smoke. The retained fixture and method-specific approval are in the source of
+truth above. The pull-request run generated the candidate PR artifact; the
+default-branch write job was skipped by design, so publication permissions and
+idempotent PR updates remain unverified. Dakota device probes and the Executor
+502 reproduction remain operational work, not CI qualification.
+
+## Codex 0.166.0 exposed-method qualification
+
+`tests/fixtures/protocol/codex_0.166.0_native_methods.json` retains the exact reviewed binary/source provenance, per-method request/response schemas, and positive disposable RPC evidence. The generator checks each approved method independently; negative results do not grant admission.
+
+`ci/qualify_native_methods.py` reproduces the probes using an isolated credential-free HOME/CODEX_HOME and loopback-only provider fixtures. Mutating probes operate only on freshly created fixture threads, submissions and native-owned sleep processes, which are cleaned up. Queue state and terminal termination are checked for their actual effects.
+
+This reviewed fixture covers 15 exposed methods, not the complete 58-method
+consumed catalog. Its dictionary-form schemas remain valid baselines for newer
+candidates, and same-version maintenance reruns preserve these approvals.
+Additional full-catalog evidence uses a separate fixture so the reviewed
+positive probes are never replaced by partial qualification. The existing
+fixture alone cannot produce a qualified-release handoff.
+
+The turn-settings probe requires `features.step_model_switching=true` in the disposable fixture. Method qualification does not enable that feature, change operator configuration, or restart a production Codex daemon. Runtime feature/permission checks still apply.

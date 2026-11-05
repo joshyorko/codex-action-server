@@ -65,6 +65,13 @@ def _write_receipt_inputs(root: Path):
     }
     fixture_path = root / fixture_relative
     fixture_path.parent.mkdir(parents=True)
+    test_path = root / "tests/test_protocol_contracts.py"
+    test_path.write_text("# isolated receipt contract fixture\n")
+    fixture["typed_regression_test_files_sha256"] = {
+        "tests/test_protocol_contracts.py": hashlib.sha256(
+            test_path.read_bytes()
+        ).hexdigest()
+    }
     fixture_path.write_text(json.dumps(fixture))
     source = {
         "kind": "native_methods_fixture",
@@ -198,6 +205,15 @@ def _build_synthetic_full_surface_receipt(root: Path):
         "typed_regression_status": "passed",
         "methods": methods,
     }
+    test_hashes = {}
+    for name in sorted(
+        {name for row in catalog["methods"] for name in row["regression_tests"]}
+    ):
+        test_path = root / name
+        test_path.parent.mkdir(parents=True, exist_ok=True)
+        test_path.write_bytes((ROOT / name).read_bytes())
+        test_hashes[name] = hashlib.sha256(test_path.read_bytes()).hexdigest()
+    fixture["typed_regression_test_files_sha256"] = test_hashes
     fixture_path.write_text(json.dumps(fixture, sort_keys=True) + "\n")
 
     manifest = {
@@ -322,6 +338,88 @@ def test_receipt_binds_merged_qualification_to_one_published_image(tmp_path):
     jsonschema.Draft202012Validator(
         schema, format_checker=jsonschema.FormatChecker()
     ).validate(value)
+
+
+@pytest.mark.parametrize("change", ["changed_test", "missing_hashes"])
+def test_receipt_refuses_stale_regression_evidence(tmp_path, change):
+    _write_receipt_inputs(tmp_path)
+    if change == "changed_test":
+        (tmp_path / "tests/test_protocol_contracts.py").write_text("# changed test\n")
+    else:
+        path = tmp_path / "tests/fixtures/protocol/codex_0.166.0_native_methods.json"
+        fixture = json.loads(path.read_text())
+        fixture.pop("typed_regression_test_files_sha256")
+        path.write_text(json.dumps(fixture))
+    commit = "e" * 40
+    with pytest.raises(ValueError, match="regression.*hash"):
+        receipt.build_receipt(
+            tmp_path,
+            repository="joshyorko/codex-action-server",
+            source_commit=commit,
+            image="ghcr.io/joshyorko/codex-action-server",
+            image_digest="sha256:" + "f" * 64,
+            image_revision=commit,
+            qualification_run_url="https://github.com/joshyorko/codex-action-server/actions/runs/123",
+            required_ci_url="https://github.com/joshyorko/codex-action-server/actions/runs/124",
+            publication_run_url="https://github.com/joshyorko/codex-action-server/actions/runs/125",
+            comparison_url=f"https://github.com/joshyorko/codex-action-server/compare/{'d' * 40}...{commit}",
+        )
+
+
+@pytest.mark.parametrize("changed", [False, True])
+def test_receipt_preserves_reviewed_probe_schema_fingerprints(tmp_path, changed):
+    _write_receipt_inputs(tmp_path)
+    manifest_path = tmp_path / "ci/codex_qualification/approved_methods.json"
+    manifest = json.loads(manifest_path.read_text())
+    source = manifest["sources"]["0.166.0"]
+    source["fixture"] = "tests/fixtures/protocol/codex_0.166.0_exposed_methods.json"
+    schema = {"type": "object"}
+    digest = hashlib.sha256(
+        json.dumps(schema, sort_keys=True, separators=(",", ":")).encode()
+    ).hexdigest()
+    manifest["approvals"][0]["schema_fingerprint"] = {
+        "request_sha256": digest,
+        "response_sha256": digest,
+    }
+    manifest_path.write_text(json.dumps(manifest))
+    probe = {
+        **{
+            key: source[key]
+            for key in (
+                "binary_sha256",
+                "source_tag",
+                "source_url",
+                "source_asset_sha256",
+                "source_asset_id",
+            )
+        },
+        "typed_regression_tests": "passed",
+        "methods": {
+            "app/read": {
+                "request_schema": {"type": "string"} if changed else schema,
+                "response_schema": schema,
+                "protocol_smoke": {"status": "passed", "positive": True},
+            }
+        },
+    }
+    (tmp_path / source["fixture"]).write_text(json.dumps(probe))
+    commit = "e" * 40
+    arguments = dict(
+        repository="joshyorko/codex-action-server",
+        source_commit=commit,
+        image="ghcr.io/joshyorko/codex-action-server",
+        image_digest="sha256:" + "f" * 64,
+        image_revision=commit,
+        qualification_run_url="https://github.com/joshyorko/codex-action-server/actions/runs/123",
+        required_ci_url="https://github.com/joshyorko/codex-action-server/actions/runs/124",
+        publication_run_url="https://github.com/joshyorko/codex-action-server/actions/runs/125",
+        comparison_url=f"https://github.com/joshyorko/codex-action-server/compare/{'d' * 40}...{commit}",
+    )
+    if changed:
+        with pytest.raises(ValueError, match="fingerprint differs"):
+            receipt.build_receipt(tmp_path, **arguments)
+    else:
+        assert receipt.build_receipt(tmp_path, **arguments) is not None
 
 
 def test_receipt_refuses_an_image_built_from_another_commit(tmp_path):

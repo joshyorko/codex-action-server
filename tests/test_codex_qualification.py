@@ -2,7 +2,10 @@ import json
 import hashlib
 import importlib.util
 from pathlib import Path
+import shutil
 import tempfile
+
+import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 SPEC = importlib.util.spec_from_file_location(
@@ -285,8 +288,33 @@ def test_candidate_version_approval_is_not_its_own_compatibility_baseline():
     assert baseline[0] == "0.162.1"
 
 
+def test_exposed_method_fixture_preserves_reviewed_schema_baselines():
+    manifest = json.loads(
+        (ROOT / "ci/codex_qualification/approved_methods.json").read_text()
+    )
+    baseline = qualification._latest_method_contract(manifest, "app/read", "0.167.0")
+    assert baseline is not None
+    assert baseline[0] == "0.166.0"
+    assert set(baseline[2]) == {"AppsReadParams", "AppsReadResponse"}
+    assert baseline[2]["AppsReadParams"]["type"] == "object"
+
+
+def test_pinned_stable_schema_bundle_supplies_consumed_contract_baselines():
+    manifest = json.loads(
+        (ROOT / "ci/codex_qualification/approved_methods.json").read_text()
+    )
+    baseline = qualification._latest_method_contract(manifest, "model/list", "0.166.0")
+    assert baseline is not None
+    assert baseline[0] == "0.160.1"
+    assert set(baseline[2]) == {"ModelListParams", "ModelListResponse"}
+    assert "Model" in baseline[2]["ModelListResponse"]["definitions"]
+
+
+@pytest.mark.parametrize(
+    "existing_kind", ["diagnostics", "probe_approved", "probe_new"]
+)
 def test_first_native_fixture_extends_existing_diagnostics_source(
-    tmp_path, monkeypatch
+    tmp_path, monkeypatch, existing_kind
 ):
     repo = tmp_path / "repo"
     artifact = tmp_path / "artifact"
@@ -454,6 +482,25 @@ def test_first_native_fixture_extends_existing_diagnostics_source(
             }
         ],
     }
+    if existing_kind.startswith("probe_"):
+        source["kind"] = "native_methods_fixture"
+        source.pop("qualification_run")
+        old_fixture.write_text(
+            json.dumps(
+                {
+                    "native_version": version,
+                    "binary_sha256": binary_sha,
+                    "typed_regression_tests": "passed",
+                    "methods": {
+                        "server/diagnostics": {
+                            "protocol_smoke": {"status": "passed", "positive": True}
+                        }
+                    },
+                }
+            )
+        )
+        if existing_kind == "probe_new":
+            manifest["approvals"] = []
     manifest_path.parent.mkdir(parents=True, exist_ok=True)
     manifest_path.write_text(json.dumps(manifest))
     docs_path = repo / "docs/acceptance/codex-native-qualification.md"
@@ -468,6 +515,12 @@ def test_first_native_fixture_extends_existing_diagnostics_source(
 
     result = qualification_proposal.prepare_proposal(artifact, output, run_url)
 
+    if existing_kind == "probe_approved":
+        assert result["status"] == "already-approved"
+        assert result["files"] == []
+        assert not (output / diagnostics_fixture).exists()
+        assert json.loads(old_fixture.read_text())["methods"]["server/diagnostics"]
+        return
     assert result["status"] == "prepared"
     assert result["qualified_methods"] == ["server/diagnostics"]
     assert len(result["withheld_methods"]) == len(catalog["methods"]) - 1
@@ -475,8 +528,11 @@ def test_first_native_fixture_extends_existing_diagnostics_source(
         (output / "ci/codex_qualification/approved_methods.json").read_text()
     )
     assert proposed_manifest["sources"][version]["native_methods_fixture"].endswith(
-        "_native_methods.json"
+        "_native_catalog.json"
+        if existing_kind == "probe_new"
+        else "_native_methods.json"
     )
+    assert proposed_manifest["sources"][version]["fixture"] == diagnostics_fixture
     proposed_fixture = json.loads(
         (
             output / proposed_manifest["sources"][version]["native_methods_fixture"]
@@ -501,6 +557,46 @@ def test_first_native_fixture_extends_existing_diagnostics_source(
         )
         == 1
     )
+    if existing_kind == "diagnostics":
+        for name in result["files"]:
+            (repo / name).parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(output / name, repo / name)
+        stable = next(
+            row for row in method_rows if row["method"] == "mcpServer/tool/call"
+        )
+        stable["status"] = "compatible_pending_review"
+        stable["reason_code"] = "schema_and_behavior_passed"
+        stable["schema_fingerprint"] = {}
+        for kind in ("request", "response"):
+            path = schema_dir / f"{stable[f'{kind}_schema']}.json"
+            path.write_text(
+                json.dumps({"title": stable[f"{kind}_schema"], "type": "object"})
+            )
+            stable["schema_fingerprint"][f"{kind}_sha256"] = hashlib.sha256(
+                path.read_bytes()
+            ).hexdigest()
+        report["withheld_methods"].remove(stable["method"])
+        (artifact / "native-methods.json").write_text(json.dumps(report))
+        updated_output = tmp_path / "stable-progress"
+        updated = qualification_proposal.prepare_proposal(
+            artifact, updated_output, run_url
+        )
+        assert updated["status"] == "prepared"
+        assert updated["new_approvals"] == []
+        updated_fixture = json.loads(
+            (
+                updated_output
+                / proposed_manifest["sources"][version]["native_methods_fixture"]
+            ).read_text()
+        )
+        assert (
+            next(
+                row
+                for row in updated_fixture["methods"]
+                if row["method"] == stable["method"]
+            )["status"]
+            == "compatible_pending_review"
+        )
 
 
 def test_native_method_fixture_does_not_admit_methods_without_exact_approval(

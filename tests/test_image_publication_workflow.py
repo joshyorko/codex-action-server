@@ -182,7 +182,7 @@ def test_only_publication_has_registry_write_permission():
             assert step["with"]["persist-credentials"] == "false"
 
 
-def _run_handoff_step(tmp_path, *, main_sha):
+def _run_handoff_step(tmp_path, *, main_sha, pending_workflow=""):
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     gh = bin_dir / "gh"
@@ -198,7 +198,14 @@ case "$2" in
   */test.yml/runs*) run_id=124 ;;
   *) echo "unexpected gh api request" >&2; exit 2 ;;
 esac
-printf '{"workflow_runs":[{"head_sha":"%s","head_branch":"main","event":"push","status":"completed","conclusion":"success","html_url":"https://github.com/joshyorko/codex-action-server/actions/runs/%s","run_number":1,"run_attempt":1}]}\\n' "$GITHUB_SHA" "$run_id"
+state=completed
+conclusion='"success"'
+if [[ "$run_id" == "$MOCK_PENDING_WORKFLOW" && ! -f "$RUNNER_TEMP/pending-observed" ]]; then
+  touch "$RUNNER_TEMP/pending-observed"
+  state=in_progress
+  conclusion=null
+fi
+printf '{"workflow_runs":[{"head_sha":"%s","head_branch":"main","event":"push","status":"%s","conclusion":%s,"html_url":"https://github.com/joshyorko/codex-action-server/actions/runs/%s","run_number":1,"run_attempt":1}]}\\n' "$GITHUB_SHA" "$state" "$conclusion" "$run_id"
 """
     )
     gh.chmod(0o755)
@@ -236,6 +243,7 @@ exec "$REAL_GIT" "$@"
         "IMAGE_REVISION": commit,
         "MOCK_MAIN_SHA": main_sha,
         "MOCK_PREVIOUS_SHA": "a" * 40,
+        "MOCK_PENDING_WORKFLOW": pending_workflow,
         "RUNNER_TEMP": str(temp),
         "GITHUB_OUTPUT": str(output),
         "GITHUB_STEP_SUMMARY": str(summary),
@@ -270,6 +278,18 @@ def test_handoff_does_not_emit_artifact_for_incomplete_merged_surface(tmp_path):
     assert "status=skipped_incomplete_qualification" in output.read_text()
     assert "no receipt emitted" in summary.read_text()
     assert not (temp / "qualified-release.json").exists()
+
+
+@pytest.mark.parametrize("pending_workflow", ["123", "124"])
+def test_handoff_waits_for_both_successful_workflows(tmp_path, pending_workflow):
+    commit = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()
+    result, output, _, temp = _run_handoff_step(
+        tmp_path, main_sha=commit, pending_workflow=pending_workflow
+    )
+    assert result.returncode == 0, result.stderr
+    assert (temp / "pending-observed").exists()
+    assert "status=skipped_failed_validation" not in output.read_text()
+    assert json.loads(result.stdout)["status"] == "skipped_incomplete_qualification"
 
 
 def test_codex_qualification_is_scheduled_serial_and_fail_closed():

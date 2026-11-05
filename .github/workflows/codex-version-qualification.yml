@@ -213,7 +213,7 @@ jobs:
           echo "$result"
           echo "status=$(jq -r .status <<<"$result")" >> "$GITHUB_OUTPUT"
       - name: Require compatible method evidence for native-contract changes
-        if: github.event_name == 'pull_request' && (steps.qualification.outputs.qualification != 'compatible_pending_review' || steps.regressions.outcome != 'success')
+        if: (github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && github.ref_name != github.event.repository.default_branch)) && (steps.qualification.outputs.qualification != 'compatible_pending_review' || steps.regressions.outcome != 'success')
         env:
           QUALIFICATION: ${{ steps.qualification.outputs.qualification }}
         run: |
@@ -247,6 +247,7 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
+      actions: write
     steps:
       - uses: actions/checkout@v4
         with:
@@ -296,6 +297,7 @@ jobs:
           while IFS= read -r file; do
             case "$file" in
               "tests/fixtures/protocol/codex_${VERSION}_native_methods.json"|\
+              "tests/fixtures/protocol/codex_${VERSION}_native_catalog.json"|\
               ci/codex_qualification/approved_methods.json|\
               src/codex_shared/native_qualification.py|\
               docs/acceptance/codex-native-qualification.md) ;;
@@ -338,7 +340,9 @@ jobs:
             tests/test_native_method_catalog.py \
             tests/test_codex_qualification.py \
             tests/test_native_qualification_receipt.py
-          git add ci/codex_qualification/approved_methods.json src/codex_shared/native_qualification.py docs/acceptance/codex-native-qualification.md "tests/fixtures/protocol/codex_${VERSION}_native_methods.json"
+          while IFS= read -r file; do
+            git add -- "$file"
+          done < <(jq -r '.files[]' "$proposal/proposal.json")
           if ! git diff --cached --quiet; then
             git commit -m "Qualify Codex $VERSION native methods"
           elif git diff --quiet "origin/$BASE_BRANCH...HEAD"; then
@@ -371,6 +375,11 @@ jobs:
           else
             gh pr create --repo "$GITHUB_REPOSITORY" --base "$BASE_BRANCH" --head "$GITHUB_REPOSITORY_OWNER:$branch" --title "$title" --body-file "$body"
           fi
+          # GITHUB_TOKEN writes do not trigger push/pull_request workflows.
+          # Dispatch verification for this exact branch without publication.
+          gh workflow run test.yml --repo "$GITHUB_REPOSITORY" --ref "$branch"
+          gh workflow run container.yml --repo "$GITHUB_REPOSITORY" --ref "$branch" -f publish=false
+          gh workflow run codex-version-qualification.yml --repo "$GITHUB_REPOSITORY" --ref "$branch" -f "release_tag=rust-v$VERSION"
 
   report-blocked-candidate:
     needs: [generate-candidate-schema, open-qualified-pr]

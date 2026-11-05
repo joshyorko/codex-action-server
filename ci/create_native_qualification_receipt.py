@@ -55,7 +55,9 @@ def _version_key(version: str) -> tuple[int, int, int]:
     return tuple(int(part) for part in version.split("."))
 
 
-def _method_rows(fixture: dict, catalog: dict, version: str) -> dict[str, dict]:
+def _method_rows(
+    fixture: dict, catalog: dict, version: str, root: Path
+) -> dict[str, dict]:
     expected = {
         row["method"]: row
         for row in catalog.get("methods", [])
@@ -73,6 +75,17 @@ def _method_rows(fixture: dict, catalog: dict, version: str) -> dict[str, dict]:
         raise ValueError(
             f"native method fixture method set differs from catalog for {version}"
         )
+    expected_tests = {
+        name for row in expected.values() for name in row.get("regression_tests", [])
+    }
+    test_hashes = fixture.get("typed_regression_test_files_sha256")
+    if not isinstance(test_hashes, dict) or set(test_hashes) != expected_tests:
+        raise ValueError(f"native regression file hashes are missing for {version}")
+    for name in sorted(expected_tests):
+        if test_hashes[name] != _sha256(_repo_file(root, name)):
+            raise ValueError(
+                f"native regression file hash is stale for {version}/{name}"
+            )
     for method, row in actual.items():
         if _METHOD.fullmatch(method) is None:
             raise ValueError(f"native method name is invalid for {version}")
@@ -170,6 +183,49 @@ def _canonical_receipt_digest(receipt: dict) -> str:
     unsigned = {key: value for key, value in receipt.items() if key != "receipt_sha256"}
     canonical = json.dumps(unsigned, sort_keys=True, separators=(",", ":")).encode()
     return _sha256_bytes(canonical)
+
+
+def _matches_reviewed_probe(
+    root: Path, source: dict, method: str, approval: dict, row: dict, fixture_ref: str
+) -> bool:
+    primary = source.get("fixture")
+    if (
+        source.get("kind") != "native_methods_fixture"
+        or not isinstance(primary, str)
+        or primary == fixture_ref
+    ):
+        return False
+    probe_fixture = _read_json(_repo_file(root, primary))
+    if probe_fixture.get("typed_regression_tests") != "passed" or any(
+        probe_fixture.get(key) != source.get(key)
+        for key in (
+            "binary_sha256",
+            "source_tag",
+            "source_url",
+            "source_asset_sha256",
+            "source_asset_id",
+        )
+    ):
+        return False
+    methods = probe_fixture.get("methods")
+    probe = methods.get(method) if isinstance(methods, dict) else None
+    if (
+        not isinstance(probe, dict)
+        or probe.get("protocol_smoke", {}).get("positive") is not True
+    ):
+        return False
+    for kind in ("request", "response"):
+        schema = probe.get(f"{kind}_schema")
+        if not isinstance(schema, dict) or schema != row.get("schemas", {}).get(
+            row[f"{kind}_schema"]
+        ):
+            return False
+        canonical = json.dumps(schema, sort_keys=True, separators=(",", ":")).encode()
+        if approval.get("schema_fingerprint", {}).get(
+            f"{kind}_sha256"
+        ) != _sha256_bytes(canonical):
+            return False
+    return probe.get("protocol_smoke", {}).get("status") == "passed"
 
 
 def build_receipt(
@@ -293,7 +349,7 @@ def build_receipt(
     if not str(fixture.get("source_asset_id", "")).isdecimal():
         raise ValueError(f"native release asset ID is invalid for {version}")
 
-    rows = _method_rows(fixture, catalog, version)
+    rows = _method_rows(fixture, catalog, version, root)
     if any(row.get("status") != "compatible_pending_review" for row in rows.values()):
         return None
 
@@ -322,7 +378,11 @@ def build_receipt(
                 raise ValueError(
                     f"runtime approval provenance mismatch for {version}/{method}"
                 )
-            if approval.get("schema_fingerprint") != row.get("schema_fingerprint"):
+            if approval.get("schema_fingerprint") != row.get(
+                "schema_fingerprint"
+            ) and not _matches_reviewed_probe(
+                root, source, method, approval, row, fixture_ref
+            ):
                 raise ValueError(
                     f"runtime approval fingerprint differs from evidence for {version}/{method}"
                 )
