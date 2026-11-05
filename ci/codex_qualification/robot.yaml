@@ -1,0 +1,17 @@
+tasks:
+  check-catalog:
+    shell: python -B tasks.py check-catalog
+  native-regressions:
+    shell: python -B tasks.py native-regressions
+  focused-tests:
+    shell: python -B tasks.py focused-tests
+  lint:
+    shell: python -B tasks.py lint
+  format:
+    shell: python -B tasks.py format
+
+environmentConfigs:
+  - environment_linux_amd64_freeze.yaml
+  - conda.yaml
+
+artifactsDir: ../../output/codex-maintenance

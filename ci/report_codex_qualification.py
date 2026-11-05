@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build a sanitized issue report for an unqualified native candidate."""
+"""Build a bounded blocker issue for native methods withheld from admission."""
 
 from __future__ import annotations
 
@@ -10,18 +10,13 @@ import re
 
 _VERSION = re.compile(r"(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\Z")
 _SHA256 = re.compile(r"[0-9a-f]{64}\Z")
-_ALLOWED_STATUSES = {
-    "unqualified",
-    "unqualified_regression_tests_not_run",
-    "unqualified_live_protocol_smoke",
-    "needs_review",
-    "failed",
-}
+_METHOD_STATUS = {"compatible_pending_review", "needs_review", "unqualified"}
+_REASON = re.compile(r"[a-z][a-z0-9_]{0,63}\Z")
 
 
 def _load(directory: Path, name: str):
     path = directory / name
-    if not path.is_file() or path.stat().st_size > 2 * 1024 * 1024:
+    if not path.is_file() or path.stat().st_size > 8 * 1024 * 1024:
         return None
     try:
         return json.loads(path.read_text())
@@ -30,30 +25,17 @@ def _load(directory: Path, name: str):
 
 
 def _digest(value) -> str:
-    return value if isinstance(value, str) and _SHA256.fullmatch(value) else "unavailable"
+    return (
+        value if isinstance(value, str) and _SHA256.fullmatch(value) else "unavailable"
+    )
 
 
 def build_report(artifact: Path, version_hint: str, run_url: str, workflow_result: str):
     provenance = _load(artifact, "provenance.json") or {}
-    diff = _load(artifact, "server-diagnostics-schema-diff.json") or {}
-    smoke = _load(artifact, "protocol-smoke.json") or {}
-    version = provenance.get("version") or version_hint
+    report = _load(artifact, "native-methods.json") or {}
+    version = report.get("version") or provenance.get("version") or version_hint
     if not isinstance(version, str) or _VERSION.fullmatch(version) is None:
         version = "unresolved"
-    status = provenance.get("qualification")
-    if status not in _ALLOWED_STATUSES:
-        status = "failed" if workflow_result != "success" else "unqualified"
-    identical = diff.get("identical")
-    if not isinstance(identical, bool):
-        identical = "not available"
-    smoke_status = smoke.get("status")
-    if smoke_status not in {"passed", "failed", "invalid_response", "not_run"}:
-        smoke_status = provenance.get("live_protocol_smoke", "not_run")
-    if smoke_status not in {"passed", "failed", "invalid_response", "not_run"}:
-        smoke_status = "not_run"
-    typed_status = provenance.get("typed_regression_tests", "not_run")
-    if typed_status not in {"passed", "not_run"}:
-        typed_status = "not_run"
     if workflow_result not in {"success", "failure", "cancelled", "skipped"}:
         workflow_result = "unknown"
     run_url = (
@@ -62,40 +44,86 @@ def build_report(artifact: Path, version_hint: str, run_url: str, workflow_resul
         and not any(char.isspace() for char in run_url)
         else "unavailable"
     )
-    source_tag = provenance.get("source_tag")
-    if source_tag != f"rust-v{version}":
+    expected_tag = f"rust-v{version}"
+    source_tag = report.get("source_tag")
+    if source_tag != expected_tag:
         source_tag = "unavailable"
     expected_asset_url = (
         f"https://github.com/openai/codex/releases/download/{source_tag}/"
         "codex-x86_64-unknown-linux-musl.tar.gz"
     )
-    asset_url = (
-        expected_asset_url
-        if provenance.get("source_url") == expected_asset_url
-        and source_tag != "unavailable"
-        else "unavailable"
+    source_url = report.get("source_url")
+    if source_url != expected_asset_url or source_tag == "unavailable":
+        source_url = "unavailable"
+
+    rows = report.get("methods", [])
+    if not isinstance(rows, list):
+        rows = []
+    withheld = []
+    for row in rows:
+        if (
+            not isinstance(row, dict)
+            or row.get("status") == "compatible_pending_review"
+        ):
+            continue
+        method = row.get("method")
+        if not isinstance(method, str) or not re.fullmatch(
+            r"[A-Za-z0-9/_-]{1,128}", method
+        ):
+            method = "unknown_method"
+        status = (
+            row.get("status") if row.get("status") in _METHOD_STATUS else "unqualified"
+        )
+        reason = row.get("reason_code")
+        if not isinstance(reason, str) or _REASON.fullmatch(reason) is None:
+            reason = "qualification_evidence_unavailable"
+        typed = row.get("typed_regressions")
+        if typed not in {"passed", "not_run", "invalid_evidence"}:
+            typed = "not_run"
+        smoke = row.get("smoke", {})
+        smoke_status = smoke.get("status") if isinstance(smoke, dict) else None
+        if not isinstance(smoke_status, str) or _REASON.fullmatch(smoke_status) is None:
+            smoke_status = "not_run"
+        withheld.append((method, status, reason, typed, smoke_status))
+    withheld.sort()
+
+    overall_status = report.get("qualification")
+    if not isinstance(overall_status, str) or _REASON.fullmatch(overall_status) is None:
+        overall_status = "failed" if workflow_result != "success" else "unqualified"
+    counts = report.get("counts", {})
+    if not isinstance(counts, dict):
+        counts = {}
+    lines = [
+        f"Codex `{version}` has native methods withheld from exact-version qualification.",
+        "",
+        "## Qualification evidence",
+        f"- Workflow verdict: `{overall_status}` (workflow result: `{workflow_result}`).",
+        f"- Stable source tag: `{source_tag}`.",
+        f"- Source asset: `{source_url}`.",
+        f"- Asset SHA-256: `{_digest(report.get('source_asset_sha256'))}`.",
+        f"- Binary SHA-256: `{_digest(report.get('binary_sha256'))}`.",
+        f"- Catalog methods: `{counts.get('total', len(rows))}`; compatible pending review: `{counts.get('compatible_pending_review', 0)}`; withheld: `{len(withheld)}`.",
+        f"- Workflow run and bounded evidence artifact: {run_url}",
+        "",
+        "## Withheld methods",
+    ]
+    lines.extend(
+        f"- `{method}`: status `{status}`, reason `{reason}`, typed regressions `{typed}`, smoke `{smoke}`."
+        for method, status, reason, typed, smoke in withheld
     )
-    title = f"Codex diagnostics qualification needs review: {version}"
-    body = "\n".join(
+    if not withheld:
+        lines.append(
+            "- No method-level details were available; inspect the bounded artifact."
+        )
+    lines.extend(
         (
-            f"Codex `{version}` was not admitted for `{provenance.get('method', 'server/diagnostics')}`.",
-            "",
-            "## Qualification evidence",
-            f"- Workflow verdict: `{status}` (workflow result: `{workflow_result}`).",
-            f"- Stable source tag: `{source_tag}`.",
-            f"- Source asset: `{asset_url}`.",
-            f"- Asset SHA-256: `{_digest(provenance.get('source_asset_sha256'))}`.",
-            f"- Binary SHA-256: `{_digest(provenance.get('binary_sha256'))}`.",
-            f"- Diagnostics schema identical to reviewed baseline: `{identical}`.",
-            f"- Typed regressions: `{typed_status}`.",
-            f"- Live `server/diagnostics` protocol smoke: `{smoke_status}`.",
-            f"- Workflow run and attached bounded diff/provenance artifacts: {run_url}",
             "",
             "## Maintainer action",
-            "Review the generated method-level schema diff and live response-shape evidence. Keep the exact-version/method gate closed until both the schema and disposable protocol smoke are reviewed. Do not use a semver range or a runtime banner as approval evidence.",
+            "Review the method-specific schema fingerprints and typed regression evidence. Keep each withheld experimental method outside the exact-version approval table until its own evidence passes review. Do not infer daemon installation or deployment state from this workflow.",
         )
     )
-    return title, body
+    title = f"Codex native method qualification needs review: {version}"
+    return title, "\n".join(lines)
 
 
 def main() -> int:

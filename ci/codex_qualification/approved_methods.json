@@ -357,7 +357,10 @@
     "0.160.1": {
       "fixture": "tests/fixtures/protocol/codex_0.160.1_to_0.161.0_experimental_compatibility.json",
       "kind": "compatibility_fixture",
-      "source_commit": "d27764b82f7118f674371e6d6e76271d9d606edb"
+      "source_commit": "d27764b82f7118f674371e6d6e76271d9d606edb",
+      "schema_bundle_fixture": "tests/fixtures/protocol/codex_0.160.1_native_schema_bundle.json",
+      "schema_bundle_sha256": "81a88c04ae4984b16d73080f4109d0477682bc76c8adbe483e371175ce54c054",
+      "schema_bundle_source_url": "https://github.com/openai/codex/blob/d27764b82f7118f674371e6d6e76271d9d606edb/codex-rs/app-server-protocol/schema/json/codex_app_server_protocol.v2.schemas.json"
     },
     "0.161.0": {
       "fixture": "tests/fixtures/protocol/codex_0.160.1_to_0.161.0_experimental_compatibility.json",
