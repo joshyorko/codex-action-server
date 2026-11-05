@@ -349,6 +349,14 @@
       "payload_schema_sha256": "89d499594d33c651242118a35bc61391764a45c7ec29c845d4d14991aeda3dbe",
       "return": "Response[RpcEnvelope]"
     },
+    "relay_coordination_message": {
+      "arguments": {
+        "payload": "CoordinationRelayRequest"
+      },
+      "output_schema_sha256": "fa690fdd67143783030a92cec2fc870cfbf061404d0d1e8c5bff6b0e1b42f33e",
+      "payload_schema_sha256": "cbf8270b4c4d79206a79c08ca99b1543b1d62511455408137e85920d49eca1a6",
+      "return": "Response[RpcEnvelope]"
+    },
     "remove_thread_attachment": {
       "arguments": {
         "payload": "ThreadAttachmentRemoveRequest"
@@ -509,6 +517,9 @@
       "payload_schema_sha256": "d7e71c3247d5c8567e51a4f667d7e8c9f7c1ae67be30e9a76c79e0c2eec012dd",
       "return": "Response[RpcEnvelope]"
     }
+  },
+  "additions": {
+    "relay_coordination_message": "Issue #28; original baseline action contracts preserved."
   },
   "provenance": {
     "commit": "a731d2e48917561b6ee8d209e01e47802effe563",

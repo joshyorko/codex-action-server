@@ -265,7 +265,9 @@ def _receipt_root():
     )
 
 
-def _dispatch_run(operation, payload, callback):
+def _dispatch_run(
+    operation, payload, callback, *, include_receipts=True, include_events=True
+):
     # Reserve before connecting. A transport failure cannot trigger implicit replay.
     receipt_payload = payload.model_dump()
     # Preserve fingerprints written before optional execution-policy fields existed.
@@ -302,7 +304,15 @@ def _dispatch_run(operation, payload, callback):
                     )
                     result = callback(client, receipt)
                     result["dispatch"] = receipt.public()
-                    return Response(result=_envelope(operation, client, result))
+                    return Response(
+                        result=_envelope(
+                            operation,
+                            client,
+                            result,
+                            include_receipts=include_receipts,
+                            include_events=include_events,
+                        )
+                    )
             except (
                 ActionError,
                 RpcError,

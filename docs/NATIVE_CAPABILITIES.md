@@ -1,5 +1,8 @@
 # Native capability inventory
 
+The `coordination` report describes the native board boundary and opt-in
+operator relay. See [independent thread coordination](COORDINATION.md).
+
 `list_native_capabilities({target})` reports the selected daemon's `userAgent`,
 the versioned CAS contract, capability families, current exposure profile, and
 `selected_packages`. Each family's `exposed_methods` reflects the selected

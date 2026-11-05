@@ -4,6 +4,7 @@ from codex_rpc import METHODS
 from action_catalog_contract import (
     IMPLEMENTED_PROFILE,
     native_methods_for_deployment,
+    action_names_for_deployment,
     selected_package_names,
 )
 
@@ -397,5 +398,24 @@ def inventory(native_version: str | None) -> dict:
         "server_exposure_profile": IMPLEMENTED_PROFILE,
         "selected_packages": list(packages),
         "admin_enabled": False,
+        "coordination": {
+            "status": "native_board_unavailable_for_independent_roots",
+            "native_board_rpc_exposed": False,
+            "model_tools": "unverified",
+            "feature_flags": "unverified",
+            "independent_roots_shared_board": "unverified",
+            "operator_relay": "opt_in_private_pair_policy",
+            "relay_mode": "active_turn_steer_only",
+            "idle_delivery": "folder_fallback",
+            "injection_excluded": "idle_check_is_not_atomic",
+            "queue_excluded": "native_queue_add_can_start_a_turn",
+            "relay_action": "relay_coordination_message",
+            "relay_exposed": "relay_coordination_message"
+            in action_names_for_deployment(packages=packages),
+            "authority": "operator; sender is context, not authenticated authorship",
+            "auto_wake": False,
+            "acceptance_is_read": False,
+            "folder_fallback": "external_mailbox_not_native_board",
+        },
         "families": families,
     }
