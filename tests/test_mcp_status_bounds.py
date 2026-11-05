@@ -129,6 +129,27 @@ def test_mcp_status_preserves_opaque_cursor_without_clipping():
     assert response.result.result["nextCursor"] == cursor
 
 
+@pytest.mark.parametrize(
+    "key", ["access_token", "authorization", "apiKey", "client_secret"]
+)
+def test_mcp_status_redacts_credential_shaped_root_metadata(key):
+    module = load_actions()
+    cursor = "opaque-native-cursor"
+    client = StatusClient(
+        {"data": [], "nextCursor": cursor, key: "root-credential-sentinel"}
+    )
+    with (
+        patch.object(module, "Client", return_value=client),
+        patch.object(module, "resolve_target", return_value="fixture"),
+    ):
+        response = module.list_mcp_server_status(
+            module.McpServerStatusListRequest(target="local", limit=1)
+        )
+    assert response.result.result[key] == "[REDACTED]"
+    assert response.result.result["nextCursor"] == cursor
+    assert "root-credential-sentinel" not in repr(response.model_dump(mode="json"))
+
+
 @pytest.mark.parametrize("cursor", [42, {}, "🔑" * 70_000])
 def test_mcp_status_refuses_invalid_or_oversized_cursor(cursor):
     module = load_actions()

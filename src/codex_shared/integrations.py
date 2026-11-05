@@ -166,6 +166,8 @@ def _bounded_mcp_status_result(result: Any) -> dict[str, Any]:
                         )
                         for index, server in enumerate(servers)
                     ]
+                elif key.replace("_", "").lower() in _MCP_STATUS_SECRET_KEYS:
+                    bounded_result[key] = "[REDACTED]"
                 else:
                     bounded_result[key] = visit(result[key], str(key), 1, root_budget)
 
