@@ -48,6 +48,13 @@ def _capability(
 
 # Native mappings include guard reads, optional settings, and composite operations.
 _CAPABILITY_RECORDS = (
+    _capability(
+        "relay_coordination_message",
+        "coordination",
+        True,
+        "thread/read",
+        "turn/steer",
+    ),
     _capability("read_dispatch_receipt", "inspection", False),
     _capability("list_targets", "inspection", False),
     _capability("inspect_target", "inspection", False),

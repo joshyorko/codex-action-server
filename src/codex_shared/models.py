@@ -283,6 +283,34 @@ class ThreadMutationRequest(StrictModel):
     thread_id: str
 
 
+class CoordinationPeer(StrictModel):
+    target: str = Field(min_length=1, max_length=128)
+    cwd: str = Field(min_length=1, max_length=512)
+    thread_id: str = Field(min_length=1, max_length=128)
+
+
+class CoordinationRelayRequest(ThreadMutationRequest):
+    sender: CoordinationPeer
+    mode: Literal["steer"]
+    text: str = Field(min_length=1, max_length=2048)
+    expected_turn_id: str = Field(min_length=1, max_length=128)
+    in_reply_to: str | None = Field(
+        default=None, pattern=r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$"
+    )
+
+    @model_validator(mode="after")
+    def validate_relay(self):
+        if not self.text.strip() or len(self.text.encode("utf-8")) > 2048:
+            raise ValueError(
+                "coordination text must contain 1 through 2048 UTF-8 bytes"
+            )
+        if self.sender.target != self.target:
+            raise ValueError("coordination cannot cross targets")
+        if self.sender.thread_id == self.thread_id:
+            raise ValueError("coordination requires distinct native threads")
+        return self
+
+
 class ThreadForkRequest(ThreadMutationRequest):
     last_turn_id: str | None = Field(default=None, min_length=1)
     model: str | None = Field(default=None, min_length=1, max_length=256)

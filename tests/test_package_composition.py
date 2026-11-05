@@ -42,6 +42,7 @@ CONTROL = frozenset(
     clear_thread_goal compact_thread create_thread_and_start_turn create_thread_section
     delete_thread delete_thread_queue_item delete_thread_section fork_thread
     inject_thread_items interrupt_turn move_thread_to_section remove_thread_attachment
+    relay_coordination_message
     reorder_thread_queue resume_thread revert_thread set_thread_goal set_thread_name
     start_review start_thread start_thread_queue start_turn steer_turn
     terminate_background_terminal unarchive_thread update_thread_metadata
@@ -82,7 +83,7 @@ def _assert_signatures(path, names):
 
 def test_fixed_baseline_has_disjoint_complete_catalog():
     assert len(OBSERVE) == 31
-    assert len(CONTROL) == 33
+    assert len(CONTROL) == 34
     assert not OBSERVE & CONTROL
     assert set(CONTRACT["actions"]) == OBSERVE | CONTROL
 

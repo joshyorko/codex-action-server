@@ -49,6 +49,7 @@ READS = {
     "read_dispatch_receipt",
 }
 CONTROLS = {
+    "relay_coordination_message",
     "fork_thread",
     "archive_thread",
     "unarchive_thread",

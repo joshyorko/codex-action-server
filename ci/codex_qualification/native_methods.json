@@ -1074,6 +1074,7 @@
         "inject_thread_items"
       ],
       "regression_tests": [
+        "tests/test_coordination.py",
         "tests/test_mcp_annotations.py",
         "tests/test_package_composition.py",
         "tests/test_protocol_contracts.py",
@@ -1327,6 +1328,7 @@
         "add_thread_queue_item"
       ],
       "regression_tests": [
+        "tests/test_coordination.py",
         "tests/test_mcp_annotations.py",
         "tests/test_native_capabilities.py",
         "tests/test_native_wire_contract_fixtures.py",
@@ -1976,6 +1978,22 @@
           "read_only_hint": true
         },
         {
+          "action": "relay_coordination_message",
+          "destructive_hint": true,
+          "group": "coordination",
+          "idempotent_hint": false,
+          "is_consequential": true,
+          "open_world_hint": true,
+          "packages": [
+            "codex-action-server",
+            "codex-control"
+          ],
+          "profiles": [
+            "operator"
+          ],
+          "read_only_hint": false
+        },
+        {
           "action": "remove_thread_attachment",
           "destructive_hint": true,
           "group": "organization",
@@ -2294,6 +2312,7 @@
         "read_app",
         "read_mcp_resource",
         "read_thread",
+        "relay_coordination_message",
         "remove_thread_attachment",
         "reorder_thread_queue",
         "resume_thread",
@@ -2320,6 +2339,7 @@
         "tests/test_capability_metadata.py",
         "tests/test_container_image.py",
         "tests/test_control_actions.py",
+        "tests/test_coordination.py",
         "tests/test_dispatch_actions.py",
         "tests/test_dispatch_policy.py",
         "tests/test_exposure_profiles.py",
@@ -2413,6 +2433,7 @@
         "tests/test_capability_metadata.py",
         "tests/test_container_image.py",
         "tests/test_control_actions.py",
+        "tests/test_coordination.py",
         "tests/test_dispatch_actions.py",
         "tests/test_dispatch_policy.py",
         "tests/test_http_boot.py",
@@ -3059,6 +3080,7 @@
         "tests/test_action_server_validation.py",
         "tests/test_actions.py",
         "tests/test_capability_metadata.py",
+        "tests/test_coordination.py",
         "tests/test_http_boot.py",
         "tests/test_mcp_annotations.py",
         "tests/test_package_composition.py",
@@ -3159,6 +3181,7 @@
         "tests/test_capability_metadata.py",
         "tests/test_container_image.py",
         "tests/test_control_actions.py",
+        "tests/test_coordination.py",
         "tests/test_dispatch_actions.py",
         "tests/test_dispatch_policy.py",
         "tests/test_http_boot.py",
@@ -3179,6 +3202,22 @@
       "access": "mutating_or_external",
       "action_capabilities": [
         {
+          "action": "relay_coordination_message",
+          "destructive_hint": true,
+          "group": "coordination",
+          "idempotent_hint": false,
+          "is_consequential": true,
+          "open_world_hint": true,
+          "packages": [
+            "codex-action-server",
+            "codex-control"
+          ],
+          "profiles": [
+            "operator"
+          ],
+          "read_only_hint": false
+        },
+        {
           "action": "steer_turn",
           "destructive_hint": true,
           "group": "execution",
@@ -3198,11 +3237,13 @@
       "classification": "stable",
       "method": "turn/steer",
       "owning_typed_actions": [
+        "relay_coordination_message",
         "steer_turn"
       ],
       "regression_tests": [
         "tests/test_action_server_validation.py",
         "tests/test_actions.py",
+        "tests/test_coordination.py",
         "tests/test_http_boot.py",
         "tests/test_mcp_annotations.py",
         "tests/test_package_composition.py",
