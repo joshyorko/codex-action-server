@@ -217,7 +217,7 @@ def _run(
                     separators=(",", ":"),
                 ).encode("utf-8")
                 if len(encoded) > maximum_response_bytes:
-                    raise RpcError("Native supervisory snapshot exceeds its byte limit")
+                    raise RpcError("Native action response exceeds its byte limit")
             return response
     except ActionError:
         raise
