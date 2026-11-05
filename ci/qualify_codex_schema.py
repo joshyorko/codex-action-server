@@ -18,6 +18,7 @@ import time
 from pathlib import Path
 
 from native_compatibility_review import exact_reviewed_probe, reviewed_schema_change
+from run_native_method_regressions import reviewed_node_counts
 
 ROOT = Path(__file__).resolve().parents[1]
 BASELINE = ROOT / "tests/fixtures/protocol/codex_0.162.1_server_diagnostics.json"
@@ -834,6 +835,13 @@ def build_method_evidence(
         )
         if review:
             evidence["compatibility_review"] = review
+        reviewed_counts = None
+        if review and review["kind"] == "reviewed_consumed_contract":
+            reviewed_counts = reviewed_node_counts(
+                review["tests"], typed_regression_evidence.get("test_node_outcomes")
+            )
+            if reviewed_counts is not None:
+                evidence["reviewed_test_outcomes"] = reviewed_counts
         if native_positive:
             evidence["native_positive"] = native_positive
         baseline = _latest_method_contract(manifest, row["method"], version)
@@ -910,6 +918,14 @@ def build_method_evidence(
                 else "typed_regressions_not_run"
             )
             evidence.update(status="unqualified", reason_code=reason)
+        elif (
+            review
+            and review["kind"] == "reviewed_consumed_contract"
+            and reviewed_counts is None
+        ):
+            evidence.update(
+                status="unqualified", reason_code="reviewed_test_nodes_not_passed"
+            )
         elif (
             review
             and review["kind"] == "reviewed_consumed_contract"

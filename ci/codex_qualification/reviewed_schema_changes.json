@@ -76,6 +76,9 @@
           ]
         },
         "mcpServerStatus/list": {
+          "optional_acceptance_tests": [
+            "tests/test_action_server_validation.py::ActionServerValidationTests::test_real_loopback_mcp_uses_typed_actions_and_isolated_native_fixture"
+          ],
           "request_fields": [
             "optional threadId,limit,cursor,detail"
           ],
@@ -96,7 +99,6 @@
           },
           "summary": "/response/definitions/McpServerStatus/properties/toolListMeta adds unrestricted JSON; consumed CAS fields remain compatible.",
           "tests": [
-            "tests/test_action_server_validation.py::ActionServerValidationTests::test_real_loopback_mcp_uses_typed_actions_and_isolated_native_fixture",
             "tests/test_action_transport_failures.py::test_read_action_sanitizes_native_handshake_failure",
             "tests/test_control_actions.py::test_read_only_priority_actions_are_typed_and_target_scoped",
             "tests/test_mcp_status_bounds.py::test_mcp_status_preserves_native_page_and_detail_with_bounded_schema",
@@ -107,6 +109,9 @@
           ]
         },
         "modelProvider/capabilities/read": {
+          "optional_acceptance_tests": [
+            "tests/test_action_server_validation.py::ActionServerValidationTests::test_real_loopback_mcp_uses_typed_actions_and_isolated_native_fixture"
+          ],
           "request_fields": [
             "{}"
           ],
@@ -126,7 +131,6 @@
           },
           "summary": "/response/properties/namespaceTools removed; /response/required removes namespaceTools; consumed CAS fields remain compatible.",
           "tests": [
-            "tests/test_action_server_validation.py::ActionServerValidationTests::test_real_loopback_mcp_uses_typed_actions_and_isolated_native_fixture",
             "tests/test_control_actions.py::test_read_only_priority_actions_are_typed_and_target_scoped",
             "tests/test_protocol_contracts.py::NativeProtocolContractTests::test_read_only_inventory_actions_use_empty_native_params",
             "tests/test_rpc_lifecycle.py::NativeLifecycleTests::test_priority_native_methods_are_bounded_and_workstream_scoped"
@@ -300,6 +304,11 @@
           ]
         },
         "thread/items/list": {
+          "optional_acceptance_tests": [
+            "tests/test_action_server_validation.py::ActionServerValidationTests::test_real_loopback_mcp_uses_typed_actions_and_isolated_native_fixture",
+            "tests/test_container_image.py::test_production_image_mcp_native_socket_and_persistent_receipt",
+            "tests/test_http_boot.py::test_standalone_http_boot_catalog_and_safe_diagnostics"
+          ],
           "request_fields": [
             "threadId,optional turnId,limit,cursor,sortDirection after thread id/cwd guard"
           ],
@@ -319,17 +328,19 @@
           },
           "summary": "/response/definitions/ThreadItem/properties adds startedAtMs,completedAtMs; /response/definitions/ThreadItem/oneOf[subAgentActivity] adds model,reasoningEffort; /response/definitions/ThreadItem/oneOf[imageGeneration] changes required result to anyOf fileId/result, adds generationId,inputImages; /response/definitions/MessagePhase/oneOf adds partial_answer; consumed CAS fields remain compatible.",
           "tests": [
-            "tests/test_action_server_validation.py::ActionServerValidationTests::test_real_loopback_mcp_uses_typed_actions_and_isolated_native_fixture",
             "tests/test_capability_metadata.py::test_capability_records_preserve_composite_native_operations",
-            "tests/test_container_image.py::test_production_image_mcp_native_socket_and_persistent_receipt",
             "tests/test_control_actions.py::test_paginated_thread_turns_and_items_keep_exact_thread_cwd_guard",
-            "tests/test_http_boot.py::test_standalone_http_boot_catalog_and_safe_diagnostics",
             "tests/test_protocol_contracts.py::NativeProtocolContractTests::test_page_and_goal_actions_map_all_wire_fields",
             "tests/test_protocol_contracts.py::NativeProtocolContractTests::test_pagination_contracts_keep_opaque_cursors_and_native_page_fields",
             "tests/test_rpc_lifecycle.py::NativeLifecycleTests::test_priority_native_methods_are_bounded_and_workstream_scoped"
           ]
         },
         "thread/list": {
+          "optional_acceptance_tests": [
+            "tests/test_action_server_validation.py::ActionServerValidationTests::test_real_loopback_mcp_uses_typed_actions_and_isolated_native_fixture",
+            "tests/test_container_image.py::test_production_image_mcp_native_socket_and_persistent_receipt",
+            "tests/test_http_boot.py::test_standalone_http_boot_catalog_and_safe_diagnostics"
+          ],
           "request_fields": [
             "cwd,limit,optional cursor"
           ],
@@ -349,11 +360,8 @@
           },
           "summary": "/request/properties adds ancestorThreadId,attachedToThreadId,excludedThreadIds,parentThreadId,projectId; /response/properties/readStates adds optional nullable map; shared Thread,Turn,ThreadItem,CodexErrorInfo additions listed below; consumed CAS fields remain compatible.",
           "tests": [
-            "tests/test_action_server_validation.py::ActionServerValidationTests::test_real_loopback_mcp_uses_typed_actions_and_isolated_native_fixture",
             "tests/test_actions.py::ActionContractTests::test_discovery_is_typed_and_target_scoped",
             "tests/test_actions.py::ActionContractTests::test_entrypoints_do_not_accept_raw_method_or_shell_arguments",
-            "tests/test_container_image.py::test_production_image_mcp_native_socket_and_persistent_receipt",
-            "tests/test_http_boot.py::test_standalone_http_boot_catalog_and_safe_diagnostics",
             "tests/test_protocol_contracts.py::NativeProtocolContractTests::test_pagination_contracts_keep_opaque_cursors_and_native_page_fields",
             "tests/test_provider_acceptance_contract.py::test_provider_smoke_gates_diagnostics_by_exact_native_version",
             "tests/test_rpc_lifecycle.py::NativeLifecycleTests::test_priority_native_methods_are_bounded_and_workstream_scoped"
@@ -395,6 +403,9 @@
           ]
         },
         "thread/read": {
+          "optional_acceptance_tests": [
+            "tests/test_action_server_validation.py::ActionServerValidationTests::test_real_loopback_mcp_uses_typed_actions_and_isolated_native_fixture"
+          ],
           "request_fields": [
             "threadId,includeTurns"
           ],
@@ -420,7 +431,6 @@
           },
           "summary": "/response/properties/readState adds optional nullable read revision/unread position; /response/definitions/Thread/properties adds canAcceptDirectInput,daybreakEnabled,environments,extra; shared Turn,ThreadItem,CodexErrorInfo additions listed below; consumed CAS fields remain compatible.",
           "tests": [
-            "tests/test_action_server_validation.py::ActionServerValidationTests::test_real_loopback_mcp_uses_typed_actions_and_isolated_native_fixture",
             "tests/test_action_transport_failures.py::test_dispatch_handshake_failure_records_unknown_without_redispatch",
             "tests/test_actions.py::ActionContractTests::test_read_requires_and_verifies_workstream_cwd",
             "tests/test_actions.py::ActionContractTests::test_read_rejects_a_thread_from_another_workstream",
@@ -551,6 +561,11 @@
           ]
         },
         "thread/turns/list": {
+          "optional_acceptance_tests": [
+            "tests/test_action_server_validation.py::ActionServerValidationTests::test_real_loopback_mcp_uses_typed_actions_and_isolated_native_fixture",
+            "tests/test_container_image.py::test_production_image_mcp_native_socket_and_persistent_receipt",
+            "tests/test_http_boot.py::test_standalone_http_boot_catalog_and_safe_diagnostics"
+          ],
           "request_fields": [
             "threadId,optional limit,cursor,sortDirection,itemsView after thread id/cwd guard"
           ],
@@ -570,11 +585,8 @@
           },
           "summary": "/response/definitions/Turn/properties/rootTurnId adds nullable string; shared ThreadItem,CodexErrorInfo additions listed below; consumed CAS fields remain compatible.",
           "tests": [
-            "tests/test_action_server_validation.py::ActionServerValidationTests::test_real_loopback_mcp_uses_typed_actions_and_isolated_native_fixture",
             "tests/test_capability_metadata.py::test_capability_records_preserve_composite_native_operations",
-            "tests/test_container_image.py::test_production_image_mcp_native_socket_and_persistent_receipt",
             "tests/test_control_actions.py::test_paginated_thread_turns_and_items_keep_exact_thread_cwd_guard",
-            "tests/test_http_boot.py::test_standalone_http_boot_catalog_and_safe_diagnostics",
             "tests/test_protocol_contracts.py::NativeProtocolContractTests::test_page_and_goal_actions_map_all_wire_fields",
             "tests/test_protocol_contracts.py::NativeProtocolContractTests::test_pagination_contracts_keep_opaque_cursors_and_native_page_fields",
             "tests/test_rpc_lifecycle.py::NativeLifecycleTests::test_priority_native_methods_are_bounded_and_workstream_scoped"

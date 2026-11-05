@@ -24,6 +24,11 @@ def reviewed_inputs(tmp_path):
     _write_receipt_inputs(tmp_path)
     fixture = json.loads((tmp_path / FIXTURE).read_text())
     row = fixture["methods"][0]
+    test_file = tmp_path / "tests/test_protocol_contracts.py"
+    test_file.write_text("def test_app_response():\n    assert True\n")
+    fixture["typed_regression_test_files_sha256"][
+        "tests/test_protocol_contracts.py"
+    ] = _digest(test_file)
     source = tmp_path / SOURCE
     source.parent.mkdir()
     source.write_text("def read(value):\n    return value['apps']\n")
@@ -69,6 +74,14 @@ def reviewed_inputs(tmp_path):
         row["regression_tests"],
     )
     assert row["compatibility_review"] is not None
+    row["reviewed_test_outcomes"] = {
+        "tests/test_protocol_contracts.py::test_app_response": {
+            "passed": 1,
+            "skipped": 0,
+            "failed": 0,
+        }
+    }
+    fixture["reviewed_test_node_outcomes"] = row["reviewed_test_outcomes"]
     row["native_positive"] = {
         "status": "passed",
         "positive": True,
@@ -82,7 +95,7 @@ def reviewed_inputs(tmp_path):
     return tmp_path, fixture
 
 
-def _build(root):
+def _build(root, **options):
     commit = "e" * 40
     return receipt.build_receipt(
         root,
@@ -95,6 +108,7 @@ def _build(root):
         required_ci_url="https://github.com/joshyorko/codex-action-server/actions/runs/124",
         publication_run_url="https://github.com/joshyorko/codex-action-server/actions/runs/125",
         comparison_url=f"https://github.com/joshyorko/codex-action-server/compare/{'d' * 40}...{commit}",
+        **options,
     )
 
 
@@ -134,6 +148,71 @@ def test_receipt_requires_positive_native_evidence_after_semantic_review(
     del fixture["methods"][0]["native_positive"]
     (root / FIXTURE).write_text(json.dumps(fixture))
     with pytest.raises(ValueError, match="positive behavior is missing"):
+        _build(root)
+
+
+def test_receipt_cannot_replace_stable_review_with_an_arbitrary_exact_probe(
+    reviewed_inputs,
+):
+    root, fixture = reviewed_inputs
+    row = fixture["methods"][0]
+    row["method"] = "plugin/read"
+    row["classification"] = "stable"
+    row["reason_code"] = "reviewed_exact_version_probe"
+    row["compatibility_review"] = {
+        "kind": "reviewed_exact_version_probe",
+        "method": "plugin/read",
+        "fixture": SOURCE,
+        "fixture_sha256": _digest(root / SOURCE),
+    }
+    del row["native_positive"]
+    (root / FIXTURE).write_text(json.dumps(fixture))
+    catalog_path = root / "ci/codex_qualification/native_methods.json"
+    catalog = json.loads(catalog_path.read_text())
+    catalog["methods"][0].update(method="plugin/read", classification="stable")
+    catalog_path.write_text(json.dumps(catalog))
+    manifest_path = root / "ci/codex_qualification/approved_methods.json"
+    manifest = json.loads(manifest_path.read_text())
+    manifest["approvals"] = []
+    manifest_path.write_text(json.dumps(manifest))
+    with pytest.raises(ValueError, match="exact-version probe"):
+        _build(root)
+
+
+def test_receipt_rejects_a_removed_reviewed_node_even_with_fresh_file_hash(
+    reviewed_inputs,
+):
+    root, fixture = reviewed_inputs
+    test_file = root / "tests/test_protocol_contracts.py"
+    test_file.write_text("def test_unrelated():\n    assert True\n")
+    fixture["typed_regression_test_files_sha256"][
+        "tests/test_protocol_contracts.py"
+    ] = _digest(test_file)
+    (root / FIXTURE).write_text(json.dumps(fixture))
+    with pytest.raises(ValueError, match="reviewed source hash is stale"):
+        _build(root)
+
+
+@pytest.mark.parametrize(
+    "counts",
+    [
+        {"passed": 0, "skipped": 0, "failed": 0},
+        {"passed": 0, "skipped": 1, "failed": 0},
+        {"passed": 1, "skipped": 0, "failed": 1},
+    ],
+)
+def test_receipt_refuses_nonexecuted_skipped_or_failed_reviewed_nodes(
+    reviewed_inputs, counts
+):
+    root, fixture = reviewed_inputs
+    fixture["reviewed_test_node_outcomes"][
+        "tests/test_protocol_contracts.py::test_app_response"
+    ] = counts
+    fixture["methods"][0]["reviewed_test_outcomes"] = fixture[
+        "reviewed_test_node_outcomes"
+    ]
+    (root / FIXTURE).write_text(json.dumps(fixture))
+    with pytest.raises(ValueError, match="reviewed test nodes did not pass"):
         _build(root)
 
 

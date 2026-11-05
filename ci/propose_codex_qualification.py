@@ -11,6 +11,7 @@ import re
 import sys
 
 from native_compatibility_review import exact_reviewed_probe, reviewed_schema_change
+from run_native_method_regressions import reviewed_node_counts
 
 ROOT = Path(__file__).resolve().parents[1]
 CATALOG = ROOT / "ci/codex_qualification/native_methods.json"
@@ -219,6 +220,12 @@ def _validate_method_evidence(
                 )
             if reviewed is None or evidence.get("compatibility_review") != reviewed:
                 raise ValueError(f"compatible method review is invalid for {method}")
+            if reason == "reviewed_consumed_contract":
+                counts = reviewed_node_counts(
+                    reviewed["tests"], typed.get("test_node_outcomes")
+                )
+                if counts is None or counts != evidence.get("reviewed_test_outcomes"):
+                    raise ValueError(f"reviewed test nodes did not pass for {method}")
         positive = evidence.get("native_positive")
         if (
             reason == "reviewed_consumed_contract"
@@ -368,7 +375,11 @@ def prepare_proposal(artifact: Path, output: Path, run_url: str) -> dict:
             if schema_path.is_file():
                 schemas[schema_name] = _read_json(schema_path)
         fixture_row["schemas"] = schemas
-        for key in ("compatibility_review", "native_positive"):
+        for key in (
+            "compatibility_review",
+            "native_positive",
+            "reviewed_test_outcomes",
+        ):
             if key in row:
                 fixture_row[key] = row[key]
         fixture_methods.append(fixture_row)
@@ -388,6 +399,11 @@ def prepare_proposal(artifact: Path, output: Path, run_url: str) -> dict:
         "generated_files_sha256": generated_hashes,
         "typed_regression_status": typed.get("status"),
         "typed_regression_test_files_sha256": typed.get("test_files", {}),
+        "reviewed_test_node_outcomes": {
+            node: counts
+            for row in fixture_methods
+            for node, counts in row.get("reviewed_test_outcomes", {}).items()
+        },
         "methods": fixture_methods,
         "counts": method_report.get("counts", {}),
     }

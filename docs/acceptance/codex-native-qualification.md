@@ -27,7 +27,8 @@ Exact-version positive probes can be reused only when the approved method,
 release asset, binary and both parsed schemas match. Changed consumed contracts
 are reviewed individually in `ci/codex_qualification/reviewed_schema_changes.json`;
 their exact schema fingerprints, implementation file hashes and typed test nodes
-must still match. Fresh disposable native positives and current mapped tests are
+must still match. Every required reviewed node must exist and execute successfully;
+missing, skipped or failed nodes refuse qualification. Fresh disposable native positives and current mapped tests are
 required before those reviews can qualify a candidate. This does not add a
 version-wide experimental approval.
 
@@ -62,6 +63,8 @@ The `container-image` workflow emits
 `cas-qualified-release-<source-commit>-<publication-run-id>` as a 90-day
 Actions artifact named `qualified-release.json`. It does so only for an exact
 `main` commit whose qualification and required CI push runs both succeeded,
+whose authenticated same-run method artifact is complete and matches the merged
+snapshot, rather than relying on a green workflow alone,
 whose merged native fixture covers the complete catalog with passing evidence,
 whose mapped regression-file hashes match the current source tree,
 whose experimental methods have exact approval fingerprints, and whose

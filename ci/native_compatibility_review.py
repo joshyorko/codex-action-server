@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import ast
 import hashlib
 import json
 from pathlib import Path
@@ -81,6 +82,43 @@ def _string_list(value, *, nonempty=False) -> bool:
         and (bool(value) or not nonempty)
         and all(isinstance(item, str) and item.strip() for item in value)
         and len(set(value)) == len(value)
+    )
+
+
+def _test_node_exists(path: Path, node: str) -> bool:
+    parts = node.split("::")
+    parts[-1] = parts[-1].partition("[")[0]
+    if not all(parts) or not parts[-1].startswith("test"):
+        return False
+    try:
+        body = ast.parse(path.read_text()).body
+    except (OSError, UnicodeError, SyntaxError, ValueError):
+        return False
+    for name in parts[:-1]:
+        parent = next(
+            (
+                item
+                for item in body
+                if isinstance(item, ast.ClassDef) and item.name == name
+            ),
+            None,
+        )
+        if parent is None or not (
+            name.startswith("Test")
+            or any(
+                isinstance(base, ast.Name)
+                and base.id == "TestCase"
+                or isinstance(base, ast.Attribute)
+                and base.attr == "TestCase"
+                for base in parent.bases
+            )
+        ):
+            return False
+        body = parent.body
+    return any(
+        isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef))
+        and item.name == parts[-1]
+        for item in body
     )
 
 
@@ -244,6 +282,7 @@ def reviewed_schema_change(
             or not node.strip()
             or relative not in regression_tests
             or not path.is_file()
+            or not _test_node_exists(path, node)
         ):
             return None
     return {

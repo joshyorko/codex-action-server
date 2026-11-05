@@ -23,6 +23,9 @@ def _write_receipt_inputs(root: Path):
         "codex-x86_64-unknown-linux-musl.tar.gz"
     )
     fixture_relative = f"tests/fixtures/protocol/codex_{version}_native_methods.json"
+    schema_digest = hashlib.sha256(
+        (json.dumps({"type": "object"}, indent=2, sort_keys=True) + "\n").encode()
+    ).hexdigest()
     fixture = {
         "schema_version": 1,
         "native_version": version,
@@ -53,8 +56,8 @@ def _write_receipt_inputs(root: Path):
                 "smoke": {"status": "typed_action_regressions_passed"},
                 "regression_tests": ["tests/test_protocol_contracts.py"],
                 "schema_fingerprint": {
-                    "request_sha256": "c" * 64,
-                    "response_sha256": "d" * 64,
+                    "request_sha256": schema_digest,
+                    "response_sha256": schema_digest,
                 },
                 "schemas": {
                     "AppsReadParams": {"type": "object"},
@@ -119,6 +122,58 @@ def _write_receipt_inputs(root: Path):
             }
         )
     )
+
+
+def _write_current_qualification_artifact(root: Path, destination: Path):
+    """Build a synthetic current-run artifact for isolated handoff tests."""
+    manifest = json.loads(
+        (root / "ci/codex_qualification/approved_methods.json").read_text()
+    )
+    source = manifest["sources"]["0.166.0"]
+    fixture = json.loads(
+        (root / source.get("native_methods_fixture", source["fixture"])).read_text()
+    )
+    destination.mkdir(parents=True, exist_ok=True)
+    schemas = destination / "candidate-schemas"
+    schemas.mkdir(exist_ok=True)
+    for row in fixture["methods"]:
+        for name, schema in row["schemas"].items():
+            (schemas / f"{name}.json").write_text(
+                json.dumps(schema, indent=2, sort_keys=True) + "\n"
+            )
+    identity = {
+        "version": fixture["native_version"],
+        **{
+            key: fixture[key]
+            for key in (
+                "binary_sha256",
+                "source_tag",
+                "source_url",
+                "source_asset_sha256",
+                "source_asset_id",
+            )
+        },
+    }
+    report = {"schema_version": 1, **identity, "methods": fixture["methods"]}
+    typed = {
+        "candidate_version": fixture["native_version"],
+        "status": "passed",
+        "test_files": fixture["typed_regression_test_files_sha256"],
+        "test_node_outcomes": fixture.get("reviewed_test_node_outcomes", {}),
+        "methods": {
+            row["method"]: {
+                "status": "passed",
+                "test_files": row["regression_tests"],
+                "coverage": row["typed_regression_coverage"],
+            }
+            for row in fixture["methods"]
+        },
+    }
+    (destination / "native-methods.json").write_text(json.dumps(report))
+    (destination / "provenance.json").write_text(
+        json.dumps({**identity, "typed_regression_evidence": typed})
+    )
+    return destination
 
 
 def _build_synthetic_full_surface_receipt(root: Path):

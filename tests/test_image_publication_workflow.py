@@ -140,6 +140,9 @@ def test_publication_uses_the_verified_image_and_emits_an_immutable_handoff():
     assert upload["with"]["path"] == "${{ runner.temp }}/qualified-release.json"
     assert upload["with"]["retention-days"] == "90"
     assert "--qualification-run-url" in handoff["run"]
+    assert "--qualification-artifact" in handoff["run"]
+    assert 'gh run download "$qualification_run_id"' in handoff["run"]
+    assert "/actions/runs/$qualification_run_id/artifacts" in handoff["run"]
     assert "actions/workflows/$workflow/runs" in handoff["run"]
 
 
@@ -183,12 +186,27 @@ def test_only_publication_has_registry_write_permission():
 
 
 def _run_handoff_step(
-    tmp_path, *, main_sha, pending_workflow="", complete_surface=False
+    tmp_path,
+    *,
+    main_sha,
+    pending_workflow="",
+    complete_surface=False,
+    artifact_state="valid",
 ):
-    from test_native_qualification_receipt import _write_receipt_inputs
+    from test_native_qualification_receipt import (
+        _write_current_qualification_artifact,
+        _write_receipt_inputs,
+    )
 
     source_root = tmp_path / "source"
     _write_receipt_inputs(source_root)
+    artifact_source = tmp_path / "qualification-artifact"
+    _write_current_qualification_artifact(source_root, artifact_source)
+    if artifact_state == "partial":
+        report = artifact_source / "native-methods.json"
+        value = json.loads(report.read_text())
+        value["methods"][0]["status"] = "needs_review"
+        report.write_text(json.dumps(value))
     if not complete_surface:
         fixture = (
             source_root / "tests/fixtures/protocol/codex_0.166.0_native_methods.json"
@@ -202,11 +220,30 @@ def _run_handoff_step(
     gh.write_text(
         """#!/usr/bin/env bash
 set -euo pipefail
+if [[ "${1-}" == run && "${2-}" == download ]]; then
+  test "$3" = 123
+  shift 3
+  directory=""
+  while (($#)); do
+    case "$1" in
+      --repo) test "$2" = "$GITHUB_REPOSITORY"; shift 2 ;;
+      --name) test "$2" = codex-schema-0.166.0; shift 2 ;;
+      --dir) directory="$2"; shift 2 ;;
+      *) exit 2 ;;
+    esac
+  done
+  test -n "$directory"
+  printf '%s\\n' 'run=123 name=codex-schema-0.166.0' > "$RUNNER_TEMP/download-observed"
+  if [[ "$MOCK_ARTIFACT_STATE" == download_failed ]]; then exit 1; fi
+  cp -R "$MOCK_ARTIFACT_SOURCE/." "$directory/"
+  exit 0
+fi
 if [[ "$*" == *"--jq .object.sha"* ]]; then
   printf '%s\\n' "$MOCK_MAIN_SHA"
   exit 0
 fi
 case "$2" in
+  */actions/runs/123/artifacts*) cat "$MOCK_ARTIFACT_METADATA"; exit 0 ;;
   */codex-version-qualification.yml/runs*) run_id=123 ;;
   */test.yml/runs*) run_id=124 ;;
   *) echo "unexpected gh api request" >&2; exit 2 ;;
@@ -218,7 +255,7 @@ if [[ "$run_id" == "$MOCK_PENDING_WORKFLOW" && ! -f "$RUNNER_TEMP/pending-observ
   state=in_progress
   conclusion=null
 fi
-printf '{"workflow_runs":[{"head_sha":"%s","head_branch":"main","event":"push","status":"%s","conclusion":%s,"html_url":"https://github.com/joshyorko/codex-action-server/actions/runs/%s","run_number":1,"run_attempt":1}]}\\n' "$GITHUB_SHA" "$state" "$conclusion" "$run_id"
+printf '{"workflow_runs":[{"id":%s,"head_sha":"%s","head_branch":"main","event":"push","status":"%s","conclusion":%s,"html_url":"https://github.com/joshyorko/codex-action-server/actions/runs/%s","run_number":1,"run_attempt":1}]}\\n' "$run_id" "$GITHUB_SHA" "$state" "$conclusion" "$run_id"
 """
     )
     gh.chmod(0o755)
@@ -242,6 +279,29 @@ exec "$REAL_GIT" "$@"
     output = tmp_path / "github-output"
     summary = tmp_path / "step-summary"
     commit = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()
+    artifact = {
+        "id": 567,
+        "name": "codex-schema-0.166.0",
+        "expired": artifact_state == "expired",
+        "workflow_run": {
+            "id": 999 if artifact_state == "wrong_run" else 123,
+            "head_sha": "e" * 40 if artifact_state == "wrong_head" else commit,
+        },
+    }
+    if artifact_state == "wrong_name":
+        artifact["name"] = "codex-schema-unqualified"
+    artifacts = [] if artifact_state == "missing" else [artifact]
+    if artifact_state == "duplicate":
+        artifacts.append({**artifact, "id": 568})
+    metadata = tmp_path / "artifact-metadata.json"
+    metadata.write_text(
+        json.dumps(
+            {
+                "total_count": len(artifacts) + int(artifact_state == "truncated"),
+                "artifacts": artifacts,
+            }
+        )
+    )
     env = {
         **os.environ,
         "PATH": str(bin_dir) + ":" + os.environ["PATH"],
@@ -258,6 +318,9 @@ exec "$REAL_GIT" "$@"
         "MOCK_PREVIOUS_SHA": "a" * 40,
         "MOCK_PENDING_WORKFLOW": pending_workflow,
         "MOCK_SOURCE_ROOT": str(source_root),
+        "MOCK_ARTIFACT_STATE": artifact_state,
+        "MOCK_ARTIFACT_SOURCE": str(artifact_source),
+        "MOCK_ARTIFACT_METADATA": str(metadata),
         "RUNNER_TEMP": str(temp),
         "GITHUB_OUTPUT": str(output),
         "GITHUB_STEP_SUMMARY": str(summary),
@@ -306,6 +369,53 @@ def test_handoff_emits_a_receipt_only_for_complete_qualified_source(tmp_path):
     receipt = json.loads((temp / "qualified-release.json").read_text())
     assert receipt["source"]["revision"] == commit
     assert receipt["qualification"]["withheld_methods"] == []
+    assert (temp / "download-observed").read_text().strip() == (
+        "run=123 name=codex-schema-0.166.0"
+    )
+
+
+@pytest.mark.parametrize(
+    "artifact_state",
+    [
+        "missing",
+        "expired",
+        "duplicate",
+        "wrong_run",
+        "wrong_head",
+        "wrong_name",
+        "truncated",
+    ],
+)
+def test_handoff_refuses_unbound_qualification_artifacts(tmp_path, artifact_state):
+    commit = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()
+    result, output, _, temp = _run_handoff_step(
+        tmp_path, main_sha=commit, complete_surface=True, artifact_state=artifact_state
+    )
+    assert result.returncode == 0, result.stderr
+    assert "status=skipped_qualification_artifact" in output.read_text()
+    assert not (temp / "qualified-release.json").exists()
+    assert not (temp / "download-observed").exists()
+
+
+def test_handoff_refuses_partial_current_run_with_complete_merged_snapshot(tmp_path):
+    commit = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()
+    result, _, _, temp = _run_handoff_step(
+        tmp_path, main_sha=commit, complete_surface=True, artifact_state="partial"
+    )
+    assert result.returncode != 0
+    assert not (temp / "qualified-release.json").exists()
+
+
+def test_handoff_refuses_failed_qualification_artifact_download(tmp_path):
+    commit = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()
+    result, _, _, temp = _run_handoff_step(
+        tmp_path,
+        main_sha=commit,
+        complete_surface=True,
+        artifact_state="download_failed",
+    )
+    assert result.returncode != 0
+    assert not (temp / "qualified-release.json").exists()
 
 
 @pytest.mark.parametrize("pending_workflow", ["123", "124"])

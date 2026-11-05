@@ -63,6 +63,7 @@ def main() -> int:
                 "tests/test_native_qualification_receipt.py",
                 "tests/test_native_compatibility_review.py",
                 "tests/test_native_receipt_review_bindings.py",
+                "tests/test_current_qualification_artifact.py",
                 "tests/test_image_publication_workflow.py",
                 "tests/test_renovate_config.py",
             ]
@@ -91,6 +92,7 @@ def main() -> int:
                 "tests/test_native_qualification_receipt.py",
                 "tests/test_native_compatibility_review.py",
                 "tests/test_native_receipt_review_bindings.py",
+                "tests/test_current_qualification_artifact.py",
                 "tests/test_image_publication_workflow.py",
                 "tests/test_renovate_config.py",
             ]
@@ -121,6 +123,7 @@ def main() -> int:
                 "tests/test_native_qualification_receipt.py",
                 "tests/test_native_compatibility_review.py",
                 "tests/test_native_receipt_review_bindings.py",
+                "tests/test_current_qualification_artifact.py",
                 "tests/test_image_publication_workflow.py",
                 "tests/test_renovate_config.py",
                 "tests/test_launch_preflight.py",
@@ -150,6 +153,7 @@ def main() -> int:
                 "tests/test_native_qualification_receipt.py",
                 "tests/test_native_compatibility_review.py",
                 "tests/test_native_receipt_review_bindings.py",
+                "tests/test_current_qualification_artifact.py",
                 "tests/test_image_publication_workflow.py",
                 "tests/test_renovate_config.py",
                 "tests/test_launch_preflight.py",

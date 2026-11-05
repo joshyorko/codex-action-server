@@ -330,6 +330,88 @@ def test_consumed_review_rejects_a_removed_mapped_test(semantic_review):
     assert admit_review(root, row) is None
 
 
+@pytest.mark.parametrize(
+    "source, node",
+    [
+        ("def test_renamed():\n    assert True\n", "test_read"),
+        ("test_read = True\n", "test_read"),
+        ("def read():\n    return True\n", "read"),
+        ("class TestReader:\n    pass\n", "TestReader"),
+        ("class TestReader:\n    pass\n", "TestReader::test_read"),
+        (
+            "class TestRenamed:\n    def test_read(self):\n        assert True\n",
+            "TestReader::test_read",
+        ),
+        (
+            "class Reader:\n    def test_read(self):\n        assert True\n",
+            "Reader::test_read",
+        ),
+        (
+            "def TestReader():\n    def test_read():\n        assert True\n",
+            "TestReader::test_read",
+        ),
+        ("def test_read(:\n    assert True\n", "test_read"),
+    ],
+)
+def test_consumed_review_rejects_missing_or_non_test_nodes(
+    semantic_review, source, node
+):
+    root, document, row = semantic_review
+    (root / "tests/test_reader.py").write_text(source)
+    row["tests"] = [f"tests/test_reader.py::{node}"]
+    write_json(root, REVIEW_REF, document)
+    assert admit_review(root, row) is None
+
+
+@pytest.mark.parametrize(
+    "source, node",
+    [
+        ("def test_read():\n    assert True\n", "test_read[example]"),
+        (
+            "class TestReader:\n    def test_read(self):\n        assert True\n",
+            "TestReader::test_read",
+        ),
+        (
+            "import unittest\nclass ReaderTests(unittest.TestCase):\n"
+            "    def test_read(self):\n        assert True\n",
+            "ReaderTests::test_read",
+        ),
+    ],
+)
+def test_consumed_review_accepts_existing_pytest_and_unittest_nodes(
+    semantic_review, source, node
+):
+    root, document, row = semantic_review
+    (root / "tests/test_reader.py").write_text(source)
+    row["tests"] = [f"tests/test_reader.py::{node}"]
+    write_json(root, REVIEW_REF, document)
+    assert admit_review(root, row) is not None
+
+
+def test_all_current_consumed_contract_reviews_have_existing_test_nodes():
+    document = json.loads((ROOT / REVIEW_REF).read_text())
+    catalog = json.loads(
+        (ROOT / "ci/codex_qualification/native_methods.json").read_text()
+    )
+    methods = {row["method"]: row for row in catalog["methods"]}
+    release = document["versions"][VERSION]
+    assert len(release["methods"]) == 22
+    for method, row in release["methods"].items():
+        assert (
+            review.reviewed_schema_change(
+                ROOT,
+                method,
+                VERSION,
+                release["binary_sha256"],
+                release["source_asset_sha256"],
+                release["source_asset_id"],
+                row["schema_fingerprint"],
+                methods[method]["regression_tests"],
+            )
+            is not None
+        ), method
+
+
 @pytest.mark.parametrize("kind", ["probe", "source", "test"])
 def test_review_evidence_paths_cannot_escape_source_tree(probe, semantic_review, kind):
     root, manifest, _ = probe

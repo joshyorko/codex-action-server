@@ -179,6 +179,7 @@ jobs:
                   '[.workflow_runs[] | select(.head_sha == $sha and .head_branch == "main" and .event == "push")] | sort_by(.run_number, .run_attempt) | last // empty'
           }
           qualification_run=""
+          qualification_run_id=""
           required_ci_run=""
           for attempt in $(seq 1 120); do
             qualification="$(find_green_run codex-version-qualification.yml)"
@@ -188,6 +189,7 @@ jobs:
               required_ci_state="$(jq -r '.status + ":" + (.conclusion // "")' <<<"$required_ci")"
               if [ "$qualification_state" = "completed:success" ] && [ "$required_ci_state" = "completed:success" ]; then
                 qualification_run="$(jq -r .html_url <<<"$qualification")"
+                qualification_run_id="$(jq -r .id <<<"$qualification")"
                 required_ci_run="$(jq -r .html_url <<<"$required_ci")"
                 break
               fi
@@ -204,6 +206,29 @@ jobs:
             echo "No successful exact-commit qualification and CI runs were found; no receipt emitted." >> "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
+          if [[ ! "$qualification_run_id" =~ ^[1-9][0-9]*$ ]]; then
+            echo "status=skipped_qualification_artifact" >> "$GITHUB_OUTPUT"
+            echo "Qualification run identity is invalid; no receipt emitted." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          artifacts="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$qualification_run_id/artifacts?per_page=100")"
+          qualification_artifact_name="$(jq -r --arg sha "$GITHUB_SHA" --argjson run_id "$qualification_run_id" '
+            if .total_count != (.artifacts | length) then empty else
+              [.artifacts[] | select(.name | test("^codex-schema-[0-9]+\\.[0-9]+\\.[0-9]+$"))]
+              | if length != 1 then empty else
+                  .[0] | select(.expired == false and .workflow_run.id == $run_id and .workflow_run.head_sha == $sha)
+                  | .name
+                end
+            end' <<<"$artifacts")"
+          if [ -z "$qualification_artifact_name" ]; then
+            echo "status=skipped_qualification_artifact" >> "$GITHUB_OUTPUT"
+            echo "A unique unexpired exact-run qualification artifact was not found; no receipt emitted." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          qualification_artifact="$RUNNER_TEMP/handoff-qualification"
+          mkdir -m 700 "$qualification_artifact"
+          gh run download "$qualification_run_id" --repo "$GITHUB_REPOSITORY" \
+            --name "$qualification_artifact_name" --dir "$qualification_artifact"
           previous_commit="$(git rev-parse "$GITHUB_SHA^")"
           image=ghcr.io/joshyorko/codex-action-server
           python ci/create_native_qualification_receipt.py \
@@ -214,6 +239,7 @@ jobs:
             --image-digest "$IMAGE_DIGEST" \
             --image-revision "$IMAGE_REVISION" \
             --qualification-run-url "$qualification_run" \
+            --qualification-artifact "$qualification_artifact" \
             --required-ci-url "$required_ci_run" \
             --publication-run-url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
             --comparison-url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/compare/$previous_commit...$GITHUB_SHA" \

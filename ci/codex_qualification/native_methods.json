@@ -467,6 +467,7 @@
         "tests/test_mcp_annotations.py",
         "tests/test_native_compatibility_review.py",
         "tests/test_native_operator_surfaces.py",
+        "tests/test_native_receipt_review_bindings.py",
         "tests/test_package_composition.py",
         "tests/test_protocol_contracts.py"
       ],
