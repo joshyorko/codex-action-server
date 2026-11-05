@@ -32,3 +32,13 @@ def test_local_renovate_config_inherits_patchraptor_and_requires_review():
     assert protected_rule["platformAutomerge"] is False
     assert protected_rule["dependencyDashboardApproval"] is True
     assert protected_rule["prCreation"] == "status-success"
+
+
+def test_vulnerability_force_rule_cannot_skip_dashboard_or_successful_ci():
+    config = json.loads((ROOT / ".github/renovate.json5").read_text())
+    assert config["vulnerabilityAlerts"] == {
+        "dependencyDashboardApproval": True,
+        "prCreation": "status-success",
+        "automerge": False,
+        "platformAutomerge": False,
+    }

@@ -1,4 +1,5 @@
 import ast
+from fnmatch import fnmatchcase
 import json
 import os
 from pathlib import Path
@@ -434,10 +435,7 @@ def test_codex_qualification_is_scheduled_serial_and_fail_closed():
     definition = qualification_workflow()
     assert definition["on"]["schedule"] == [{"cron": "17 6 * * *"}]
     assert definition["on"]["push"]["branches"] == ["main"]
-    assert ".github/schemas/**" in definition["on"]["push"]["paths"]
     assert ".github/schemas/**" in definition["on"]["pull_request"]["paths"]
-    assert "tests/fixtures/protocol/**" in definition["on"]["push"]["paths"]
-    assert "ci/codex_qualification/**" in definition["on"]["push"]["paths"]
     assert definition["concurrency"]["cancel-in-progress"] == "false"
     assert definition["jobs"]["generate-candidate-schema"]["permissions"] == {
         "contents": "read"
@@ -455,6 +453,29 @@ def test_codex_qualification_is_scheduled_serial_and_fail_closed():
     )
     assert 'git push origin "$branch"' in branch_writer["run"]
     assert "cancel-in-progress" not in open_pr
+
+
+@pytest.mark.parametrize(
+    "changed_path",
+    [
+        "README.md",
+        "Containerfile",
+        "pyproject.toml",
+        ".github/renovate.json5",
+        "src/boundary.py",
+        ".github/workflows/container.yml",
+    ],
+)
+def test_every_published_main_change_has_an_exact_commit_qualification(changed_path):
+    assert allowed(workflow()["jobs"]["publish"]["if"], "push", "refs/heads/main")
+    trigger = qualification_workflow()["on"]["push"]
+    assert any(fnmatchcase("main", branch) for branch in trigger["branches"])
+    assert not trigger.get("paths") or any(
+        fnmatchcase(changed_path, path) for path in trigger["paths"]
+    )
+    assert not any(
+        fnmatchcase(changed_path, path) for path in trigger.get("paths-ignore", [])
+    )
 
 
 def _qualification_concurrency_group(event, ref, pr_number=0):

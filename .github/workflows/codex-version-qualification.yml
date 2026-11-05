@@ -11,24 +11,6 @@ on:
         type: string
   push:
     branches: [main]
-    paths:
-      - 'src/codex_rpc.py'
-      - 'src/codex_shared/**'
-      - 'tests/fixtures/protocol/**'
-      - 'tests/test_native_diagnostics_*.py'
-      - 'ci/codex_qualification/**'
-      - 'ci/*.py'
-      - 'docs/acceptance/codex-native-qualification.md'
-      - '.github/schemas/**'
-      - 'tests/test_codex_qualification.py'
-      - 'tests/test_native_method_catalog.py'
-      - 'tests/test_native_qualification_receipt.py'
-      - 'tests/test_image_publication_workflow.py'
-      - 'tests/test_renovate_config.py'
-      - 'package.yaml'
-      - '.github/renovate.json5'
-      - '.github/workflows/codex-version-qualification.yml'
-      - '.github/workflows/container.yml'
   pull_request:
     paths:
       - 'ci/*.py'
