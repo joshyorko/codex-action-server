@@ -695,6 +695,627 @@
       "source_asset_sha256": "a0bf572d2f93f056c6712a6da348e96078dc84f3885fd7be67807ef389cb3978",
       "source_tag": "rust-v0.166.0",
       "source_url": "https://github.com/openai/codex/releases/download/rust-v0.166.0/codex-x86_64-unknown-linux-musl.tar.gz"
+    },
+    "0.167.0": {
+      "binary_sha256": "cdcb45aaa01d0f14e298985e09465aebccd47f64ecd298aea44814af7b62bbda",
+      "methods": {
+        "review/start": {
+          "request_fields": [
+            "threadId",
+            "target"
+          ],
+          "response_fields": [
+            "$.reviewThreadId",
+            "$.turn.id",
+            "$ (native result forwarded)"
+          ],
+          "schema_fingerprint": {
+            "request_sha256": "cac942a9a9f53da711217f3cc4de72ff39cd2db7fe78f1b504ee602c53bde15c",
+            "response_sha256": "89e2ac9d56f88de7bb2ddb00cba28a5e4311cc96b9f778be06621465c3f8be12"
+          },
+          "source_files_sha256": {
+            "src/codex_actions.py": "c97eaae2d19e95590025de2d45736fcb3ec1baba496a12b438a5d8022d75f772",
+            "src/codex_rpc.py": "c3d45e1b3ec78df03e559fcbd41491887e4d050f2350996d73d029b88cb530b5",
+            "src/codex_shared/common.py": "398da2027ddaa116370587d3d76b5523a7463283b29d1b2b5bfbf433cc8cae91",
+            "src/codex_shared/execution.py": "2606b8f8c7f796c9c3dfe52d889c7887755acfc5552fb0a92985a0b58c0a884f",
+            "src/codex_shared/models.py": "c869b958617f8cd5672ed07adb92f3a72418850ffcdecc3063ffbe2da19cb07e"
+          },
+          "summary": "Audio UserInput now accepts the existing URL or a fileId; the typed CAS text branch and consumed identity, pagination and acknowledgement fields are unchanged.",
+          "tests": [
+            "tests/test_native_operator_surfaces.py::test_review_and_mcp_tool_calls_are_consequential_and_receipt_protected"
+          ]
+        },
+        "thread/fork": {
+          "request_fields": [
+            "threadId",
+            "cwd",
+            "excludeTurns",
+            "lastTurnId",
+            "model",
+            "modelProvider"
+          ],
+          "response_fields": [
+            "$.thread.id",
+            "$.thread.cwd",
+            "$ (native result forwarded)",
+            "$.model",
+            "$.modelProvider",
+            "$.reasoningEffort",
+            "$.approvalPolicy",
+            "$.sandbox",
+            "$.thread.model",
+            "$.thread.modelProvider",
+            "$.thread.reasoningEffort",
+            "$.thread.approvalPolicy",
+            "$.thread.sandbox"
+          ],
+          "schema_fingerprint": {
+            "request_sha256": "9c85b0347ef12c9a7eef7f08b3710d859569a16414bdf0f18254b0c42560a47e",
+            "response_sha256": "3d54a6a901bf02b5f4823a7efb7775951061003823590329fb157ac8b4a8c8de"
+          },
+          "source_files_sha256": {
+            "src/codex_actions.py": "c97eaae2d19e95590025de2d45736fcb3ec1baba496a12b438a5d8022d75f772",
+            "src/codex_rpc.py": "c3d45e1b3ec78df03e559fcbd41491887e4d050f2350996d73d029b88cb530b5",
+            "src/codex_shared/common.py": "398da2027ddaa116370587d3d76b5523a7463283b29d1b2b5bfbf433cc8cae91",
+            "src/codex_shared/models.py": "c869b958617f8cd5672ed07adb92f3a72418850ffcdecc3063ffbe2da19cb07e",
+            "src/codex_shared/organization.py": "f69a86f57adda2a535b18cd851d5c90f3b1ee353dc00ee4e5667f0a7c37811a4"
+          },
+          "summary": "Audio UserInput now accepts the existing URL or a fileId; the typed CAS text branch and consumed identity, pagination and acknowledgement fields are unchanged.",
+          "tests": [
+            "tests/test_thread_lifecycle.py::test_lifecycle_actions_send_only_typed_native_fields"
+          ]
+        },
+        "thread/items/list": {
+          "optional_acceptance_tests": [
+            "tests/test_action_server_validation.py::ActionServerValidationTests::test_real_loopback_mcp_uses_typed_actions_and_isolated_native_fixture",
+            "tests/test_container_image.py::test_production_image_mcp_native_socket_and_persistent_receipt",
+            "tests/test_http_boot.py::test_standalone_http_boot_catalog_and_safe_diagnostics"
+          ],
+          "request_fields": [
+            "threadId,optional turnId,limit,cursor,sortDirection after thread id/cwd guard"
+          ],
+          "response_fields": [
+            "raw page dict"
+          ],
+          "schema_fingerprint": {
+            "request_sha256": "d5cf9784413f1d1abba756e04e48b273a9d12ab2c5675442e91b6a4ee55e19f0",
+            "response_sha256": "054ebb1e51fad510f1ff9bd2fd06a96d9db06ca4f8963207dccfef91ea8e540b"
+          },
+          "source_files_sha256": {
+            "src/codex_actions.py": "c97eaae2d19e95590025de2d45736fcb3ec1baba496a12b438a5d8022d75f772",
+            "src/codex_rpc.py": "c3d45e1b3ec78df03e559fcbd41491887e4d050f2350996d73d029b88cb530b5",
+            "src/codex_shared/common.py": "398da2027ddaa116370587d3d76b5523a7463283b29d1b2b5bfbf433cc8cae91",
+            "src/codex_shared/models.py": "c869b958617f8cd5672ed07adb92f3a72418850ffcdecc3063ffbe2da19cb07e",
+            "src/codex_shared/threads.py": "eb1243d7724394e5fc679a2d17e3853d9c73ab72e9b2c944397c4741852fc0e6"
+          },
+          "summary": "Audio UserInput now accepts the existing URL or a fileId; the typed CAS text branch and consumed identity, pagination and acknowledgement fields are unchanged.",
+          "tests": [
+            "tests/test_capability_metadata.py::test_capability_records_preserve_composite_native_operations",
+            "tests/test_control_actions.py::test_paginated_thread_turns_and_items_keep_exact_thread_cwd_guard",
+            "tests/test_protocol_contracts.py::NativeProtocolContractTests::test_page_and_goal_actions_map_all_wire_fields",
+            "tests/test_protocol_contracts.py::NativeProtocolContractTests::test_pagination_contracts_keep_opaque_cursors_and_native_page_fields",
+            "tests/test_rpc_lifecycle.py::NativeLifecycleTests::test_priority_native_methods_are_bounded_and_workstream_scoped"
+          ]
+        },
+        "thread/list": {
+          "optional_acceptance_tests": [
+            "tests/test_action_server_validation.py::ActionServerValidationTests::test_real_loopback_mcp_uses_typed_actions_and_isolated_native_fixture",
+            "tests/test_container_image.py::test_production_image_mcp_native_socket_and_persistent_receipt",
+            "tests/test_http_boot.py::test_standalone_http_boot_catalog_and_safe_diagnostics"
+          ],
+          "request_fields": [
+            "cwd,limit,optional cursor"
+          ],
+          "response_fields": [
+            "entire dict; new readStates preserved"
+          ],
+          "schema_fingerprint": {
+            "request_sha256": "1781b1778cb08619f0bf12528b128e55648b86569114196b1b5ec565b9b7935d",
+            "response_sha256": "b57fafd7a25fca12c4b3c3e3a6e9775c1473583ea95df66b4a7727b921cfd898"
+          },
+          "source_files_sha256": {
+            "src/codex_actions.py": "c97eaae2d19e95590025de2d45736fcb3ec1baba496a12b438a5d8022d75f772",
+            "src/codex_rpc.py": "c3d45e1b3ec78df03e559fcbd41491887e4d050f2350996d73d029b88cb530b5",
+            "src/codex_shared/common.py": "398da2027ddaa116370587d3d76b5523a7463283b29d1b2b5bfbf433cc8cae91",
+            "src/codex_shared/models.py": "c869b958617f8cd5672ed07adb92f3a72418850ffcdecc3063ffbe2da19cb07e",
+            "src/codex_shared/threads.py": "eb1243d7724394e5fc679a2d17e3853d9c73ab72e9b2c944397c4741852fc0e6"
+          },
+          "summary": "Audio UserInput now accepts the existing URL or a fileId; the typed CAS text branch and consumed identity, pagination and acknowledgement fields are unchanged.",
+          "tests": [
+            "tests/test_actions.py::ActionContractTests::test_discovery_is_typed_and_target_scoped",
+            "tests/test_actions.py::ActionContractTests::test_entrypoints_do_not_accept_raw_method_or_shell_arguments",
+            "tests/test_protocol_contracts.py::NativeProtocolContractTests::test_pagination_contracts_keep_opaque_cursors_and_native_page_fields",
+            "tests/test_provider_acceptance_contract.py::test_provider_smoke_gates_diagnostics_by_exact_native_version",
+            "tests/test_rpc_lifecycle.py::NativeLifecycleTests::test_priority_native_methods_are_bounded_and_workstream_scoped"
+          ]
+        },
+        "thread/metadata/update": {
+          "request_fields": [
+            "threadId",
+            "gitInfo"
+          ],
+          "response_fields": [
+            "$ (native result forwarded)",
+            "$.model",
+            "$.modelProvider",
+            "$.reasoningEffort",
+            "$.approvalPolicy",
+            "$.sandbox",
+            "$.thread.model",
+            "$.thread.modelProvider",
+            "$.thread.reasoningEffort",
+            "$.thread.approvalPolicy",
+            "$.thread.sandbox"
+          ],
+          "schema_fingerprint": {
+            "request_sha256": "acde30f30f11984fce6d96f52858348db92ce9ee7ea18a8fca19689ec8aabbbe",
+            "response_sha256": "a155fd55ee1ff6891ef6bccef4c391a964a02a26b254ada8992f27a43148ac79"
+          },
+          "source_files_sha256": {
+            "src/codex_actions.py": "c97eaae2d19e95590025de2d45736fcb3ec1baba496a12b438a5d8022d75f772",
+            "src/codex_rpc.py": "c3d45e1b3ec78df03e559fcbd41491887e4d050f2350996d73d029b88cb530b5",
+            "src/codex_shared/common.py": "398da2027ddaa116370587d3d76b5523a7463283b29d1b2b5bfbf433cc8cae91",
+            "src/codex_shared/models.py": "c869b958617f8cd5672ed07adb92f3a72418850ffcdecc3063ffbe2da19cb07e",
+            "src/codex_shared/organization.py": "f69a86f57adda2a535b18cd851d5c90f3b1ee353dc00ee4e5667f0a7c37811a4"
+          },
+          "summary": "Audio UserInput now accepts the existing URL or a fileId; the typed CAS text branch and consumed identity, pagination and acknowledgement fields are unchanged.",
+          "tests": [
+            "tests/test_thread_lifecycle.py::test_lifecycle_actions_send_only_typed_native_fields",
+            "tests/test_thread_lifecycle.py::test_metadata_update_maps_only_fields_in_pinned_native_schema"
+          ]
+        },
+        "thread/queue/add": {
+          "request_fields": [
+            "threadId",
+            "input=[typed text]",
+            "clientUserMessageId"
+          ],
+          "response_fields": [
+            "queuedSubmission.id",
+            "raw result"
+          ],
+          "schema_fingerprint": {
+            "request_sha256": "f6466a8f06cd4e68ec1999d06a0d70a1ddc339c0cb1baf12ee966a999fead17c",
+            "response_sha256": "896a82716b432a8aa4d190591bcfa86adacdacb91ec5ec2c9c75ff6562561256"
+          },
+          "source_files_sha256": {
+            "src/codex_actions.py": "c97eaae2d19e95590025de2d45736fcb3ec1baba496a12b438a5d8022d75f772",
+            "src/codex_rpc.py": "c3d45e1b3ec78df03e559fcbd41491887e4d050f2350996d73d029b88cb530b5",
+            "src/codex_shared/common.py": "398da2027ddaa116370587d3d76b5523a7463283b29d1b2b5bfbf433cc8cae91",
+            "src/codex_shared/models.py": "c869b958617f8cd5672ed07adb92f3a72418850ffcdecc3063ffbe2da19cb07e",
+            "src/codex_shared/queues.py": "e6509ee08e5fa3675a7b90a63d05dba40e40d51a4dca10bea96b5b97a9a577bf"
+          },
+          "summary": "Audio UserInput now accepts the existing URL or a fileId; the typed CAS text branch and consumed identity, pagination and acknowledgement fields are unchanged.",
+          "tests": [
+            "tests/test_thread_queue.py::test_queue_actions_map_native_fields_and_persist_acknowledged_receipts"
+          ]
+        },
+        "thread/queue/list": {
+          "request_fields": [
+            "threadId",
+            "limit",
+            "cursor"
+          ],
+          "response_fields": [
+            "raw page dict"
+          ],
+          "schema_fingerprint": {
+            "request_sha256": "b4c889089eee8a0f785ff85e0128a4d3f347353870fa848221096a472223773b",
+            "response_sha256": "7a320613604095eef93247b395dafeeb6d05b26256c4055b6a5bad05eff74ab5"
+          },
+          "source_files_sha256": {
+            "src/codex_actions.py": "c97eaae2d19e95590025de2d45736fcb3ec1baba496a12b438a5d8022d75f772",
+            "src/codex_rpc.py": "c3d45e1b3ec78df03e559fcbd41491887e4d050f2350996d73d029b88cb530b5",
+            "src/codex_shared/common.py": "398da2027ddaa116370587d3d76b5523a7463283b29d1b2b5bfbf433cc8cae91",
+            "src/codex_shared/models.py": "c869b958617f8cd5672ed07adb92f3a72418850ffcdecc3063ffbe2da19cb07e",
+            "src/codex_shared/queues.py": "e6509ee08e5fa3675a7b90a63d05dba40e40d51a4dca10bea96b5b97a9a577bf"
+          },
+          "summary": "Audio UserInput now accepts the existing URL or a fileId; the typed CAS text branch and consumed identity, pagination and acknowledgement fields are unchanged.",
+          "tests": [
+            "tests/test_thread_queue.py::test_queue_actions_map_native_fields_and_persist_acknowledged_receipts"
+          ]
+        },
+        "thread/queue/start": {
+          "request_fields": [
+            "threadId",
+            "queuedSubmissionId"
+          ],
+          "response_fields": [
+            "turn.id",
+            "raw result"
+          ],
+          "schema_fingerprint": {
+            "request_sha256": "d92f1e985c183fa3f261bbfa004416f0f572a225a53e5de1744682e154cce936",
+            "response_sha256": "0d36557b2abe291a3d7c68e4359f0c7071daa454e4026f9150fe7fbb800ba8d9"
+          },
+          "source_files_sha256": {
+            "src/codex_actions.py": "c97eaae2d19e95590025de2d45736fcb3ec1baba496a12b438a5d8022d75f772",
+            "src/codex_rpc.py": "c3d45e1b3ec78df03e559fcbd41491887e4d050f2350996d73d029b88cb530b5",
+            "src/codex_shared/common.py": "398da2027ddaa116370587d3d76b5523a7463283b29d1b2b5bfbf433cc8cae91",
+            "src/codex_shared/models.py": "c869b958617f8cd5672ed07adb92f3a72418850ffcdecc3063ffbe2da19cb07e",
+            "src/codex_shared/queues.py": "e6509ee08e5fa3675a7b90a63d05dba40e40d51a4dca10bea96b5b97a9a577bf"
+          },
+          "summary": "Audio UserInput now accepts the existing URL or a fileId; the typed CAS text branch and consumed identity, pagination and acknowledgement fields are unchanged.",
+          "tests": [
+            "tests/test_thread_queue.py::test_queue_actions_map_native_fields_and_persist_acknowledged_receipts"
+          ]
+        },
+        "thread/queue/update": {
+          "request_fields": [
+            "threadId",
+            "queuedSubmissionId",
+            "input=[typed text]"
+          ],
+          "response_fields": [
+            "queuedSubmission.id must equal requested item",
+            "raw result"
+          ],
+          "schema_fingerprint": {
+            "request_sha256": "fa7fcb29e72763d216a736a1529abaf216aff91ee37ffa0639fbb9835cf81ccc",
+            "response_sha256": "6ec2ff1153cbbd357c87e0ed47c98385dab3fe3d176c1559ad1bd26c4848aa83"
+          },
+          "source_files_sha256": {
+            "src/codex_actions.py": "c97eaae2d19e95590025de2d45736fcb3ec1baba496a12b438a5d8022d75f772",
+            "src/codex_rpc.py": "c3d45e1b3ec78df03e559fcbd41491887e4d050f2350996d73d029b88cb530b5",
+            "src/codex_shared/common.py": "398da2027ddaa116370587d3d76b5523a7463283b29d1b2b5bfbf433cc8cae91",
+            "src/codex_shared/models.py": "c869b958617f8cd5672ed07adb92f3a72418850ffcdecc3063ffbe2da19cb07e",
+            "src/codex_shared/queues.py": "e6509ee08e5fa3675a7b90a63d05dba40e40d51a4dca10bea96b5b97a9a577bf"
+          },
+          "summary": "Audio UserInput now accepts the existing URL or a fileId; the typed CAS text branch and consumed identity, pagination and acknowledgement fields are unchanged.",
+          "tests": [
+            "tests/test_thread_queue.py::test_queue_actions_map_native_fields_and_persist_acknowledged_receipts"
+          ]
+        },
+        "thread/read": {
+          "optional_acceptance_tests": [
+            "tests/test_action_server_validation.py::ActionServerValidationTests::test_real_loopback_mcp_uses_typed_actions_and_isolated_native_fixture"
+          ],
+          "request_fields": [
+            "threadId,includeTurns"
+          ],
+          "response_fields": [
+            "thread.id and thread.cwd exact identity required; complete raw result retained"
+          ],
+          "schema_fingerprint": {
+            "request_sha256": "dfe040c6ac71d30795b8be3f3ff232e66f362a37f883b491e5d1ea367f470db4",
+            "response_sha256": "4ee5071cf8c7245189e5bd0819e459b9d974d5949708372fee68b6fc5329f90d"
+          },
+          "source_files_sha256": {
+            "src/codex_actions.py": "c97eaae2d19e95590025de2d45736fcb3ec1baba496a12b438a5d8022d75f772",
+            "src/codex_rpc.py": "c3d45e1b3ec78df03e559fcbd41491887e4d050f2350996d73d029b88cb530b5",
+            "src/codex_shared/common.py": "398da2027ddaa116370587d3d76b5523a7463283b29d1b2b5bfbf433cc8cae91",
+            "src/codex_shared/coordination.py": "d67a7102bb561d2619451f32ad44cf3c0699661fb2f45a319539ecab85bac37c",
+            "src/codex_shared/execution.py": "2606b8f8c7f796c9c3dfe52d889c7887755acfc5552fb0a92985a0b58c0a884f",
+            "src/codex_shared/inspection.py": "3bd5fa64610f4f0c1d12b57bdc193f265a9417e016e914044788137a0868cc0c",
+            "src/codex_shared/integrations.py": "534b3ecbce9f4ecba85ee0e59a74467c06bdfe0b039e030d6632d4def5a595a7",
+            "src/codex_shared/models.py": "c869b958617f8cd5672ed07adb92f3a72418850ffcdecc3063ffbe2da19cb07e",
+            "src/codex_shared/organization.py": "f69a86f57adda2a535b18cd851d5c90f3b1ee353dc00ee4e5667f0a7c37811a4",
+            "src/codex_shared/queues.py": "e6509ee08e5fa3675a7b90a63d05dba40e40d51a4dca10bea96b5b97a9a577bf",
+            "src/codex_shared/threads.py": "eb1243d7724394e5fc679a2d17e3853d9c73ab72e9b2c944397c4741852fc0e6"
+          },
+          "summary": "Audio UserInput now accepts the existing URL or a fileId; the typed CAS text branch and consumed identity, pagination and acknowledgement fields are unchanged.",
+          "tests": [
+            "tests/test_action_transport_failures.py::test_dispatch_handshake_failure_records_unknown_without_redispatch",
+            "tests/test_actions.py::ActionContractTests::test_read_requires_and_verifies_workstream_cwd",
+            "tests/test_actions.py::ActionContractTests::test_read_rejects_a_thread_from_another_workstream",
+            "tests/test_actions.py::ActionContractTests::test_read_rejects_a_different_returned_thread_id",
+            "tests/test_actions.py::ActionContractTests::test_mutation_rejects_a_different_returned_thread_id",
+            "tests/test_actions.py::ActionContractTests::test_mutations_read_and_verify_cwd_before_native_request",
+            "tests/test_actions.py::ActionContractTests::test_thread_start_and_resume_are_explicit_lifecycle_operations"
+          ]
+        },
+        "thread/resume": {
+          "request_fields": [
+            "threadId",
+            "cwd",
+            "excludeTurns",
+            "model",
+            "modelProvider",
+            "approvalPolicy",
+            "sandbox"
+          ],
+          "response_fields": [
+            "$.thread.id",
+            "$.thread.cwd",
+            "$ (native result forwarded)",
+            "$.model",
+            "$.modelProvider",
+            "$.reasoningEffort",
+            "$.approvalPolicy",
+            "$.sandbox",
+            "$.thread.model",
+            "$.thread.modelProvider",
+            "$.thread.reasoningEffort",
+            "$.thread.approvalPolicy",
+            "$.thread.sandbox"
+          ],
+          "schema_fingerprint": {
+            "request_sha256": "9642460eb42e9a6e8fa8e12b4381e8ed939d10b1ad8690e694d84467ea76d41a",
+            "response_sha256": "9ab25f81ec27b83042c469fd031127c8eaf1a3ac8e2cdc53e76cb24f8e03ce28"
+          },
+          "source_files_sha256": {
+            "src/codex_actions.py": "c97eaae2d19e95590025de2d45736fcb3ec1baba496a12b438a5d8022d75f772",
+            "src/codex_rpc.py": "c3d45e1b3ec78df03e559fcbd41491887e4d050f2350996d73d029b88cb530b5",
+            "src/codex_shared/common.py": "398da2027ddaa116370587d3d76b5523a7463283b29d1b2b5bfbf433cc8cae91",
+            "src/codex_shared/execution.py": "2606b8f8c7f796c9c3dfe52d889c7887755acfc5552fb0a92985a0b58c0a884f",
+            "src/codex_shared/models.py": "c869b958617f8cd5672ed07adb92f3a72418850ffcdecc3063ffbe2da19cb07e"
+          },
+          "summary": "Audio UserInput accepts URL or fileId and ContentItem input_audio accepts audio_url or file_id; CAS resume sends no audio/content overrides, and its existing thread identity and settings consumers are unchanged.",
+          "tests": [
+            "tests/test_protocol_contracts.py::NativeProtocolContractTests::test_thread_resume_maps_provider_and_preserves_same_thread_identity",
+            "tests/test_control_actions.py::test_resume_maps_native_model_provider_and_omits_unset_overrides",
+            "tests/test_rpc_lifecycle.py::NativeLifecycleTests::test_existing_thread_still_uses_native_resume_once"
+          ]
+        },
+        "thread/revert": {
+          "request_fields": [
+            "threadId",
+            "beforeTurnId"
+          ],
+          "response_fields": [
+            "$ (native result forwarded)",
+            "$.model",
+            "$.modelProvider",
+            "$.reasoningEffort",
+            "$.approvalPolicy",
+            "$.sandbox",
+            "$.thread.model",
+            "$.thread.modelProvider",
+            "$.thread.reasoningEffort",
+            "$.thread.approvalPolicy",
+            "$.thread.sandbox"
+          ],
+          "schema_fingerprint": {
+            "request_sha256": "3a5e85a67906c8ea3ad9f5065559d263d968a28a957739e7a1d9e4e1981e4eb8",
+            "response_sha256": "f9414442fee237370bf03444e1273a89f25ce2df3eadcab9f034ae27a01ae009"
+          },
+          "source_files_sha256": {
+            "src/codex_actions.py": "c97eaae2d19e95590025de2d45736fcb3ec1baba496a12b438a5d8022d75f772",
+            "src/codex_rpc.py": "c3d45e1b3ec78df03e559fcbd41491887e4d050f2350996d73d029b88cb530b5",
+            "src/codex_shared/common.py": "398da2027ddaa116370587d3d76b5523a7463283b29d1b2b5bfbf433cc8cae91",
+            "src/codex_shared/models.py": "c869b958617f8cd5672ed07adb92f3a72418850ffcdecc3063ffbe2da19cb07e",
+            "src/codex_shared/organization.py": "f69a86f57adda2a535b18cd851d5c90f3b1ee353dc00ee4e5667f0a7c37811a4"
+          },
+          "summary": "Audio UserInput now accepts the existing URL or a fileId; the typed CAS text branch and consumed identity, pagination and acknowledgement fields are unchanged.",
+          "tests": [
+            "tests/test_thread_lifecycle.py::test_lifecycle_actions_send_only_typed_native_fields"
+          ]
+        },
+        "thread/search": {
+          "request_fields": [
+            "searchTerm",
+            "limit",
+            "cursor",
+            "sortKey",
+            "sortDirection",
+            "sourceKinds",
+            "archived"
+          ],
+          "response_fields": [
+            "data[].thread.id",
+            "data[].thread.cwd exact worktree filter",
+            "nextCursor",
+            "backwardsCursor"
+          ],
+          "schema_fingerprint": {
+            "request_sha256": "5c3bbb9d37d7d83f3f7747423427ff9c8b0f1154ac8cd7c832995a763dfa8e61",
+            "response_sha256": "e608e9fef596d16d650a628f202f68fcb8ec2b603d6f27f3698eae1132e5f04c"
+          },
+          "source_files_sha256": {
+            "src/codex_actions.py": "c97eaae2d19e95590025de2d45736fcb3ec1baba496a12b438a5d8022d75f772",
+            "src/codex_rpc.py": "c3d45e1b3ec78df03e559fcbd41491887e4d050f2350996d73d029b88cb530b5",
+            "src/codex_shared/common.py": "398da2027ddaa116370587d3d76b5523a7463283b29d1b2b5bfbf433cc8cae91",
+            "src/codex_shared/models.py": "c869b958617f8cd5672ed07adb92f3a72418850ffcdecc3063ffbe2da19cb07e",
+            "src/codex_shared/threads.py": "eb1243d7724394e5fc679a2d17e3853d9c73ab72e9b2c944397c4741852fc0e6"
+          },
+          "summary": "Audio UserInput now accepts the existing URL or a fileId; the typed CAS text branch and consumed identity, pagination and acknowledgement fields are unchanged.",
+          "tests": [
+            "tests/test_thread_read_surfaces.py::test_bounded_read_actions_map_exact_native_fields"
+          ]
+        },
+        "thread/start": {
+          "request_fields": [
+            "cwd",
+            "model",
+            "modelProvider",
+            "approvalPolicy",
+            "sandbox",
+            "dynamicTools"
+          ],
+          "response_fields": [
+            "$.thread.id",
+            "$.thread.cwd",
+            "$ (native result forwarded)",
+            "$.model",
+            "$.modelProvider",
+            "$.reasoningEffort",
+            "$.approvalPolicy",
+            "$.sandbox",
+            "$.thread.model",
+            "$.thread.modelProvider",
+            "$.thread.reasoningEffort",
+            "$.thread.approvalPolicy",
+            "$.thread.sandbox"
+          ],
+          "schema_fingerprint": {
+            "request_sha256": "80a40a7fac15b4bf70efb7f893fb353acc0a0d30c68f54aee4f01923deca85de",
+            "response_sha256": "d98f3ee79c052e04fda92f60028249e6685389a017bf190b6c2c418d06533375"
+          },
+          "source_files_sha256": {
+            "src/codex_actions.py": "c97eaae2d19e95590025de2d45736fcb3ec1baba496a12b438a5d8022d75f772",
+            "src/codex_rpc.py": "c3d45e1b3ec78df03e559fcbd41491887e4d050f2350996d73d029b88cb530b5",
+            "src/codex_shared/common.py": "398da2027ddaa116370587d3d76b5523a7463283b29d1b2b5bfbf433cc8cae91",
+            "src/codex_shared/execution.py": "2606b8f8c7f796c9c3dfe52d889c7887755acfc5552fb0a92985a0b58c0a884f",
+            "src/codex_shared/models.py": "c869b958617f8cd5672ed07adb92f3a72418850ffcdecc3063ffbe2da19cb07e"
+          },
+          "summary": "Audio UserInput now accepts the existing URL or a fileId; the typed CAS text branch and consumed identity, pagination and acknowledgement fields are unchanged.",
+          "tests": [
+            "tests/test_protocol_contracts.py::NativeProtocolContractTests::test_thread_start_maps_provider_and_effort_to_supported_boundaries",
+            "tests/test_control_actions.py::test_new_thread_turn_materializes_fresh_thread_on_one_native_connection",
+            "tests/test_control_actions.py::test_fixed_callback_registration_preserves_settings_and_same_connection_wait",
+            "tests/test_rpc_lifecycle.py::NativeLifecycleTests::test_created_thread_stays_on_connection_until_first_turn_materializes_rollout"
+          ]
+        },
+        "thread/timeline/list": {
+          "request_fields": [
+            "threadId",
+            "limit",
+            "cursor"
+          ],
+          "response_fields": [
+            "raw page dict"
+          ],
+          "schema_fingerprint": {
+            "request_sha256": "c585f0e23ed65406dd80f0e0b2956f3f87e7a7aa03627e5e002c61bfc4e1f6c5",
+            "response_sha256": "86cda50f37c6432ad17270827aa28d3f5bca024daa9632d0924f66f50659eeb1"
+          },
+          "source_files_sha256": {
+            "src/codex_actions.py": "c97eaae2d19e95590025de2d45736fcb3ec1baba496a12b438a5d8022d75f772",
+            "src/codex_rpc.py": "c3d45e1b3ec78df03e559fcbd41491887e4d050f2350996d73d029b88cb530b5",
+            "src/codex_shared/common.py": "398da2027ddaa116370587d3d76b5523a7463283b29d1b2b5bfbf433cc8cae91",
+            "src/codex_shared/models.py": "c869b958617f8cd5672ed07adb92f3a72418850ffcdecc3063ffbe2da19cb07e",
+            "src/codex_shared/threads.py": "eb1243d7724394e5fc679a2d17e3853d9c73ab72e9b2c944397c4741852fc0e6"
+          },
+          "summary": "Audio UserInput now accepts the existing URL or a fileId; the typed CAS text branch and consumed identity, pagination and acknowledgement fields are unchanged.",
+          "tests": [
+            "tests/test_thread_read_surfaces.py::test_bounded_read_actions_map_exact_native_fields"
+          ]
+        },
+        "thread/turns/list": {
+          "optional_acceptance_tests": [
+            "tests/test_action_server_validation.py::ActionServerValidationTests::test_real_loopback_mcp_uses_typed_actions_and_isolated_native_fixture",
+            "tests/test_container_image.py::test_production_image_mcp_native_socket_and_persistent_receipt",
+            "tests/test_http_boot.py::test_standalone_http_boot_catalog_and_safe_diagnostics"
+          ],
+          "request_fields": [
+            "threadId,optional limit,cursor,sortDirection,itemsView after thread id/cwd guard"
+          ],
+          "response_fields": [
+            "raw page dict"
+          ],
+          "schema_fingerprint": {
+            "request_sha256": "2a8b93d7d4437cc25e16a1dde16d8db3c338d39e16c5eece2a56e943a21577d7",
+            "response_sha256": "bccb5eb4fcde318825e4e92cadb85cda57315fceb9e46a3b6dc0582f91c2c72b"
+          },
+          "source_files_sha256": {
+            "src/codex_actions.py": "c97eaae2d19e95590025de2d45736fcb3ec1baba496a12b438a5d8022d75f772",
+            "src/codex_rpc.py": "c3d45e1b3ec78df03e559fcbd41491887e4d050f2350996d73d029b88cb530b5",
+            "src/codex_shared/common.py": "398da2027ddaa116370587d3d76b5523a7463283b29d1b2b5bfbf433cc8cae91",
+            "src/codex_shared/models.py": "c869b958617f8cd5672ed07adb92f3a72418850ffcdecc3063ffbe2da19cb07e",
+            "src/codex_shared/threads.py": "eb1243d7724394e5fc679a2d17e3853d9c73ab72e9b2c944397c4741852fc0e6"
+          },
+          "summary": "Audio UserInput now accepts the existing URL or a fileId; the typed CAS text branch and consumed identity, pagination and acknowledgement fields are unchanged.",
+          "tests": [
+            "tests/test_capability_metadata.py::test_capability_records_preserve_composite_native_operations",
+            "tests/test_control_actions.py::test_paginated_thread_turns_and_items_keep_exact_thread_cwd_guard",
+            "tests/test_protocol_contracts.py::NativeProtocolContractTests::test_page_and_goal_actions_map_all_wire_fields",
+            "tests/test_protocol_contracts.py::NativeProtocolContractTests::test_pagination_contracts_keep_opaque_cursors_and_native_page_fields",
+            "tests/test_rpc_lifecycle.py::NativeLifecycleTests::test_priority_native_methods_are_bounded_and_workstream_scoped"
+          ]
+        },
+        "thread/unarchive": {
+          "request_fields": [
+            "threadId"
+          ],
+          "response_fields": [
+            "$ (native result forwarded)",
+            "$.model",
+            "$.modelProvider",
+            "$.reasoningEffort",
+            "$.approvalPolicy",
+            "$.sandbox",
+            "$.thread.model",
+            "$.thread.modelProvider",
+            "$.thread.reasoningEffort",
+            "$.thread.approvalPolicy",
+            "$.thread.sandbox"
+          ],
+          "schema_fingerprint": {
+            "request_sha256": "a1d5d847b61ea16ab09d5b9d1c1461134a7829292aae02a7e11b0a69b00c76ca",
+            "response_sha256": "b6c679c30c2014ef1ea8a06ff98977e15a2f4bef848db0d3e6c75a69e49a3c37"
+          },
+          "source_files_sha256": {
+            "src/codex_actions.py": "c97eaae2d19e95590025de2d45736fcb3ec1baba496a12b438a5d8022d75f772",
+            "src/codex_rpc.py": "c3d45e1b3ec78df03e559fcbd41491887e4d050f2350996d73d029b88cb530b5",
+            "src/codex_shared/common.py": "398da2027ddaa116370587d3d76b5523a7463283b29d1b2b5bfbf433cc8cae91",
+            "src/codex_shared/models.py": "c869b958617f8cd5672ed07adb92f3a72418850ffcdecc3063ffbe2da19cb07e",
+            "src/codex_shared/organization.py": "f69a86f57adda2a535b18cd851d5c90f3b1ee353dc00ee4e5667f0a7c37811a4"
+          },
+          "summary": "Audio UserInput now accepts the existing URL or a fileId; the typed CAS text branch and consumed identity, pagination and acknowledgement fields are unchanged.",
+          "tests": [
+            "tests/test_thread_lifecycle.py::test_lifecycle_identity_mismatch_fails_before_native_mutation",
+            "tests/test_thread_lifecycle.py::test_unarchive_dispatch_checks_identity_and_sends_only_the_exact_thread"
+          ]
+        },
+        "turn/start": {
+          "request_fields": [
+            "threadId",
+            "cwd",
+            "input",
+            "model",
+            "effort",
+            "approvalPolicy",
+            "sandboxPolicy"
+          ],
+          "response_fields": [
+            "$.turn.id",
+            "$.turn.status",
+            "$ (native result forwarded)",
+            "turn/completed.params.threadId",
+            "turn/completed.params.turn.id",
+            "turn/completed.params.turn.status"
+          ],
+          "schema_fingerprint": {
+            "request_sha256": "d13cb408b906669e8d3e8694b42148a75180d4dcd0eeac6867271add8dfa1864",
+            "response_sha256": "b75b88c2f507685b948d06166b5436678fd320c9878883d97f5a17f620a25116"
+          },
+          "source_files_sha256": {
+            "src/codex_actions.py": "c97eaae2d19e95590025de2d45736fcb3ec1baba496a12b438a5d8022d75f772",
+            "src/codex_rpc.py": "c3d45e1b3ec78df03e559fcbd41491887e4d050f2350996d73d029b88cb530b5",
+            "src/codex_shared/common.py": "398da2027ddaa116370587d3d76b5523a7463283b29d1b2b5bfbf433cc8cae91",
+            "src/codex_shared/execution.py": "2606b8f8c7f796c9c3dfe52d889c7887755acfc5552fb0a92985a0b58c0a884f",
+            "src/codex_shared/models.py": "c869b958617f8cd5672ed07adb92f3a72418850ffcdecc3063ffbe2da19cb07e"
+          },
+          "summary": "Audio UserInput now accepts the existing URL or a fileId; the typed CAS text branch and consumed identity, pagination and acknowledgement fields are unchanged.",
+          "tests": [
+            "tests/test_actions.py::ActionContractTests::test_start_turn_resumes_same_connection_and_can_wait",
+            "tests/test_control_actions.py::test_new_thread_turn_materializes_fresh_thread_on_one_native_connection",
+            "tests/test_rpc_lifecycle.py::NativeLifecycleTests::test_created_thread_stays_on_connection_until_first_turn_materializes_rollout"
+          ]
+        },
+        "turn/steer": {
+          "request_fields": [
+            "threadId",
+            "expectedTurnId",
+            "input"
+          ],
+          "response_fields": [
+            "$ (native result forwarded; CAS does not independently check turnId)"
+          ],
+          "schema_fingerprint": {
+            "request_sha256": "ba7034e96620c999cf0164f08bc753f58ff2b214f2025ab409f8ce42dc4cc708",
+            "response_sha256": "866ba9a77c12b5d570c837d58f73bf40b24e50fa93404bdf792dd984d313b1aa"
+          },
+          "source_files_sha256": {
+            "src/codex_actions.py": "c97eaae2d19e95590025de2d45736fcb3ec1baba496a12b438a5d8022d75f772",
+            "src/codex_rpc.py": "c3d45e1b3ec78df03e559fcbd41491887e4d050f2350996d73d029b88cb530b5",
+            "src/codex_shared/common.py": "398da2027ddaa116370587d3d76b5523a7463283b29d1b2b5bfbf433cc8cae91",
+            "src/codex_shared/coordination.py": "d67a7102bb561d2619451f32ad44cf3c0699661fb2f45a319539ecab85bac37c",
+            "src/codex_shared/execution.py": "2606b8f8c7f796c9c3dfe52d889c7887755acfc5552fb0a92985a0b58c0a884f",
+            "src/codex_shared/models.py": "c869b958617f8cd5672ed07adb92f3a72418850ffcdecc3063ffbe2da19cb07e"
+          },
+          "summary": "Audio UserInput now accepts the existing URL or a fileId; the typed CAS text branch and consumed identity, pagination and acknowledgement fields are unchanged.",
+          "tests": [
+            "tests/test_actions.py::ActionContractTests::test_mutations_read_and_verify_cwd_before_native_request",
+            "tests/test_protocol_contracts.py::NativeProtocolContractTests::test_public_models_do_not_offer_unsupported_provider_or_steer_overrides"
+          ]
+        }
+      },
+      "native_version": "0.167.0",
+      "source_asset_id": "715506769",
+      "source_asset_sha256": "9d64836106d5b374e90ee4454c7ebcde7ca7106558bd7e41a34b9f26ebda251a",
+      "source_tag": "rust-v0.167.0",
+      "source_url": "https://github.com/openai/codex/releases/download/rust-v0.167.0/codex-x86_64-unknown-linux-musl.tar.gz"
     }
   }
 }

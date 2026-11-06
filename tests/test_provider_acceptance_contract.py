@@ -403,6 +403,15 @@ def test_provider_smoke_gates_diagnostics_by_exact_native_version(
 
     checks = load_live_checks()
     calls = []
+    monkeypatch.setattr(
+        codex_rpc,
+        "REVIEWED_EXPERIMENTAL_METHODS_BY_NATIVE_VERSION",
+        {
+            "0.166.0": frozenset({"server/diagnostics"}),
+            "0.160.1": frozenset({"server/diagnostics"}),
+            "9.9.9": frozenset(),
+        },
+    )
     # smoke() sets its process-wide target file as the real driver does. Keep
     # that mutation within this test instead of leaking it to the suite.
     monkeypatch.setenv("CODEX_ACTION_TARGETS", "restore-after-smoke-test")
@@ -462,9 +471,6 @@ def test_provider_smoke_gates_diagnostics_by_exact_native_version(
                 "diagnostics_observed_version": "0.159.2",
                 "diagnostics_last_qualified_versions": [
                     "0.160.1",
-                    "0.161.0",
-                    "0.162.0",
-                    "0.162.1",
                     "0.166.0",
                 ],
             }

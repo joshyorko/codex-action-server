@@ -13,6 +13,23 @@ _VERSION = re.compile(r"(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\
 _REVIEW_FILE = "ci/codex_qualification/reviewed_schema_changes.json"
 
 
+def native_probe_dependencies_match(root: Path, proof: dict) -> bool:
+    if proof.get("fixture") != "ci/probe_operator_native.py":
+        return True
+    dependencies = proof.get("fixture_dependencies_sha256")
+    required = ("ci/qualify_native_methods.py", "ci/qualify_codex_schema.py")
+    if not isinstance(dependencies, dict) or set(dependencies) != set(required):
+        return False
+    try:
+        return all(
+            dependencies[name]
+            == hashlib.sha256(_repo_path(root.resolve(), name).read_bytes()).hexdigest()
+            for name in required
+        )
+    except (OSError, ValueError):
+        return False
+
+
 def _repo_path(root: Path, relative: str) -> Path:
     if (
         not isinstance(relative, str)

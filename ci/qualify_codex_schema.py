@@ -17,7 +17,11 @@ import tempfile
 import time
 from pathlib import Path
 
-from native_compatibility_review import exact_reviewed_probe, reviewed_schema_change
+from native_compatibility_review import (
+    exact_reviewed_probe,
+    native_probe_dependencies_match,
+    reviewed_schema_change,
+)
 from run_native_method_regressions import reviewed_node_counts
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -624,7 +628,7 @@ def _smoke_params(method: str, temporary: Path) -> dict[str, object]:
 def _native_behavior(binary: Path, generated: Path, output: Path, version: str) -> dict:
     methods = {}
     binary_sha = sha256_file(binary)
-    for name in ("stable", "account"):
+    for name in ("stable", "account", "operator"):
         script = ROOT / f"ci/probe_{name}_native.py"
         destination = output / f"{name}-native-behavior.json"
         try:
@@ -673,6 +677,8 @@ def _native_behavior(binary: Path, generated: Path, output: Path, version: str) 
                 continue
             if name == "account" and result.get("status") != "passed":
                 continue
+            if name == "operator" and result.get("cleanup") != "exited":
+                continue
             for method, proof in result.get("methods", {}).items():
                 if (
                     isinstance(proof, dict)
@@ -707,6 +713,7 @@ def _positive_behavior(
         or proof.get("binary_sha256") != binary_sha
         or proof.get("request_sha256") != fingerprints["request_sha256"]
         or proof.get("response_sha256") != fingerprints["response_sha256"]
+        or not native_probe_dependencies_match(ROOT, proof)
     ):
         return None
     return proof

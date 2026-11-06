@@ -9,7 +9,11 @@ import json
 from pathlib import Path
 import re
 
-from native_compatibility_review import exact_reviewed_probe, reviewed_schema_change
+from native_compatibility_review import (
+    exact_reviewed_probe,
+    native_probe_dependencies_match,
+    reviewed_schema_change,
+)
 from run_native_method_regressions import reviewed_node_counts
 
 _VERSION = re.compile(r"(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\Z")
@@ -225,6 +229,10 @@ def _method_rows(
             ) != positive.get("fixture_sha256"):
                 raise ValueError(
                     f"native positive fixture hash is stale for {version}/{method}"
+                )
+            if not native_probe_dependencies_match(root, positive):
+                raise ValueError(
+                    f"native positive probe dependencies are stale for {version}/{method}"
                 )
         expected_tests = expected_row.get("regression_tests")
         coverage = row.get("typed_regression_coverage")
