@@ -151,6 +151,37 @@ def test_receipt_requires_positive_native_evidence_after_semantic_review(
         _build(root)
 
 
+@pytest.mark.parametrize("change", ["helper", "omit", "fingerprint"])
+def test_operator_positive_binds_imported_probe_helpers(reviewed_inputs, change):
+    root, fixture = reviewed_inputs
+    probe = root / "ci/probe_operator_native.py"
+    probe.write_text("# synthetic operator wrapper\n")
+    dependencies = {}
+    for relative in ("ci/qualify_native_methods.py", "ci/qualify_codex_schema.py"):
+        path = root / relative
+        path.write_text("# synthetic imported helper\n")
+        dependencies[relative] = _digest(path)
+    positive = fixture["methods"][0]["native_positive"]
+    positive.update(
+        fixture="ci/probe_operator_native.py",
+        fixture_sha256=_digest(probe),
+        fixture_dependencies_sha256=dependencies,
+    )
+    (root / FIXTURE).write_text(json.dumps(fixture))
+    assert _build(root) is not None
+    if change == "helper":
+        (root / "ci/qualify_native_methods.py").write_text("# changed helper\n")
+    elif change == "omit":
+        del positive["fixture_dependencies_sha256"]
+    else:
+        positive["fixture_dependencies_sha256"]["ci/qualify_native_methods.py"] = (
+            "f" * 64
+        )
+    (root / FIXTURE).write_text(json.dumps(fixture))
+    with pytest.raises(ValueError, match="positive probe dependencies are stale"):
+        _build(root)
+
+
 def test_receipt_cannot_replace_stable_review_with_an_arbitrary_exact_probe(
     reviewed_inputs,
 ):

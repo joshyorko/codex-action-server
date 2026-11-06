@@ -132,6 +132,40 @@ def test_failed_native_probe_cannot_reuse_a_previous_output(tmp_path, monkeypatc
     )
 
 
+@pytest.mark.parametrize("cleanup", ["exited", "failed"])
+def test_qualification_runs_exact_version_operator_positives(
+    tmp_path, monkeypatch, cleanup
+):
+    binary = tmp_path / "codex"
+    binary.write_bytes(b"synthetic candidate")
+    calls = []
+
+    def run(command, **kwargs):
+        calls.append(Path(command[2]).name)
+        destination = Path(command[command.index("--output") + 1])
+        destination.write_text(
+            json.dumps(
+                {
+                    "native_version": "0.167.0",
+                    "binary_sha256": hashlib.sha256(binary.read_bytes()).hexdigest(),
+                    "cleanup": cleanup,
+                    "methods": {
+                        "fixture/operator": {"status": "passed", "positive": True}
+                    },
+                }
+            )
+        )
+        return subprocess.CompletedProcess(command, 0, "", "")
+
+    monkeypatch.setattr(qualification.subprocess, "run", run)
+    proofs = qualification._native_behavior(binary, tmp_path, tmp_path, "0.167.0")
+    assert "probe_operator_native.py" in calls
+    if cleanup == "exited":
+        assert proofs["fixture/operator"]["native_version"] == "0.167.0"
+    else:
+        assert proofs == {}
+
+
 def test_0166_diagnostics_fixture_matches_reviewed_contract():
     candidate = json.loads(
         (

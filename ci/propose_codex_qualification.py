@@ -10,7 +10,11 @@ from pathlib import Path
 import re
 import sys
 
-from native_compatibility_review import exact_reviewed_probe, reviewed_schema_change
+from native_compatibility_review import (
+    exact_reviewed_probe,
+    native_probe_dependencies_match,
+    reviewed_schema_change,
+)
 from run_native_method_regressions import reviewed_node_counts
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -238,6 +242,7 @@ def _validate_method_evidence(
             label = {
                 "ci/probe_stable_native.py": "stable",
                 "ci/probe_account_native.py": "account",
+                "ci/probe_operator_native.py": "operator",
             }.get(script)
             if label is None:
                 raise ValueError(f"native positive fixture is invalid for {method}")
@@ -252,6 +257,7 @@ def _validate_method_evidence(
                 or positive.get("binary_sha256") != provenance["binary_sha256"]
                 or positive.get("native_version") != provenance["version"]
                 or positive.get("fixture_sha256") != _sha256(_safe_repo_file(script))
+                or not native_probe_dependencies_match(ROOT, positive)
                 or positive.get("subprocess_exit") != process.get("exit_code")
                 or any(
                     positive.get(key) != fingerprint[key]

@@ -72,10 +72,10 @@ def validate(schema, value, root=None):
             validate(schema['items'], child, root)
 
 
-def qualify(binary, schemas, temporary_root, *, local_provider=False, terminal_fixture=False):
+def qualify(binary, schemas, temporary_root, *, version='0.166.0', local_provider=False, terminal_fixture=False):
     contracts = json.loads((ROOT / 'tests/fixtures/protocol/codex_0.160.1_operator_rpc_contracts.json').read_text())['contracts']
     schema_paths = {path.stem: path for path in schemas.rglob('*.json')}
-    evidence = {'native_version': '0.166.0', 'binary_sha256': hashlib.file_digest(binary.open('rb'), 'sha256').hexdigest(),
+    evidence = {'native_version': version, 'binary_sha256': hashlib.file_digest(binary.open('rb'), 'sha256').hexdigest(),
                 'methods': {}, 'blocked_methods': {}}
     with tempfile.TemporaryDirectory(prefix='native-method-smoke-', dir=temporary_root) as scratch:
         home = Path(scratch)

@@ -388,20 +388,23 @@ def test_consumed_review_accepts_existing_pytest_and_unittest_nodes(
     assert admit_review(root, row) is not None
 
 
-def test_all_current_consumed_contract_reviews_have_existing_test_nodes():
+@pytest.mark.parametrize("version,expected_count", [("0.166.0", 22), ("0.167.0", 19)])
+def test_all_current_consumed_contract_reviews_have_existing_test_nodes(
+    version, expected_count
+):
     document = json.loads((ROOT / REVIEW_REF).read_text())
     catalog = json.loads(
         (ROOT / "ci/codex_qualification/native_methods.json").read_text()
     )
     methods = {row["method"]: row for row in catalog["methods"]}
-    release = document["versions"][VERSION]
-    assert len(release["methods"]) == 22
+    release = document["versions"][version]
+    assert len(release["methods"]) == expected_count
     for method, row in release["methods"].items():
         assert (
             review.reviewed_schema_change(
                 ROOT,
                 method,
-                VERSION,
+                version,
                 release["binary_sha256"],
                 release["source_asset_sha256"],
                 release["source_asset_id"],
