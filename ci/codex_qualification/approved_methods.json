@@ -500,6 +500,146 @@
         "response_sha256": "504e2ef2c3d06b13a107bf94a74791ff7f61c4a234f0beff78dca406ae2d1181"
       },
       "version": "0.167.0"
+    },
+    {
+      "method": "app/read",
+      "method_evidence_ref": "tests/fixtures/protocol/codex_0.168.0_native_methods.json",
+      "provenance_ref": "0.168.0",
+      "schema_fingerprint": {
+        "request_sha256": "61e6a9d35515f3164a7f7e7a5b0c5ac92817c5a3b5d7fb27e9a704fe2935ddf7",
+        "response_sha256": "f3b73c2c31f16a2cff013c9682dfea48f26571f94002195c93ce10722a288791"
+      },
+      "version": "0.168.0"
+    },
+    {
+      "method": "server/diagnostics",
+      "method_evidence_ref": "tests/fixtures/protocol/codex_0.168.0_native_methods.json",
+      "provenance_ref": "0.168.0",
+      "schema_fingerprint": {
+        "request_sha256": "5a4235de371d1a58a45300e14fbfbc9ab0a3ecef3078ae35d60f1470b6e4e4f1",
+        "response_sha256": "0b3b35e623761a05bcd4a20085be8395986d2b98037c8ebda4dcda2204689d1d"
+      },
+      "version": "0.168.0"
+    },
+    {
+      "method": "thread/backgroundTerminals/list",
+      "method_evidence_ref": "tests/fixtures/protocol/codex_0.168.0_native_methods.json",
+      "provenance_ref": "0.168.0",
+      "schema_fingerprint": {
+        "request_sha256": "7ac232410d59afd308dca04f8c0b08f20fa6e87f00bd0d3b5892b7ce8b31d2ee",
+        "response_sha256": "b56b1cbcb1d60079ee9f9caaeef29cad869a25b4a6d356566f7c9f672faa7bf4"
+      },
+      "version": "0.168.0"
+    },
+    {
+      "method": "thread/backgroundTerminals/terminate",
+      "method_evidence_ref": "tests/fixtures/protocol/codex_0.168.0_native_methods.json",
+      "provenance_ref": "0.168.0",
+      "schema_fingerprint": {
+        "request_sha256": "4af4973b4e965228e7c6ffdff341c22c227c26bc48d4b44a8696993869b64103",
+        "response_sha256": "1f5dfb3fdd3c1fef2ef9b9b2c26eb2f2c7346cdf695d4ca291ede076050d1bc7"
+      },
+      "version": "0.168.0"
+    },
+    {
+      "method": "thread/queue/add",
+      "method_evidence_ref": "tests/fixtures/protocol/codex_0.168.0_native_methods.json",
+      "provenance_ref": "0.168.0",
+      "schema_fingerprint": {
+        "request_sha256": "f6466a8f06cd4e68ec1999d06a0d70a1ddc339c0cb1baf12ee966a999fead17c",
+        "response_sha256": "896a82716b432a8aa4d190591bcfa86adacdacb91ec5ec2c9c75ff6562561256"
+      },
+      "version": "0.168.0"
+    },
+    {
+      "method": "thread/queue/delete",
+      "method_evidence_ref": "tests/fixtures/protocol/codex_0.168.0_native_methods.json",
+      "provenance_ref": "0.168.0",
+      "schema_fingerprint": {
+        "request_sha256": "35d17cc17897a7f560250d0148ec9df0482ba3d33bdcca039dde8391d3b4edbe",
+        "response_sha256": "5983c0a94e89f93340caecfe96e16d8f535edca39142920bc0ba60ec90a52919"
+      },
+      "version": "0.168.0"
+    },
+    {
+      "method": "thread/queue/list",
+      "method_evidence_ref": "tests/fixtures/protocol/codex_0.168.0_native_methods.json",
+      "provenance_ref": "0.168.0",
+      "schema_fingerprint": {
+        "request_sha256": "b4c889089eee8a0f785ff85e0128a4d3f347353870fa848221096a472223773b",
+        "response_sha256": "7a320613604095eef93247b395dafeeb6d05b26256c4055b6a5bad05eff74ab5"
+      },
+      "version": "0.168.0"
+    },
+    {
+      "method": "thread/queue/reorder",
+      "method_evidence_ref": "tests/fixtures/protocol/codex_0.168.0_native_methods.json",
+      "provenance_ref": "0.168.0",
+      "schema_fingerprint": {
+        "request_sha256": "524bc69a166160f234c7f7de9f6386ace09ce8165b1409504c5164fbaf9267a6",
+        "response_sha256": "161491f6310bcdeac60cd7cb0594cebc51857e9caccb592b7f96cefaa5f4a061"
+      },
+      "version": "0.168.0"
+    },
+    {
+      "method": "thread/queue/start",
+      "method_evidence_ref": "tests/fixtures/protocol/codex_0.168.0_native_methods.json",
+      "provenance_ref": "0.168.0",
+      "schema_fingerprint": {
+        "request_sha256": "d92f1e985c183fa3f261bbfa004416f0f572a225a53e5de1744682e154cce936",
+        "response_sha256": "0d36557b2abe291a3d7c68e4359f0c7071daa454e4026f9150fe7fbb800ba8d9"
+      },
+      "version": "0.168.0"
+    },
+    {
+      "method": "thread/queue/update",
+      "method_evidence_ref": "tests/fixtures/protocol/codex_0.168.0_native_methods.json",
+      "provenance_ref": "0.168.0",
+      "schema_fingerprint": {
+        "request_sha256": "fa7fcb29e72763d216a736a1529abaf216aff91ee37ffa0639fbb9835cf81ccc",
+        "response_sha256": "6ec2ff1153cbbd357c87e0ed47c98385dab3fe3d176c1559ad1bd26c4848aa83"
+      },
+      "version": "0.168.0"
+    },
+    {
+      "method": "thread/searchOccurrences",
+      "method_evidence_ref": "tests/fixtures/protocol/codex_0.168.0_native_methods.json",
+      "provenance_ref": "0.168.0",
+      "schema_fingerprint": {
+        "request_sha256": "c941938fd6e89675f6a6d2a475ac4433aad64614c3954515b13bf248e1c13525",
+        "response_sha256": "193e1f78e427a93f5a6471b7b69ea3f6d980c924ca26e20845992bc5b33d9dd9"
+      },
+      "version": "0.168.0"
+    },
+    {
+      "method": "thread/settings/update",
+      "method_evidence_ref": "tests/fixtures/protocol/codex_0.168.0_native_methods.json",
+      "provenance_ref": "0.168.0",
+      "schema_fingerprint": {
+        "request_sha256": "749419634bb7ed66216d72bf9d8734ecf0e6efaa8cd46fe51a117d1b42ed9657",
+        "response_sha256": "adb6c5232ff2474b61ac1811c9fe0faf8beae7f629c9bb2182190679d82bf0b1"
+      },
+      "version": "0.168.0"
+    },
+    {
+      "method": "thread/timeline/list",
+      "method_evidence_ref": "tests/fixtures/protocol/codex_0.168.0_native_methods.json",
+      "provenance_ref": "0.168.0",
+      "schema_fingerprint": {
+        "request_sha256": "c585f0e23ed65406dd80f0e0b2956f3f87e7a7aa03627e5e002c61bfc4e1f6c5",
+        "response_sha256": "86cda50f37c6432ad17270827aa28d3f5bca024daa9632d0924f66f50659eeb1"
+      },
+      "version": "0.168.0"
+    },
+    {
+      "method": "turn/settings/update",
+      "method_evidence_ref": "tests/fixtures/protocol/codex_0.168.0_native_methods.json",
+      "provenance_ref": "0.168.0",
+      "schema_fingerprint": {
+        "request_sha256": "3c0198540df66802752daa59680733221e0bc2deaf3cd0ab2c5b9daa6332ef7a",
+        "response_sha256": "504e2ef2c3d06b13a107bf94a74791ff7f61c4a234f0beff78dca406ae2d1181"
+      },
+      "version": "0.168.0"
     }
   ],
   "schema_version": 1,
@@ -549,6 +689,18 @@
       "source_asset_sha256": "9d64836106d5b374e90ee4454c7ebcde7ca7106558bd7e41a34b9f26ebda251a",
       "source_tag": "rust-v0.167.0",
       "source_url": "https://github.com/openai/codex/releases/download/rust-v0.167.0/codex-x86_64-unknown-linux-musl.tar.gz"
+    },
+    "0.168.0": {
+      "binary_sha256": "a8cb58c528c76e7313d4a70294ec614757b0f4c7bf9683e11c88ecad8c3d421b",
+      "fixture": "tests/fixtures/protocol/codex_0.168.0_native_methods.json",
+      "kind": "native_methods_fixture",
+      "native_methods_fixture": "tests/fixtures/protocol/codex_0.168.0_native_methods.json",
+      "native_methods_qualification_run": "https://github.com/joshyorko/codex-action-server/actions/runs/43378749969",
+      "qualification_run": "https://github.com/joshyorko/codex-action-server/actions/runs/43378749969",
+      "source_asset_id": "742176221",
+      "source_asset_sha256": "b983beb86dcc606cead6ee226ae2ab08e7e6eee07df4cb8d16f441f107b9e2ef",
+      "source_tag": "rust-v0.168.0",
+      "source_url": "https://github.com/openai/codex/releases/download/rust-v0.168.0/codex-x86_64-unknown-linux-musl.tar.gz"
     }
   }
 }
