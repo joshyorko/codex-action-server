@@ -500,6 +500,76 @@
         "response_sha256": "504e2ef2c3d06b13a107bf94a74791ff7f61c4a234f0beff78dca406ae2d1181"
       },
       "version": "0.167.0"
+    },
+    {
+      "method": "app/read",
+      "method_evidence_ref": "tests/fixtures/protocol/codex_0.169.0_native_methods.json",
+      "provenance_ref": "0.169.0",
+      "schema_fingerprint": {
+        "request_sha256": "61e6a9d35515f3164a7f7e7a5b0c5ac92817c5a3b5d7fb27e9a704fe2935ddf7",
+        "response_sha256": "f3b73c2c31f16a2cff013c9682dfea48f26571f94002195c93ce10722a288791"
+      },
+      "version": "0.169.0"
+    },
+    {
+      "method": "server/diagnostics",
+      "method_evidence_ref": "tests/fixtures/protocol/codex_0.169.0_native_methods.json",
+      "provenance_ref": "0.169.0",
+      "schema_fingerprint": {
+        "request_sha256": "5a4235de371d1a58a45300e14fbfbc9ab0a3ecef3078ae35d60f1470b6e4e4f1",
+        "response_sha256": "0b3b35e623761a05bcd4a20085be8395986d2b98037c8ebda4dcda2204689d1d"
+      },
+      "version": "0.169.0"
+    },
+    {
+      "method": "thread/backgroundTerminals/list",
+      "method_evidence_ref": "tests/fixtures/protocol/codex_0.169.0_native_methods.json",
+      "provenance_ref": "0.169.0",
+      "schema_fingerprint": {
+        "request_sha256": "7ac232410d59afd308dca04f8c0b08f20fa6e87f00bd0d3b5892b7ce8b31d2ee",
+        "response_sha256": "b56b1cbcb1d60079ee9f9caaeef29cad869a25b4a6d356566f7c9f672faa7bf4"
+      },
+      "version": "0.169.0"
+    },
+    {
+      "method": "thread/backgroundTerminals/terminate",
+      "method_evidence_ref": "tests/fixtures/protocol/codex_0.169.0_native_methods.json",
+      "provenance_ref": "0.169.0",
+      "schema_fingerprint": {
+        "request_sha256": "4af4973b4e965228e7c6ffdff341c22c227c26bc48d4b44a8696993869b64103",
+        "response_sha256": "1f5dfb3fdd3c1fef2ef9b9b2c26eb2f2c7346cdf695d4ca291ede076050d1bc7"
+      },
+      "version": "0.169.0"
+    },
+    {
+      "method": "thread/queue/delete",
+      "method_evidence_ref": "tests/fixtures/protocol/codex_0.169.0_native_methods.json",
+      "provenance_ref": "0.169.0",
+      "schema_fingerprint": {
+        "request_sha256": "35d17cc17897a7f560250d0148ec9df0482ba3d33bdcca039dde8391d3b4edbe",
+        "response_sha256": "5983c0a94e89f93340caecfe96e16d8f535edca39142920bc0ba60ec90a52919"
+      },
+      "version": "0.169.0"
+    },
+    {
+      "method": "thread/queue/reorder",
+      "method_evidence_ref": "tests/fixtures/protocol/codex_0.169.0_native_methods.json",
+      "provenance_ref": "0.169.0",
+      "schema_fingerprint": {
+        "request_sha256": "524bc69a166160f234c7f7de9f6386ace09ce8165b1409504c5164fbaf9267a6",
+        "response_sha256": "161491f6310bcdeac60cd7cb0594cebc51857e9caccb592b7f96cefaa5f4a061"
+      },
+      "version": "0.169.0"
+    },
+    {
+      "method": "thread/searchOccurrences",
+      "method_evidence_ref": "tests/fixtures/protocol/codex_0.169.0_native_methods.json",
+      "provenance_ref": "0.169.0",
+      "schema_fingerprint": {
+        "request_sha256": "c941938fd6e89675f6a6d2a475ac4433aad64614c3954515b13bf248e1c13525",
+        "response_sha256": "193e1f78e427a93f5a6471b7b69ea3f6d980c924ca26e20845992bc5b33d9dd9"
+      },
+      "version": "0.169.0"
     }
   ],
   "schema_version": 1,
@@ -549,6 +619,18 @@
       "source_asset_sha256": "9d64836106d5b374e90ee4454c7ebcde7ca7106558bd7e41a34b9f26ebda251a",
       "source_tag": "rust-v0.167.0",
       "source_url": "https://github.com/openai/codex/releases/download/rust-v0.167.0/codex-x86_64-unknown-linux-musl.tar.gz"
+    },
+    "0.169.0": {
+      "binary_sha256": "b452ca20f838a8855a88a41050ee4a694033fff4ea3ecdad5633e6e0e8d13f2b",
+      "fixture": "tests/fixtures/protocol/codex_0.169.0_native_methods.json",
+      "kind": "native_methods_fixture",
+      "native_methods_fixture": "tests/fixtures/protocol/codex_0.169.0_native_methods.json",
+      "native_methods_qualification_run": "https://github.com/joshyorko/codex-action-server/actions/runs/43566220557",
+      "qualification_run": "https://github.com/joshyorko/codex-action-server/actions/runs/43566220557",
+      "source_asset_id": "742918560",
+      "source_asset_sha256": "9af4d751fce183faedea629437d5252dbf458eeb04130cf4f97be844621ea985",
+      "source_tag": "rust-v0.169.0",
+      "source_url": "https://github.com/openai/codex/releases/download/rust-v0.169.0/codex-x86_64-unknown-linux-musl.tar.gz"
     }
   }
 }
