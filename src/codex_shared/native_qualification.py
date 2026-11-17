@@ -79,4 +79,15 @@ REVIEWED_EXPERIMENTAL_METHODS_BY_NATIVE_VERSION = {
             "turn/settings/update",
         }
     ),
+    "0.169.0": frozenset(
+        {
+            "app/read",
+            "server/diagnostics",
+            "thread/backgroundTerminals/list",
+            "thread/backgroundTerminals/terminate",
+            "thread/queue/delete",
+            "thread/queue/reorder",
+            "thread/searchOccurrences",
+        }
+    ),
 }
