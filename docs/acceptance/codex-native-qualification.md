@@ -174,3 +174,14 @@ The turn-settings probe requires `features.step_model_switching=true` in the dis
 - Withheld methods: none.
 - Typed regressions and disposable protocol smokes are recorded in [qualification run](https://github.com/joshyorko/codex-action-server/actions/runs/42217749397).
 - This evidence does not update installed Codex daemons, claim deployment state, or admit withheld methods.
+
+<!-- codex-qualification:0.171.0 -->
+## Qualified candidate: Codex 0.171.0
+
+- Source release: [`rust-v0.171.0`](https://github.com/openai/codex/releases/download/rust-v0.171.0/codex-x86_64-unknown-linux-musl.tar.gz); asset ID `769869206`, SHA-256 `01baa2e47809f8597be5b2f8abd4e4dfe3fb5bcb6e504c2fbaaad97056c15e8d`.
+- Binary SHA-256: `b76a027d6b210f9a8da7aaf321dd235c700f0ef7a794d4a5314b9af6c134f0f0`.
+- Method evidence: 34 compatible pending human review; 24 withheld.
+- Compatible methods: `account/rateLimits/read`, `account/usage/read`, `app/list`, `app/read`, `hooks/list`, `modelProvider/capabilities/read`, `plugin/list`, `plugin/read`, `server/diagnostics`, `skills/list`, `thread/archive`, `thread/attachment/add`, `thread/attachment/list`, `thread/attachment/remove`, `thread/backgroundTerminals/list`, `thread/backgroundTerminals/terminate`, `thread/compact/start`, `thread/delete`, `thread/goal/clear`, `thread/goal/get`, `thread/goal/set`, `thread/inject_items`, `thread/loaded/list`, `thread/name/set`, `thread/queue/delete`, `thread/queue/reorder`, `thread/searchOccurrences`, `thread/section/move`, `threadSection/create`, `threadSection/delete`, `threadSection/list`, `threadSection/update`, `turn/interrupt`, `turn/steer`.
+- Withheld methods: `mcpServer/resource/read`, `mcpServer/tool/call`, `mcpServerStatus/list`, `model/list`, `review/start`, `thread/fork`, `thread/items/list`, `thread/list`, `thread/metadata/update`, `thread/queue/add`, `thread/queue/list`, `thread/queue/start`, `thread/queue/update`, `thread/read`, `thread/resume`, `thread/revert`, `thread/search`, `thread/settings/update`, `thread/start`, `thread/timeline/list`, `thread/turns/list`, `thread/unarchive`, `turn/settings/update`, `turn/start`.
+- Typed regressions and disposable protocol smokes are recorded in [qualification run](https://github.com/joshyorko/codex-action-server/actions/runs/44688016932).
+- This evidence does not update installed Codex daemons, claim deployment state, or admit withheld methods.
