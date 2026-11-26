@@ -185,3 +185,14 @@ The turn-settings probe requires `features.step_model_switching=true` in the dis
 - Withheld methods: `mcpServer/resource/read`, `mcpServer/tool/call`, `mcpServerStatus/list`, `model/list`, `review/start`, `thread/fork`, `thread/items/list`, `thread/list`, `thread/metadata/update`, `thread/queue/add`, `thread/queue/list`, `thread/queue/start`, `thread/queue/update`, `thread/read`, `thread/resume`, `thread/revert`, `thread/search`, `thread/settings/update`, `thread/start`, `thread/timeline/list`, `thread/turns/list`, `thread/unarchive`, `turn/settings/update`, `turn/start`.
 - Typed regressions and disposable protocol smokes are recorded in [qualification run](https://github.com/joshyorko/codex-action-server/actions/runs/44688016932).
 - This evidence does not update installed Codex daemons, claim deployment state, or admit withheld methods.
+
+<!-- codex-qualification:0.172.0 -->
+## Qualified candidate: Codex 0.172.0
+
+- Source release: [`rust-v0.172.0`](https://github.com/openai/codex/releases/download/rust-v0.172.0/codex-x86_64-unknown-linux-musl.tar.gz); asset ID `785031769`, SHA-256 `a2342a8f7f68f088be30620ccfe9cb84162c93a6b56177855961cda3ed6be392`.
+- Binary SHA-256: `ad83b94c093f0cdd8176a6bc8005a461bdf23a759863e157d40f562b8a9d664d`.
+- Method evidence: 43 compatible pending human review; 15 withheld.
+- Compatible methods: `account/rateLimits/read`, `account/usage/read`, `app/list`, `app/read`, `hooks/list`, `mcpServer/resource/read`, `mcpServer/tool/call`, `mcpServerStatus/list`, `modelProvider/capabilities/read`, `plugin/list`, `plugin/read`, `server/diagnostics`, `skills/list`, `thread/archive`, `thread/attachment/add`, `thread/attachment/list`, `thread/attachment/remove`, `thread/backgroundTerminals/list`, `thread/backgroundTerminals/terminate`, `thread/compact/start`, `thread/delete`, `thread/goal/clear`, `thread/goal/get`, `thread/goal/set`, `thread/inject_items`, `thread/items/list`, `thread/loaded/list`, `thread/name/set`, `thread/queue/add`, `thread/queue/delete`, `thread/queue/list`, `thread/queue/reorder`, `thread/queue/update`, `thread/searchOccurrences`, `thread/section/move`, `thread/settings/update`, `threadSection/create`, `threadSection/delete`, `threadSection/list`, `threadSection/update`, `turn/interrupt`, `turn/settings/update`, `turn/steer`.
+- Withheld methods: `model/list`, `review/start`, `thread/fork`, `thread/list`, `thread/metadata/update`, `thread/queue/start`, `thread/read`, `thread/resume`, `thread/revert`, `thread/search`, `thread/start`, `thread/timeline/list`, `thread/turns/list`, `thread/unarchive`, `turn/start`.
+- Typed regressions and disposable protocol smokes are recorded in [qualification run](https://github.com/joshyorko/codex-action-server/actions/runs/45768495304).
+- This evidence does not update installed Codex daemons, claim deployment state, or admit withheld methods.

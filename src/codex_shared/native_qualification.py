@@ -90,4 +90,20 @@ REVIEWED_EXPERIMENTAL_METHODS_BY_NATIVE_VERSION = {
             "thread/searchOccurrences",
         }
     ),
+    "0.172.0": frozenset(
+        {
+            "app/read",
+            "server/diagnostics",
+            "thread/backgroundTerminals/list",
+            "thread/backgroundTerminals/terminate",
+            "thread/queue/add",
+            "thread/queue/delete",
+            "thread/queue/list",
+            "thread/queue/reorder",
+            "thread/queue/update",
+            "thread/searchOccurrences",
+            "thread/settings/update",
+            "turn/settings/update",
+        }
+    ),
 }
